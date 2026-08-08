@@ -916,7 +916,12 @@ function buildGenericWorkCss(appId: string, manifest: any, heroDataUrl: string, 
     ? buildQoderWorkShellCss(colors)
     : appId === 'catpaw'
       ? buildCatPawCss(heroDataUrl, colors)
+      : appId === 'zcode'
+        ? buildZCodeConversationCss(colors)
       : '';
+  const contentSurfaceSelectors = appId === 'zcode'
+    ? '[class*="composer"], [class*="input-container"]'
+    : '[class*="message"], [class*="bubble"], [class*="composer"], [class*="input-container"]';
   return `/* DREAM_THEME:${manifest.id} */
 :root {
   --dream-work-accent: ${colors.accent};
@@ -944,13 +949,63 @@ html, body, #root { background: ${colors.surface} !important; color: ${colors.te
 :is(${main}) :where([class*="message"], [class*="chat"], [class*="composer"], [class*="editor"], [contenteditable="true"], textarea) {
   color: ${colors.text} !important;
 }
-:is(${main}) :where([class*="message"], [class*="bubble"], [class*="composer"], [class*="input-container"]) {
+:is(${main}) :where(${contentSurfaceSelectors}) {
   background-color: color-mix(in srgb, ${colors.surface} 88%, transparent) !important;
   backdrop-filter: blur(16px) saturate(108%);
 }
 :is(${main}) :where(p, span, li, h1, h2, h3, h4, strong, em) { color: ${colors.text} !important; }
 button[class*="bg-primary"], button[class*="bg-accent"] { background-color: ${colors.accent} !important; color: #fff !important; }
 ${appSpecificCss}`;
+}
+
+function buildZCodeConversationCss(colors: any): string {
+  return `
+/* ZCode conversations: the wallpaper stays on the timeline, while each
+   semantic row receives its own readable surface instead of one large wash. */
+:is(main) :where(
+  [class*="chat"],
+  [class*="conversation"],
+  [class*="message"],
+  [class*="thread"],
+  [class*="virtual"]
+):has([data-row-id]) {
+  background-color: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
+:is(main) :where(
+  [class~="group/user-row"] > div:first-child,
+  [class~="group/assistant-row"] > [data-conversation-selectable],
+  [data-row-id]:has([data-reasoning-content])
+) {
+  border: 1px solid color-mix(in srgb, ${colors.accent} 30%, transparent) !important;
+  border-radius: 16px !important;
+  background: color-mix(in srgb, ${colors.surface} 76%, transparent) !important;
+  box-shadow: 0 12px 30px color-mix(in srgb, ${colors.surface} 30%, transparent), inset 0 1px color-mix(in srgb, white 12%, transparent) !important;
+  backdrop-filter: blur(14px) saturate(108%) !important;
+}
+
+:is(main) [class~="group/user-row"] > div:first-child {
+  border-color: color-mix(in srgb, ${colors.accent} 44%, transparent) !important;
+  background: color-mix(in srgb, ${colors.surface} 70%, transparent) !important;
+}
+
+:is(main) [class~="group/assistant-row"] > [data-conversation-selectable] {
+  padding: 14px 16px !important;
+}
+
+:is(main) [data-row-id]:has([data-reasoning-content]) {
+  padding: 12px 16px !important;
+}
+
+:is(main) [data-row-id]:has([data-reasoning-content]) [data-reasoning-content] {
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+`;
 }
 
 function buildHanaAgentCss(manifest: any, heroDataUrl: string, colors: any): string {
