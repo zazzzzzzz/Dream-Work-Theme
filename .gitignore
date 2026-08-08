@@ -1,0 +1,14 @@
+node_modules
+dist
+release
+themes
+themes.rar
+node_modules.rar
+.builder-tmp
+*.log
+.DS_Store
+.vscode
+.idea
+*.swp
+*.swo
+*~
