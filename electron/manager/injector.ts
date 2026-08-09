@@ -1048,6 +1048,50 @@ function buildZCodeConversationCss(colors: any): string {
   background: transparent !important;
   background-image: none !important;
 }
+
+/* 设置页面（aside.min-w-0 nav 出现时）里所有组件的背景统一毛玻璃材质，
+   与对话行一致：surface 76% + blur 14px + accent 30% 边框；
+   文字色统一为主题文字色，保证玻璃背景上的可读性。 */
+html:has(aside.min-w-0 nav) main :is(button, input, select):where(
+  [class*="bg-"], [class*="border"], [class*="ring-"], [class*="group/switch"]
+),
+html:has(aside.min-w-0 nav) main span:where(
+  [class*="bg-surface"], [class*="bg-secondary"], [class*="bg-selected"]
+) {
+  background: color-mix(in srgb, ${colors.surface} 76%, transparent) !important;
+  border: 1px solid color-mix(in srgb, ${colors.accent} 30%, transparent) !important;
+  backdrop-filter: blur(14px) saturate(108%) !important;
+  color: ${colors.text} !important;
+  text-shadow: none !important;
+}
+html:has(aside.min-w-0 nav) main :is(button, input, select):where(
+  [class*="bg-"], [class*="border"], [class*="ring-"], [class*="group/switch"]
+):hover {
+  border-color: color-mix(in srgb, ${colors.accent} 46%, transparent) !important;
+}
+
+/* 设置页内容区里的分块背景区域（卡片/区块/分段容器）同款毛玻璃材质。 */
+html:has(aside.min-w-0 nav) main :where(
+  div[class*="group/card"],
+  div[class*="bg-card"],
+  div[class*="bg-surface"],
+  div[role="tablist"]
+) {
+  background: color-mix(in srgb, ${colors.surface} 76%, transparent) !important;
+  border: 1px solid color-mix(in srgb, ${colors.accent} 30%, transparent) !important;
+  backdrop-filter: blur(14px) saturate(108%) !important;
+  color: ${colors.text} !important;
+}
+
+/* 输入会话框：chat-composer-input-surface 已有毛玻璃（surface 88% + blur 16px），
+   把内层 bg-input 纯白底改为透明，露出底层毛玻璃材质。 */
+.chat-composer-input-surface div[class*="bg-input"],
+.chat-composer-region div[class*="bg-input"] {
+  background: transparent !important;
+  background-color: transparent !important;
+  border-color: color-mix(in srgb, ${colors.accent} 30%, transparent) !important;
+  box-shadow: none !important;
+}
 `;
 }
 
