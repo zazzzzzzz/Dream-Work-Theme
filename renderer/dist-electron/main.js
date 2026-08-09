@@ -1,152 +1,5 @@
-"use strict";
-var __defProp = Object.defineProperty;
-var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
-var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
-const electron = require("electron");
-const path = require("path");
-const fs = require("fs");
-const child_process = require("child_process");
-const util = require("util");
-const os = require("os");
-const http = require("http");
-const net = require("net");
-const promises = require("fs/promises");
-const crypto = require("crypto");
-function _interopNamespaceDefault(e) {
-  const n = Object.create(null, { [Symbol.toStringTag]: { value: "Module" } });
-  if (e) {
-    for (const k in e) {
-      if (k !== "default") {
-        const d = Object.getOwnPropertyDescriptor(e, k);
-        Object.defineProperty(n, k, d.get ? d : {
-          enumerable: true,
-          get: () => e[k]
-        });
-      }
-    }
-  }
-  n.default = e;
-  return Object.freeze(n);
-}
-const path__namespace = /* @__PURE__ */ _interopNamespaceDefault(path);
-const fs__namespace = /* @__PURE__ */ _interopNamespaceDefault(fs);
-const os__namespace = /* @__PURE__ */ _interopNamespaceDefault(os);
-const http__namespace = /* @__PURE__ */ _interopNamespaceDefault(http);
-const net__namespace = /* @__PURE__ */ _interopNamespaceDefault(net);
-const crypto__namespace = /* @__PURE__ */ _interopNamespaceDefault(crypto);
-const localAppData = process.env.LOCALAPPDATA || path__namespace.join(os__namespace.homedir(), "AppData", "Local");
-const roamingAppData = process.env.APPDATA || path__namespace.join(os__namespace.homedir(), "AppData", "Roaming");
-const programFiles = process.env.ProgramFiles || "C:\\Program Files";
-const programFilesX86 = process.env["ProgramFiles(x86)"] || "C:\\Program Files (x86)";
-const APP_DEFINITIONS = [
-  {
-    id: "workbuddy",
-    name: "WorkBuddy",
-    exeNames: ["WorkBuddy.exe"],
-    processName: "WorkBuddy.exe",
-    defaultPort: 9339,
-    installPaths: [path__namespace.join(localAppData, "workbuddy"), path__namespace.join(localAppData, "Programs", "workbuddy"), path__namespace.join(programFiles, "WorkBuddy"), path__namespace.join(programFilesX86, "WorkBuddy"), "D:\\Program Files\\WorkBuddy"],
-    rendererHints: ["app.asar/renderer/index.html", "renderer/index.html", "index.html"],
-    kind: "workbuddy"
-  },
-  {
-    id: "codex",
-    name: "Codex",
-    exeNames: ["ChatGPT.exe", "Codex.exe"],
-    processName: "ChatGPT.exe",
-    defaultPort: 9340,
-    installPaths: [path__namespace.join(localAppData, "Programs", "Codex"), path__namespace.join(localAppData, "Programs", "OpenAI", "Codex"), path__namespace.join(programFiles, "Codex"), path__namespace.join(programFilesX86, "Codex"), "D:\\Program Files\\Codex"],
-    rendererHints: ["index.html", "renderer/index.html"],
-    kind: "codex"
-  },
-  {
-    id: "trae-work",
-    name: "TRAE Work",
-    exeNames: ["TRAE SOLO CN.exe", "TRAE Work CN.exe"],
-    processName: "TRAE SOLO CN.exe",
-    defaultPort: 9341,
-    installPaths: ["D:\\Program Files\\TRAE SOLO CN", path__namespace.join(localAppData, "Programs", "TRAE SOLO CN"), path__namespace.join(programFiles, "TRAE SOLO CN")],
-    rendererHints: ["solo/solo-lite.html", "solo-lite.html"],
-    kind: "vscode-work"
-  },
-  {
-    id: "qoder-work",
-    name: "QoderWork",
-    exeNames: ["QoderWork CN.exe", "QoderWork.exe"],
-    processName: "QoderWork CN.exe",
-    defaultPort: 9342,
-    installPaths: ["D:\\Program Files\\QoderWork CN", path__namespace.join(localAppData, "Programs", "QoderWork CN"), path__namespace.join(programFiles, "QoderWork CN")],
-    rendererHints: ["out/renderer/index.html", "renderer/index.html"],
-    kind: "generic-work",
-    devToolsActivePort: path__namespace.join(roamingAppData, "QoderWork CN", "DevToolsActivePort")
-  },
-  {
-    id: "catpaw",
-    name: "CatPaw",
-    exeNames: ["CatPaw.exe"],
-    processName: "CatPaw.exe",
-    defaultPort: 9343,
-    installPaths: [path__namespace.join(localAppData, "CatPaw"), path__namespace.join(localAppData, "Programs", "CatPaw"), path__namespace.join(programFiles, "CatPaw")],
-    rendererHints: ["app.asar/dist/index.html", "dist/index.html"],
-    kind: "generic-work"
-  },
-  {
-    id: "zcode",
-    name: "ZCode",
-    exeNames: ["ZCode.exe"],
-    processName: "ZCode.exe",
-    defaultPort: 9344,
-    installPaths: ["D:\\Program Files\\ZCode", path__namespace.join(localAppData, "Programs", "ZCode"), path__namespace.join(programFiles, "ZCode")],
-    rendererHints: ["out/renderer/index.html", "renderer/index.html"],
-    kind: "generic-work"
-  },
-  {
-    id: "qwen-office",
-    name: "千问办公",
-    exeNames: ["QwenWorkCN.exe"],
-    processName: "QwenWorkCN.exe",
-    defaultPort: 9345,
-    installPaths: ["D:\\Program Files\\QwenWorkCN", path__namespace.join(localAppData, "Programs", "QwenWorkCN"), path__namespace.join(programFiles, "QwenWorkCN")],
-    rendererHints: ["out/renderer/index.html", "renderer/index.html"],
-    kind: "generic-work",
-    devToolsActivePort: path__namespace.join(roamingAppData, "QwenWorkCN", "DevToolsActivePort")
-  },
-  {
-    id: "hana-agent",
-    name: "HanaAgent",
-    exeNames: ["HanaAgent.exe"],
-    processName: "HanaAgent.exe",
-    defaultPort: 9346,
-    installPaths: [path__namespace.join(localAppData, "Programs", "HanaAgent"), path__namespace.join(programFiles, "HanaAgent"), path__namespace.join(programFilesX86, "HanaAgent")],
-    rendererHints: [".hanako/artifacts/renderer/", "artifacts/renderer/", "/index.html"],
-    kind: "generic-work"
-  }
-];
-function getAppDefinition(appId) {
-  return APP_DEFINITIONS.find((app) => app.id === appId);
-}
-util.promisify(child_process.exec);
-const execFileAsync$2 = util.promisify(child_process.execFile);
-function findWindowsAppsOpenAIExes() {
-  const results = [];
-  const windowsApps = path__namespace.join(process.env.ProgramFiles || "C:\\Program Files", "WindowsApps");
-  if (!fs__namespace.existsSync(windowsApps)) return results;
-  try {
-    const items = fs__namespace.readdirSync(windowsApps);
-    for (const item of items) {
-      if (/^OpenAI\.Codex_\d+/i.test(item)) {
-        const candidate = path__namespace.join(windowsApps, item, "app", "ChatGPT.exe");
-        if (fs__namespace.existsSync(candidate)) {
-          results.push(candidate);
-        }
-      }
-    }
-  } catch {
-  }
-  return results;
-}
-async function findCodexAppx() {
-  const script = `
+"use strict";var qe=Object.defineProperty;var Je=(e,n,t)=>n in e?qe(e,n,{enumerable:!0,configurable:!0,writable:!0,value:t}):e[n]=t;var C=(e,n,t)=>Je(e,typeof n!="symbol"?n+"":n,t);const w=require("electron"),Ke=require("path"),Ge=require("fs"),Ve=require("os"),X=require("child_process"),se=require("util"),Xe=require("http"),Ze=require("net"),Qe=require("fs/promises"),Ye=require("crypto");function R(e){const n=Object.create(null,{[Symbol.toStringTag]:{value:"Module"}});if(e){for(const t in e)if(t!=="default"){const r=Object.getOwnPropertyDescriptor(e,t);Object.defineProperty(n,t,r.get?r:{enumerable:!0,get:()=>e[t]})}}return n.default=e,Object.freeze(n)}const c=R(Ke),m=R(Ge),$=R(Ve),Ce=R(Xe),Se=R(Ze),ie=R(Ye),M=process.env.LOCALAPPDATA||c.join($.homedir(),"AppData","Local"),ge=process.env.APPDATA||c.join($.homedir(),"AppData","Roaming"),_=process.env.ProgramFiles||"C:\\Program Files",ee=process.env["ProgramFiles(x86)"]||"C:\\Program Files (x86)",ce=[{id:"workbuddy",name:"WorkBuddy",exeNames:["WorkBuddy.exe"],processName:"WorkBuddy.exe",defaultPort:9339,installPaths:[c.join(M,"workbuddy"),c.join(M,"Programs","workbuddy"),c.join(_,"WorkBuddy"),c.join(ee,"WorkBuddy"),"D:\\Program Files\\WorkBuddy"],rendererHints:["app.asar/renderer/index.html","renderer/index.html","index.html"],kind:"workbuddy"},{id:"codex",name:"Codex",exeNames:["ChatGPT.exe","Codex.exe"],processName:"ChatGPT.exe",defaultPort:9340,installPaths:[c.join(M,"Programs","Codex"),c.join(M,"Programs","OpenAI","Codex"),c.join(_,"Codex"),c.join(ee,"Codex"),"D:\\Program Files\\Codex"],rendererHints:["index.html","renderer/index.html"],kind:"codex"},{id:"trae-work",name:"TRAE Work",exeNames:["TRAE SOLO CN.exe","TRAE Work CN.exe"],processName:"TRAE SOLO CN.exe",defaultPort:9341,installPaths:["D:\\Program Files\\TRAE SOLO CN",c.join(M,"Programs","TRAE SOLO CN"),c.join(_,"TRAE SOLO CN")],rendererHints:["solo/solo-lite.html","solo-lite.html"],kind:"vscode-work"},{id:"qoder-work",name:"QoderWork",exeNames:["QoderWork CN.exe","QoderWork.exe"],processName:"QoderWork CN.exe",defaultPort:9342,installPaths:["D:\\Program Files\\QoderWork CN",c.join(M,"Programs","QoderWork CN"),c.join(_,"QoderWork CN")],rendererHints:["out/renderer/index.html","renderer/index.html"],kind:"generic-work",devToolsActivePort:c.join(ge,"QoderWork CN","DevToolsActivePort")},{id:"catpaw",name:"CatPaw",exeNames:["CatPaw.exe"],processName:"CatPaw.exe",defaultPort:9343,installPaths:[c.join(M,"CatPaw"),c.join(M,"Programs","CatPaw"),c.join(_,"CatPaw")],rendererHints:["app.asar/dist/index.html","dist/index.html"],kind:"generic-work"},{id:"zcode",name:"ZCode",exeNames:["ZCode.exe"],processName:"ZCode.exe",defaultPort:9344,installPaths:["D:\\Program Files\\ZCode",c.join(M,"Programs","ZCode"),c.join(_,"ZCode")],rendererHints:["out/renderer/index.html","renderer/index.html"],kind:"generic-work"},{id:"qwen-office",name:"千问办公",exeNames:["QwenWorkCN.exe"],processName:"QwenWorkCN.exe",defaultPort:9345,installPaths:["D:\\Program Files\\QwenWorkCN",c.join(M,"Programs","QwenWorkCN"),c.join(_,"QwenWorkCN")],rendererHints:["out/renderer/index.html","renderer/index.html"],kind:"generic-work",devToolsActivePort:c.join(ge,"QwenWorkCN","DevToolsActivePort")},{id:"hana-agent",name:"HanaAgent",exeNames:["HanaAgent.exe"],processName:"HanaAgent.exe",defaultPort:9346,installPaths:[c.join(M,"Programs","HanaAgent"),c.join(_,"HanaAgent"),c.join(ee,"HanaAgent")],rendererHints:[".hanako/artifacts/renderer/","artifacts/renderer/","/index.html"],kind:"generic-work"}];function E(e){return ce.find(n=>n.id===e)}const G=1;function et(){const e=Z().paths;return ce.map(n=>{const t=e[n.id];return{appId:n.id,name:n.name,exeNames:[...n.exeNames],customPath:t,customPathStatus:t?le(n.id,t)?"valid":"invalid":"none"}})}function tt(e){const n=Z().paths[e];return n&&le(e,n)?n:void 0}function nt(e,n){const t=E(e);if(!t)throw new Error(`Unknown app: ${e}`);if(!le(e,n))throw new Error(`请选择 ${t.name} 的可执行文件（${t.exeNames.join(" 或 ")}）`);const r=Z();return r.paths[e]=c.resolve(n),$e(r),r.paths[e]}function rt(e){if(!E(e))throw new Error(`Unknown app: ${e}`);const n=Z();delete n.paths[e],$e(n)}function le(e,n){const t=E(e);if(!t||!n||typeof n!="string")return!1;try{if(!m.statSync(n).isFile())return!1}catch{return!1}const r=c.basename(n).toLowerCase();return t.exeNames.some(o=>o.toLowerCase()===r)}function Te(){return c.join(w.app.getPath("userData"),"app-paths.json")}function Z(){try{const e=JSON.parse(m.readFileSync(Te(),"utf8"));if(!e||typeof e!="object"||Array.isArray(e))return te();const n=e;if(n.version!==G||!n.paths||typeof n.paths!="object"||Array.isArray(n.paths))return te();const t={};for(const[r,o]of Object.entries(n.paths))E(r)&&typeof o=="string"&&o.trim()&&(t[r]=o);return{version:G,paths:t}}catch{return te()}}function te(){return{version:G,paths:{}}}function $e(e){const n=Te();m.mkdirSync(c.dirname(n),{recursive:!0}),m.writeFileSync(n,`${JSON.stringify({version:G,paths:e.paths},null,2)}
+`,"utf8")}const ot=se.promisify(X.execFile);async function Ee(e){const n=E(e);if(!n)return null;const t=tt(e);if(t)return t;const r=at(n.exeNames,n.installPaths);if(r)return r;const o=st(n);if(o)return o;if(e==="codex"){const a=it();return a||ct()}return null}function at(e,n){for(const t of n)if(!(!t||!m.existsSync(t)))try{if(m.statSync(t).isFile()&&lt(t,e))return t;for(const o of e){const a=c.join(t,o);if(z(a))return a}const r=m.readdirSync(t,{withFileTypes:!0}).filter(o=>o.isDirectory()).sort((o,a)=>a.name.localeCompare(o.name,void 0,{numeric:!0}));for(const o of r)for(const a of e){const s=c.join(t,o.name,a);if(z(s))return s}}catch{}return null}function st(e){const n=[process.env.ProgramFiles,process.env["ProgramFiles(x86)"]].filter(t=>!!t);for(const t of n)if(m.existsSync(t))try{const r=m.readdirSync(t).find(o=>o.toLowerCase().includes(e.id.replace("-",""))||o.toLowerCase().includes(e.name.toLowerCase()));if(!r)continue;for(const o of e.exeNames){const a=c.join(t,r,o);if(z(a))return a}}catch{}return null}function it(){const e=c.join(process.env.ProgramFiles||"C:\\Program Files","WindowsApps");if(!m.existsSync(e))return null;try{for(const n of m.readdirSync(e)){if(!/^OpenAI\.Codex_\d+/i.test(n))continue;const t=c.join(e,n,"app","ChatGPT.exe");if(z(t))return t}}catch{}return null}async function ct(){const e=`
 $ErrorActionPreference = 'SilentlyContinue'
 $package = Get-AppxPackage -Name 'OpenAI.Codex' -ErrorAction SilentlyContinue
 if (-not $package) { exit 1 }
@@ -155,1379 +8,35 @@ $rel = [string]$manifest.Package.Applications.Application.Executable
 if (-not $rel) { exit 1 }
 $full = Join-Path $package.InstallLocation $rel
 if (Test-Path -LiteralPath $full -PathType Leaf) { Write-Output $full } else { exit 1 }
-`;
-  try {
-    const { stdout } = await execFileAsync$2(
-      "powershell.exe",
-      ["-NoLogo", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", script],
-      { encoding: "utf8", maxBuffer: 4 * 1024 * 1024 }
-    );
-    const found = stdout.trim();
-    if (found && fs__namespace.existsSync(found)) return found;
-  } catch {
-  }
-  return null;
-}
-async function discoverApps() {
-  const results = [];
-  for (const definition of APP_DEFINITIONS.filter((app) => app.id !== "codex")) {
-    const found = findWindowsExecutable(definition.exeNames, definition.installPaths);
-    if (found) results.push({ appId: definition.id, name: definition.name, path: found });
-  }
-  const codex = findWindowsExecutable(["Codex.exe", "ChatGPT.exe"], [
-    path__namespace.join(process.env.LOCALAPPDATA || "", "Programs", "Codex"),
-    path__namespace.join(process.env.LOCALAPPDATA || "", "Programs", "OpenAI", "Codex"),
-    ...findWindowsAppsOpenAIExes()
-  ]);
-  const codexAppx = !codex ? await findCodexAppx() : null;
-  if (codexAppx) results.push({ appId: "codex", name: "Codex", path: codexAppx });
-  else if (codex) results.push({ appId: "codex", name: "Codex", path: codex });
-  return results;
-}
-function findWindowsExecutable(exeNames, installPaths) {
-  for (const base of installPaths) {
-    if (!base || !fs__namespace.existsSync(base)) continue;
-    const baseItem = fs__namespace.statSync(base);
-    if (baseItem.isFile() && exeNames.some((exe) => path__namespace.basename(base).toLowerCase() === exe.toLowerCase())) return base;
-    for (const exe of exeNames) {
-      const direct = path__namespace.join(base, exe);
-      if (fs__namespace.existsSync(direct)) return direct;
-    }
-    try {
-      const versionDirs = fs__namespace.readdirSync(base, { withFileTypes: true }).filter((item) => item.isDirectory()).sort((left, right) => right.name.localeCompare(left.name, void 0, { numeric: true }));
-      for (const item of versionDirs) {
-        for (const exe of exeNames) {
-          const candidate = path__namespace.join(base, item.name, exe);
-          if (fs__namespace.existsSync(candidate)) return candidate;
-        }
-      }
-    } catch {
-    }
-  }
-  return null;
-}
-const execFileAsync$1 = util.promisify(child_process.execFile);
-async function isAppRunning(appId) {
-  const definition = getAppDefinition(appId);
-  if (!definition) return false;
-  const processNames = [...new Set([definition.processName, ...definition.exeNames].filter(Boolean))];
-  if (os__namespace.platform() === "win32") {
-    for (const processName of processNames) {
-      try {
-        const { stdout } = await execFileAsync$1("tasklist.exe", [
-          "/FI",
-          `IMAGENAME eq ${processName}`,
-          "/FO",
-          "CSV",
-          "/NH"
-        ], { encoding: "utf8", windowsHide: true });
-        if (stdout.split(/\r?\n/).some((line) => line.trim().toLowerCase().startsWith(`"${processName.toLowerCase()}"`))) {
-          return true;
-        }
-      } catch {
-      }
-    }
-    return false;
-  }
-  for (const processName of processNames) {
-    try {
-      await execFileAsync$1("pgrep", ["-f", processName], { encoding: "utf8" });
-      return true;
-    } catch {
-    }
-  }
-  return false;
-}
-async function launchApp(appId, themeId) {
-  const profile = getAppDefinition(appId);
-  if (!profile) return { success: false, error: `Unknown app: ${appId}` };
-  const port = profile.defaultPort;
-  const args = [`--remote-debugging-port=${port}`];
-  if (appId === "codex") {
-    args.push("--disable-extensions");
-  }
-  if (themeId) {
-    args.push(`--dream-theme=${themeId}`);
-  }
-  try {
-    const appPath = getAppPath(appId);
-    console.log(`[launcher] Killing existing ${appId} instances...`);
-    await killExistingInstances(appId);
-    await waitForPortToClose(port, 15e3);
-    if (profile.devToolsActivePort) {
-      try {
-        fs__namespace.unlinkSync(profile.devToolsActivePort);
-      } catch {
-      }
-    }
-    console.log(`[launcher] Launching ${appPath} with args: ${args.join(" ")}`);
-    const child = child_process.spawn(appPath, args, {
-      detached: true,
-      stdio: "ignore",
-      env: getCleanLaunchEnvironment()
-    });
-    child.unref();
-    console.log(`[launcher] Spawned process with PID: ${child.pid}`);
-    console.log(`[launcher] Waiting for CDP port ${port} to be ready...`);
-    let actualPort = port;
-    if (profile.devToolsActivePort) {
-      actualPort = await waitForDevToolsActivePort(profile.devToolsActivePort, profile.rendererHints, 3e4);
-    } else {
-      await waitForPort(port, 3e4);
-    }
-    console.log(`[launcher] CDP port ${actualPort} is ready`);
-    if (appId === "hana-agent") {
-      await waitForStableRenderer(actualPort, profile.rendererHints, 3e4);
-    }
-    return { success: true, port: actualPort };
-  } catch (error) {
-    console.error(`[launcher] Launch failed:`, error);
-    return { success: false, error: error.message };
-  }
-}
-function getCleanLaunchEnvironment() {
-  const env = { ...process.env };
-  for (const key of [
-    "VITE_DEV_SERVER_URL",
-    "ELECTRON_RENDERER_URL",
-    "MAIN_VITE_DEV_SERVER_URL",
-    "ELECTRON_RUN_AS_NODE"
-  ]) {
-    delete env[key];
-  }
-  return env;
-}
-async function waitForDevToolsActivePort(filePath, rendererHints, timeoutMs) {
-  const start = Date.now();
-  let lastPort = 0;
-  while (Date.now() - start < timeoutMs) {
-    try {
-      const firstLine = fs__namespace.readFileSync(filePath, "utf8").split(/\r?\n/, 1)[0];
-      const port = Number(firstLine);
-      if (Number.isInteger(port) && port > 0) {
-        lastPort = port;
-        await verifyRendererEndpoint(port, rendererHints, 3e3);
-        return port;
-      }
-    } catch {
-    }
-    await new Promise((resolve) => setTimeout(resolve, 500));
-  }
-  throw new Error(`DevToolsActivePort did not expose a live renderer${lastPort ? ` on port ${lastPort}` : ""}: ${filePath}`);
-}
-async function verifyRendererEndpoint(port, rendererHints, timeoutMs) {
-  const start = Date.now();
-  while (Date.now() - start < timeoutMs) {
-    try {
-      const response = await fetch(`http://127.0.0.1:${port}/json/list`, { signal: AbortSignal.timeout(1e3) });
-      if (response.ok) {
-        const targets = await response.json();
-        if (Array.isArray(targets) && targets.some((target) => (target == null ? void 0 : target.type) === "page" && rendererHints.some((hint) => String(target.url).includes(hint)))) return;
-      }
-    } catch {
-    }
-    await new Promise((resolve) => setTimeout(resolve, 250));
-  }
-  throw new Error(`CDP renderer endpoint is not ready on port ${port}`);
-}
-async function waitForStableRenderer(port, rendererHints, timeoutMs) {
-  const startedAt = Date.now();
-  let stableId = "";
-  let stableSince = 0;
-  while (Date.now() - startedAt < timeoutMs) {
-    try {
-      const response = await fetch(`http://127.0.0.1:${port}/json/list`, { signal: AbortSignal.timeout(1e3) });
-      const targets = await response.json();
-      const target = targets.find((item) => (item == null ? void 0 : item.type) === "page" && rendererHints.some((hint) => String(item.url).includes(hint)));
-      if (target == null ? void 0 : target.id) {
-        if (target.id !== stableId) {
-          stableId = target.id;
-          stableSince = Date.now();
-        } else if (Date.now() - stableSince >= 3e3) {
-          console.log(`[launcher] Stable HanaAgent renderer ${stableId} confirmed`);
-          return;
-        }
-      }
-    } catch {
-    }
-    await new Promise((resolve) => setTimeout(resolve, 250));
-  }
-  throw new Error(`HanaAgent renderer did not stabilize on port ${port}`);
-}
-async function waitForPort(port, timeoutMs) {
-  const start = Date.now();
-  let lastError = "unknown";
-  while (Date.now() - start < timeoutMs) {
-    try {
-      await new Promise((resolve, reject) => {
-        const socket = net__namespace.createConnection(port, "127.0.0.1", () => {
-          socket.end();
-          resolve();
-        });
-        socket.once("error", (e) => {
-          lastError = e.message;
-          reject(e);
-        });
-        setTimeout(() => {
-          socket.destroy();
-          reject(new Error("timeout"));
-        }, 1e3);
-      });
-      console.log(`[launcher] Port ${port} is open, verifying CDP endpoint...`);
-      await verifyCdpEndpoint(port, 15e3);
-      console.log(`[launcher] CDP endpoint verified on port ${port}`);
-      return;
-    } catch (e) {
-      lastError = e.message;
-      console.log(`[launcher] Port check failed: ${e.message}, retrying...`);
-      await new Promise((r) => setTimeout(r, 1e3));
-    }
-  }
-  throw new Error(`CDP port ${port} did not become ready within ${timeoutMs}ms (last error: ${lastError})`);
-}
-async function verifyCdpEndpoint(port, timeoutMs) {
-  const start = Date.now();
-  while (Date.now() - start < timeoutMs) {
-    try {
-      await new Promise((resolve, reject) => {
-        const req = http__namespace.request({
-          hostname: "127.0.0.1",
-          port,
-          path: "/json/version",
-          method: "GET",
-          timeout: 2e3
-        }, (res) => {
-          let data = "";
-          res.on("data", (chunk) => {
-            data += chunk;
-          });
-          res.on("end", () => {
-            if (res.statusCode === 200) {
-              console.log(`[launcher] CDP version response: ${data.substring(0, 200)}`);
-              resolve();
-            } else {
-              reject(new Error(`HTTP ${res.statusCode}`));
-            }
-          });
-        });
-        req.on("error", reject);
-        req.on("timeout", () => {
-          req.destroy();
-          reject(new Error("timeout"));
-        });
-        req.end();
-      });
-      return;
-    } catch (e) {
-      if (Date.now() - start >= timeoutMs) {
-        throw e;
-      }
-      await new Promise((r) => setTimeout(r, 1e3));
-    }
-  }
-}
-async function killExistingInstances(appId) {
-  const platform = os__namespace.platform();
-  const definition = getAppDefinition(appId);
-  if (!definition) return;
-  const exeNames = [...new Set([definition.processName, ...definition.exeNames].filter(Boolean))];
-  try {
-    if (platform === "win32") {
-      const { execSync } = require("child_process");
-      for (const exeName of exeNames) {
-        try {
-          execSync(`taskkill /T /F /IM "${exeName}" 2>nul`, { stdio: "ignore" });
-          console.log(`[launcher] Killed existing ${exeName} process tree`);
-        } catch {
-        }
-      }
-    } else if (platform === "darwin") {
-      const { execSync } = require("child_process");
-      for (const exeName of exeNames) {
-        try {
-          execSync(`pkill -f "${exeName}" 2>/dev/null || true`, { stdio: "ignore" });
-          console.log(`[launcher] Killed existing ${exeName} processes`);
-        } catch {
-        }
-      }
-    } else if (platform === "linux") {
-      const { execSync } = require("child_process");
-      for (const exeName of exeNames) {
-        try {
-          execSync(`pkill -f "${exeName}" 2>/dev/null || true`, { stdio: "ignore" });
-          console.log(`[launcher] Killed existing ${exeName} processes`);
-        } catch {
-        }
-      }
-    }
-  } catch (e) {
-    console.warn(`[launcher] Failed to kill existing instances:`, e);
-  }
-}
-async function waitForPortToClose(port, timeoutMs) {
-  const start = Date.now();
-  while (Date.now() - start < timeoutMs) {
-    const open = await new Promise((resolve) => {
-      const socket = net__namespace.createConnection(port, "127.0.0.1");
-      socket.once("connect", () => {
-        socket.destroy();
-        resolve(true);
-      });
-      socket.once("error", () => resolve(false));
-      socket.setTimeout(500, () => {
-        socket.destroy();
-        resolve(false);
-      });
-    });
-    if (!open) {
-      console.log(`[launcher] Previous CDP port ${port} is closed`);
-      return;
-    }
-    await new Promise((resolve) => setTimeout(resolve, 250));
-  }
-  throw new Error(`Existing ${port} CDP service did not stop; refusing to inject into the old application instance`);
-}
-function getAppPath(appId) {
-  const definition = getAppDefinition(appId);
-  if (!definition) throw new Error(`Unknown app: ${appId}`);
-  const platform = os__namespace.platform();
-  if (platform === "win32") {
-    for (const base of definition.installPaths) {
-      if (!base || !fs__namespace.existsSync(base)) continue;
-      if (fs__namespace.statSync(base).isFile()) return base;
-      for (const exeName of definition.exeNames) {
-        const direct = path__namespace.join(base, exeName);
-        if (fs__namespace.existsSync(direct)) return direct;
-      }
-      const versions = fs__namespace.readdirSync(base, { withFileTypes: true }).filter((item) => item.isDirectory()).sort((a, b) => b.name.localeCompare(a.name, void 0, { numeric: true }));
-      for (const version of versions) {
-        for (const exeName of definition.exeNames) {
-          const candidate = path__namespace.join(base, version.name, exeName);
-          if (fs__namespace.existsSync(candidate)) return candidate;
-        }
-      }
-    }
-    const exeNames = definition.exeNames;
-    const scanDirs = [process.env.ProgramFiles, process.env["ProgramFiles(x86)"]].filter(Boolean);
-    for (const dir of scanDirs) {
-      if (!dir || !fs__namespace.existsSync(dir)) continue;
-      const items = fs__namespace.readdirSync(dir);
-      const match = items.find((item) => item.toLowerCase().includes(appId.replace("-", "")) || item.toLowerCase().includes(definition.name.toLowerCase()));
-      if (match) {
-        const full = path__namespace.join(dir, match);
-        for (const exeName of exeNames) {
-          const exe = path__namespace.join(full, exeName);
-          if (fs__namespace.existsSync(exe)) return exe;
-        }
-      }
-    }
-    if (appId === "codex") {
-      const windowsAppsPath = path__namespace.join(process.env.ProgramFiles || "C:\\Program Files", "WindowsApps");
-      console.log("[launcher] Codex WindowsApps fallback, path:", windowsAppsPath);
-      try {
-        const items = fs__namespace.readdirSync(windowsAppsPath);
-        const match = items.find((item) => /^OpenAI\.Codex_\d+/i.test(item));
-        if (match) {
-          const candidate = path__namespace.join(windowsAppsPath, match, "app", "ChatGPT.exe");
-          if (fs__namespace.existsSync(candidate)) {
-            console.log("[launcher] Found Codex via WindowsApps scan:", candidate);
-            return candidate;
-          }
-        }
-      } catch (e) {
-        console.log("[launcher] WindowsApps scan error:", e.message);
-      }
-      try {
-        const { execFileSync } = require("child_process");
-        const script = `Get-AppxPackage -Name 'OpenAI.Codex' -ErrorAction SilentlyContinue | ForEach-Object { Join-Path $_.InstallLocation (Get-AppxPackageManifest -Package $_.PackageFullName).Package.Applications.Application.Executable }`;
-        console.log("[launcher] Running PowerShell fallback...");
-        const result = execFileSync("powershell.exe", ["-NoLogo", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", script], { encoding: "utf8", stdio: ["pipe", "pipe", "ignore"] }).trim();
-        console.log("[launcher] PowerShell result:", result);
-        if (result && fs__namespace.existsSync(result)) return result;
-      } catch (e) {
-        console.log("[launcher] PowerShell fallback error:", e.message);
-      }
-    }
-  } else if (platform === "darwin") {
-    const apps = ["/Applications/WorkBuddy.app", "/Applications/ChatGPT.app"];
-    for (const app of apps) {
-      if (fs__namespace.existsSync(app)) return app;
-    }
-  } else if (platform === "linux") {
-    const exeNames = appId === "workbuddy" ? ["workbuddy", "WorkBuddy"] : ["codex", "Codex"];
-    const searchPaths = [
-      "/usr/bin",
-      "/usr/local/bin",
-      "/opt",
-      path__namespace.join(os__namespace.homedir(), ".local", "bin"),
-      "/snap/bin"
-    ];
-    for (const base of searchPaths) {
-      if (!fs__namespace.existsSync(base)) continue;
-      for (const exe of exeNames) {
-        const full = path__namespace.join(base, exe);
-        if (fs__namespace.existsSync(full)) return full;
-      }
-    }
-    for (const exe of exeNames) {
-      try {
-        const { execSync } = require("child_process");
-        const resolved = execSync(`which ${exe} 2>/dev/null || echo ''`).toString().trim();
-        if (resolved && fs__namespace.existsSync(resolved)) return resolved;
-      } catch {
-      }
-    }
-  }
-  throw new Error(`Could not find ${appId} executable`);
-}
-const DEFAULT_WAIT_TIMEOUT_MS = 5e3;
-const DEFAULT_POLL_MS = 100;
-const DEFAULT_COMMAND_TIMEOUT_MS = 15e3;
-const DEFAULT_CONNECT_TIMEOUT_MS = 1e4;
-const DEFAULT_DISCOVERY_TIMEOUT_MS = 5e3;
-function validatePort(port) {
-  if (!Number.isInteger(port) || port < 1024 || port > 65535) {
-    throw new TypeError(`port must be an integer from 1024 through 65535`);
-  }
-  return port;
-}
-function validateDuration(value, name, options = {}) {
-  const minimum = options.allowZero ? 0 : Number.EPSILON;
-  if (!Number.isFinite(value) || value < minimum) {
-    const qualifier = options.allowZero ? "non-negative" : "positive";
-    throw new TypeError(`${name} must be a finite ${qualifier} number`);
-  }
-  return value;
-}
-function parseLoopbackWebSocketUrl(value) {
-  if (typeof value !== "string" || value.length === 0 || value !== value.trim()) {
-    throw new TypeError("webSocketDebuggerUrl must be a non-empty URL string");
-  }
-  let parsed;
-  try {
-    parsed = new URL(value);
-  } catch (error) {
-    throw new TypeError(`webSocketDebuggerUrl is invalid: ${error.message}`);
-  }
-  if (parsed.protocol !== "ws:" || parsed.hostname !== "127.0.0.1" || parsed.username || parsed.password || parsed.hash || !parsed.port) {
-    throw new TypeError("webSocketDebuggerUrl must use ws://127.0.0.1 with an explicit port");
-  }
-  validatePort(Number(parsed.port));
-  return parsed;
-}
-function isRendererTarget(target, rendererUrlHint) {
-  if (target === null || typeof target !== "object" || Array.isArray(target) || target.type !== "page" || typeof target.url !== "string" || typeof target.webSocketDebuggerUrl !== "string") {
-    return false;
-  }
-  try {
-    parseLoopbackWebSocketUrl(target.webSocketDebuggerUrl);
-  } catch {
-    return false;
-  }
-  return target.url.includes(rendererUrlHint);
-}
-function isAnyPageTarget(target) {
-  if (target === null || typeof target !== "object" || Array.isArray(target) || target.type !== "page" || typeof target.url !== "string" || typeof target.webSocketDebuggerUrl !== "string") {
-    return false;
-  }
-  try {
-    parseLoopbackWebSocketUrl(target.webSocketDebuggerUrl);
-    return true;
-  } catch {
-    return false;
-  }
-}
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-async function awaitBeforeDeadline(promise, options) {
-  const remainingMs = Math.max(0, options.deadline - Date.now());
-  let timer = null;
-  try {
-    return await Promise.race([
-      promise,
-      new Promise((_, reject) => {
-        timer = setTimeout(() => {
-          var _a;
-          (_a = options.onTimeout) == null ? void 0 : _a.call(options);
-          reject(new Error(`${options.label} timed out after ${options.timeoutMs}ms`));
-        }, remainingMs);
-      })
-    ]);
-  } finally {
-    if (timer) clearTimeout(timer);
-  }
-}
-async function fetchRendererTargets(port, rendererUrlHint, options = {}) {
-  const timeoutMs = validateDuration(options.timeoutMs ?? DEFAULT_DISCOVERY_TIMEOUT_MS, "timeoutMs", { allowZero: false });
-  const fetchImpl = options.fetchImpl ?? globalThis.fetch;
-  if (typeof fetchImpl !== "function") {
-    throw new TypeError("fetchImpl must be a function");
-  }
-  const endpoint = `http://127.0.0.1:${port}/json/list`;
-  const controller = new AbortController();
-  const deadline = Date.now() + timeoutMs;
-  const quiet = options.quiet === true;
-  if (!quiet) console.log(`[cdp] fetchRendererTargets: port=${port}, timeoutMs=${timeoutMs}, endpoint=${endpoint}`);
-  let response;
-  try {
-    response = await awaitBeforeDeadline(
-      Promise.resolve(fetchImpl(endpoint, { redirect: "error", signal: controller.signal })),
-      { deadline, timeoutMs, label: "renderer target discovery", onTimeout: () => controller.abort() }
-    );
-  } catch (error) {
-    if (!quiet) console.log(`[cdp] fetchRendererTargets error:`, error);
-    throw new Error(`failed to fetch renderer targets from ${endpoint}: ${error.message}`);
-  }
-  if (response === null || typeof response !== "object" || !response.ok) {
-    throw new Error(`renderer target discovery failed with HTTP ${(response == null ? void 0 : response.status) ?? "unknown"}`);
-  }
-  let targets;
-  try {
-    targets = await awaitBeforeDeadline(Promise.resolve(response.json()), {
-      deadline,
-      timeoutMs,
-      label: "renderer target discovery JSON",
-      onTimeout: () => controller.abort()
-    });
-  } catch (error) {
-    throw new Error(`malformed renderer target JSON from ${endpoint}: ${error.message}`);
-  }
-  if (!Array.isArray(targets)) {
-    throw new Error("malformed renderer target JSON: expected an array");
-  }
-  return targets.filter((target) => isRendererTarget(target, rendererUrlHint)).sort(compareTargets);
-}
-async function waitForRendererTargets(port, rendererUrlHint, options = {}) {
-  const timeoutMs = validateDuration(options.timeoutMs ?? DEFAULT_WAIT_TIMEOUT_MS, "timeoutMs", { allowZero: true });
-  const pollMs = validateDuration(options.pollMs ?? DEFAULT_POLL_MS, "pollMs", { allowZero: false });
-  const fetchImpl = options.fetchImpl ?? globalThis.fetch;
-  let elapsedMs = 0;
-  const deadline = Date.now() + timeoutMs;
-  let lastError = new Error("no renderer discovery attempt completed");
-  console.log(`[cdp] waitForRendererTargets: port=${port}, hint=${rendererUrlHint}, timeoutMs=${timeoutMs}`);
-  while (true) {
-    try {
-      const remainingBudgetMs = Math.max(1, Math.min(timeoutMs - elapsedMs, deadline - Date.now()));
-      console.log(`[cdp] Attempting fetch: elapsed=${elapsedMs}ms, remainingBudget=${remainingBudgetMs}ms, deadline=${deadline}`);
-      const targets = await fetchRendererTargets(port, rendererUrlHint, {
-        fetchImpl,
-        timeoutMs: remainingBudgetMs
-      });
-      if (targets.length > 0) return targets;
-      lastError = new Error("no matching renderer/index.html page targets");
-    } catch (error) {
-      lastError = error instanceof Error ? error : new Error(String(error));
-      console.log(`[cdp] Fetch error:`, lastError.message);
-    }
-    if (elapsedMs >= timeoutMs || Date.now() >= deadline) {
-      throw new Error(`timed out after ${timeoutMs}ms waiting for renderer targets on 127.0.0.1:${port}: ${lastError.message}`);
-    }
-    const delayMs = Math.min(pollMs, timeoutMs - elapsedMs);
-    await sleep(delayMs);
-    elapsedMs += delayMs;
-  }
-}
-class CdpSession {
-  constructor(webSocketDebuggerUrl, options = {}) {
-    __publicField(this, "webSocketDebuggerUrl");
-    __publicField(this, "WebSocketImpl");
-    __publicField(this, "commandTimeoutMs");
-    __publicField(this, "connectTimeoutMs");
-    __publicField(this, "socket", null);
-    __publicField(this, "nextRequestId", 1);
-    __publicField(this, "pending", /* @__PURE__ */ new Map());
-    __publicField(this, "socketOpen", false);
-    __publicField(this, "opened", false);
-    __publicField(this, "closed", false);
-    __publicField(this, "closeStarted", false);
-    __publicField(this, "terminalError", null);
-    __publicField(this, "openPromise", null);
-    __publicField(this, "resolveOpen", null);
-    __publicField(this, "rejectOpen", null);
-    __publicField(this, "connectTimer", null);
-    this.webSocketDebuggerUrl = webSocketDebuggerUrl;
-    let WebSocketImpl = null;
-    let loadError = null;
-    try {
-      const ws = require("ws");
-      WebSocketImpl = ws ?? null;
-      if (!WebSocketImpl) {
-        loadError = "ws loaded but WebSocket is undefined";
-      }
-    } catch (e) {
-      loadError = `ws require failed: ${(e == null ? void 0 : e.message) ?? e}`;
-    }
-    if (!WebSocketImpl) {
-      try {
-        const undici = require("undici");
-        WebSocketImpl = (undici == null ? void 0 : undici.WebSocket) ?? null;
-        if (!WebSocketImpl) {
-          loadError = "undici loaded but WebSocket is undefined";
-        }
-      } catch (e) {
-        loadError = `undici require failed: ${(e == null ? void 0 : e.message) ?? e}`;
-      }
-    }
-    if (!WebSocketImpl && typeof globalThis.WebSocket === "function") {
-      WebSocketImpl = globalThis.WebSocket;
-      loadError = null;
-    }
-    if (!WebSocketImpl) {
-      const hint = loadError ? ` (${loadError})` : "";
-      throw new Error(`No WebSocket implementation available for CDP${hint}`);
-    }
-    this.WebSocketImpl = options.WebSocketImpl ?? WebSocketImpl;
-    this.commandTimeoutMs = validateDuration(options.commandTimeoutMs ?? DEFAULT_COMMAND_TIMEOUT_MS, "commandTimeoutMs");
-    this.connectTimeoutMs = validateDuration(options.connectTimeoutMs ?? DEFAULT_CONNECT_TIMEOUT_MS, "connectTimeoutMs");
-  }
-  open() {
-    if (this.closed) {
-      return Promise.reject(this.terminalError ?? new Error("CDP session is closed"));
-    }
-    if (this.opened) return Promise.resolve(this);
-    if (this.openPromise) return this.openPromise;
-    this.openPromise = new Promise((resolve, reject) => {
-      this.resolveOpen = resolve;
-      this.rejectOpen = reject;
-    });
-    this.connectTimer = setTimeout(() => {
-      this.terminate(new Error(`CDP WebSocket connect timed out after ${this.connectTimeoutMs}ms`));
-      this.closeSocket();
-    }, this.connectTimeoutMs);
-    try {
-      this.socket = new this.WebSocketImpl(this.webSocketDebuggerUrl);
-    } catch (error) {
-      this.terminate(new Error(`failed to open CDP WebSocket: ${error.message}`));
-      return this.openPromise;
-    }
-    const socket = this.socket;
-    socket.onopen = () => {
-      if (this.closed || this.socketOpen) return;
-      this.clearConnectTimer();
-      this.socketOpen = true;
-      Promise.all([this.send("Runtime.enable"), this.send("Page.enable")]).then(() => {
-        if (this.closed) return;
-        this.opened = true;
-        const resolve = this.resolveOpen;
-        this.resolveOpen = null;
-        this.rejectOpen = null;
-        resolve == null ? void 0 : resolve(this);
-      }).catch((error) => {
-        this.terminate(error);
-        this.closeSocket();
-      });
-    };
-    socket.onmessage = (event) => this.handleMessage(event);
-    socket.onerror = (event) => {
-      const source = event.error;
-      const detail = source instanceof Error ? source.message : typeof event.message === "string" && event.message.length > 0 ? event.message : "unknown socket error";
-      this.terminate(new Error(`CDP WebSocket error: ${detail}`));
-      this.closeSocket();
-    };
-    socket.onclose = () => {
-      this.closeStarted = true;
-      this.terminate(new Error("CDP WebSocket closed"));
-    };
-    return this.openPromise;
-  }
-  send(method, params = {}, options = {}) {
-    if (this.closed) {
-      return Promise.reject(this.terminalError ?? new Error("CDP session is closed"));
-    }
-    if (!this.socketOpen || !this.socket) {
-      return Promise.reject(new Error("CDP session is not open"));
-    }
-    if (typeof method !== "string" || method.length === 0) {
-      return Promise.reject(new TypeError("CDP method must be a non-empty string"));
-    }
-    const timeoutMs = validateDuration(options.timeoutMs ?? this.commandTimeoutMs, "timeoutMs");
-    const id = this.nextRequestId++;
-    return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => {
-        this.pending.delete(id);
-        reject(new Error(`CDP ${method} timed out after ${timeoutMs}ms`));
-      }, timeoutMs);
-      this.pending.set(id, { resolve, reject, timer });
-      try {
-        this.socket.send(JSON.stringify({ id, method, params }));
-      } catch (error) {
-        clearTimeout(timer);
-        this.pending.delete(id);
-        reject(new Error(`failed to send CDP ${method}: ${error.message}`));
-      }
-    });
-  }
-  async evaluate(expression, options = {}) {
-    var _a, _b, _c;
-    if (typeof expression !== "string") {
-      throw new TypeError("Runtime.evaluate expression must be a string");
-    }
-    const response = await this.send("Runtime.evaluate", {
-      expression,
-      awaitPromise: true,
-      returnByValue: true
-    }, options);
-    if (response == null ? void 0 : response.exceptionDetails) {
-      throw new Error(`Runtime.evaluate failed: ${((_a = response.exceptionDetails.exception) == null ? void 0 : _a.description) ?? response.exceptionDetails.text ?? "unknown JavaScript exception"}`);
-    }
-    if (((_b = response == null ? void 0 : response.result) == null ? void 0 : _b.type) === "undefined") return void 0;
-    return (_c = response == null ? void 0 : response.result) == null ? void 0 : _c.value;
-  }
-  async addScriptToEvaluateOnNewDocument(source) {
-    const response = await this.send("Page.addScriptToEvaluateOnNewDocument", { source });
-    return response == null ? void 0 : response.identifier;
-  }
-  async removeScriptToEvaluateOnNewDocument(identifier) {
-    await this.send("Page.removeScriptToEvaluateOnNewDocument", { identifier });
-  }
-  close() {
-    if (this.closeStarted) return;
-    this.terminate(new Error("CDP session closed by client"));
-    this.closeSocket();
-  }
-  handleMessage(event) {
-    if (typeof event.data !== "string") {
-      this.terminate(new Error("received a non-text CDP WebSocket message"));
-      this.closeSocket();
-      return;
-    }
-    let message;
-    try {
-      message = JSON.parse(event.data);
-    } catch (error) {
-      this.terminate(new Error(`received malformed CDP JSON: ${error.message}`));
-      this.closeSocket();
-      return;
-    }
-    if (!Number.isInteger(message == null ? void 0 : message.id)) return;
-    const pending = this.pending.get(message.id);
-    if (!pending) return;
-    this.pending.delete(message.id);
-    clearTimeout(pending.timer);
-    if (message.error) {
-      pending.reject(new Error(`CDP error: ${message.error.message}`));
-      return;
-    }
-    pending.resolve(message.result);
-  }
-  terminate(error) {
-    if (this.terminalError) return;
-    this.clearConnectTimer();
-    this.terminalError = error;
-    this.closed = true;
-    this.socketOpen = false;
-    const rejectOpen = this.rejectOpen;
-    this.resolveOpen = null;
-    this.rejectOpen = null;
-    rejectOpen == null ? void 0 : rejectOpen(error);
-    for (const { reject, timer } of this.pending.values()) {
-      clearTimeout(timer);
-      reject(error);
-    }
-    this.pending.clear();
-  }
-  clearConnectTimer() {
-    if (this.connectTimer !== null) {
-      clearTimeout(this.connectTimer);
-      this.connectTimer = null;
-    }
-  }
-  closeSocket() {
-    if (this.closeStarted) return;
-    this.closeStarted = true;
-    if (!this.socket || typeof this.socket.close !== "function") return;
-    const closing = this.WebSocketImpl.CLOSING ?? 2;
-    const closed = this.WebSocketImpl.CLOSED ?? 3;
-    if (this.socket.readyState === closing || this.socket.readyState === closed) return;
-    this.socket.close();
-  }
-}
-function compareTargets(left, right) {
-  const leftKeys = [String(left.id ?? ""), left.url, left.webSocketDebuggerUrl];
-  const rightKeys = [String(right.id ?? ""), right.url, right.webSocketDebuggerUrl];
-  for (let i = 0; i < leftKeys.length; i++) {
-    if (leftKeys[i] < rightKeys[i]) return -1;
-    if (leftKeys[i] > rightKeys[i]) return 1;
-  }
-  return 0;
-}
-function getBundledThemesDir() {
-  return path__namespace.join(electron.app.getAppPath(), "themes");
-}
-function getUserThemesDir() {
-  const themesDir = path__namespace.join(electron.app.getPath("userData"), "themes");
-  fs__namespace.mkdirSync(themesDir, { recursive: true });
-  return themesDir;
-}
-function getThemeSearchDirs() {
-  return [getUserThemesDir(), getBundledThemesDir()];
-}
-const heroHashCache = /* @__PURE__ */ new Map();
-function listThemes(appId) {
-  var _a;
-  const entries = [];
-  const seenIds = /* @__PURE__ */ new Set();
-  for (const themesDir of getThemeSearchDirs()) {
-    if (!fs__namespace.existsSync(themesDir)) continue;
-    const items = fs__namespace.readdirSync(themesDir, { withFileTypes: true });
-    for (const item of items) {
-      if (!item.isDirectory()) continue;
-      const themeDir = path__namespace.join(themesDir, item.name);
-      const manifestPath = path__namespace.join(themeDir, "theme.json");
-      if (!fs__namespace.existsSync(manifestPath)) continue;
-      try {
-        const raw = JSON.parse(fs__namespace.readFileSync(manifestPath, "utf-8"));
-        const manifest = validateThemeManifest(raw);
-        if (seenIds.has(manifest.id)) continue;
-        const heroPath = path__namespace.join(themeDir, manifest.hero);
-        if (!fs__namespace.existsSync(heroPath) || !fs__namespace.statSync(heroPath).isFile()) throw new Error(`theme hero is missing: ${manifest.hero}`);
-        if (appId && ((_a = manifest.apps[appId]) == null ? void 0 : _a.compat) !== true && appId !== "hana-agent") continue;
-        seenIds.add(manifest.id);
-        entries.push({
-          id: manifest.id,
-          name: manifest.name,
-          author: manifest.author,
-          path: themeDir,
-          manifest
-        });
-      } catch (e) {
-        console.error(`Failed to load theme ${item.name}:`, e);
-      }
-    }
-  }
-  const uniqueEntries = /* @__PURE__ */ new Map();
-  for (const entry of entries) {
-    const heroPath = path__namespace.join(entry.path, entry.manifest.hero);
-    const heroHash = getHeroHash(heroPath);
-    const contentKey = `${entry.name.trim().toLocaleLowerCase()}\0${entry.author.trim().toLocaleLowerCase()}\0${heroHash}`;
-    const current = uniqueEntries.get(contentKey);
-    if (!current || isPreferredThemeId(entry.id, current.id)) uniqueEntries.set(contentKey, entry);
-  }
-  return [...uniqueEntries.values()].sort((a, b) => a.name.localeCompare(b.name));
-}
-function getHeroHash(heroPath) {
-  const stats = fs__namespace.statSync(heroPath);
-  const cached = heroHashCache.get(heroPath);
-  if (cached && cached.size === stats.size && cached.mtimeMs === stats.mtimeMs) return cached.hash;
-  const hash = crypto__namespace.createHash("sha256").update(fs__namespace.readFileSync(heroPath)).digest("hex");
-  heroHashCache.set(heroPath, { size: stats.size, mtimeMs: stats.mtimeMs, hash });
-  return hash;
-}
-function isPreferredThemeId(candidate, current) {
-  const candidateCustom = candidate.startsWith("custom-");
-  const currentCustom = current.startsWith("custom-");
-  if (candidateCustom !== currentCustom) return !candidateCustom;
-  return candidate.length < current.length || candidate.length === current.length && candidate.localeCompare(current) < 0;
-}
-function getThemeById(id, appId) {
-  return listThemes(appId).find((t) => t.id === id);
-}
-function getThemeAssetPath(id) {
-  const theme = getThemeById(id);
-  if (!theme) return void 0;
-  const asset = path__namespace.resolve(theme.path, theme.manifest.hero);
-  if (!asset.startsWith(`${path__namespace.resolve(theme.path)}${path__namespace.sep}`)) return void 0;
-  return asset;
-}
-function getThemeAssetUrl(id) {
-  return `theme-asset://local/${encodeURIComponent(id)}`;
-}
-function getThemeHeroDataUrl(theme) {
-  const heroPath = path__namespace.join(theme.path, theme.manifest.hero);
-  const heroBuffer = fs__namespace.readFileSync(heroPath);
-  return `data:${getMimeType(theme.manifest.hero)};base64,${heroBuffer.toString("base64")}`;
-}
-function hasThemeContent(name, author, heroPath) {
-  const expectedHash = getHeroHash(heroPath);
-  return listThemes().some((theme) => {
-    if (theme.name.trim().toLowerCase() !== name.trim().toLowerCase() || theme.author.trim().toLowerCase() !== author.trim().toLowerCase()) return false;
-    return getHeroHash(path__namespace.join(theme.path, theme.manifest.hero)) === expectedHash;
-  });
-}
-function validateThemeManifest(input) {
-  if (typeof input !== "object" || input === null || Array.isArray(input)) {
-    throw new Error("theme manifest must be an object");
-  }
-  if (input.schemaVersion !== 1) {
-    throw new Error(`unsupported theme schema ${input.schemaVersion}`);
-  }
-  if (typeof input.id !== "string" || !/^[a-z0-9-]+$/.test(input.id)) {
-    throw new Error("theme id must use lowercase letters, numbers, and hyphens");
-  }
-  if (typeof input.name !== "string" || !input.name.trim()) {
-    throw new Error("theme name must be a non-empty string");
-  }
-  if (typeof input.author !== "string") {
-    throw new Error("theme author must be a string");
-  }
-  if (typeof input.hero !== "string") {
-    throw new Error("theme hero must be a string");
-  }
-  if (typeof input.colors !== "object" || input.colors === null) {
-    throw new Error("theme colors must be an object");
-  }
-  const requiredColors = ["accent", "secondary", "surface", "text"];
-  for (const color of requiredColors) {
-    if (typeof input.colors[color] !== "string" || !/^#[0-9a-fA-F]{6}$/.test(input.colors[color])) {
-      throw new Error(`theme color ${color} must be a hex color`);
-    }
-  }
-  return {
-    schemaVersion: 1,
-    id: input.id,
-    name: input.name.trim(),
-    author: input.author,
-    hero: input.hero,
-    colors: {
-      accent: input.colors.accent,
-      secondary: input.colors.secondary,
-      surface: input.colors.surface,
-      text: input.colors.text
-    },
-    copy: input.copy ?? void 0,
-    apps: input.apps ?? {}
-  };
-}
-function getMimeType(filename) {
-  const ext = path__namespace.extname(filename).toLowerCase();
-  const map = {
-    ".png": "image/png",
-    ".jpg": "image/jpeg",
-    ".jpeg": "image/jpeg",
-    ".webp": "image/webp",
-    ".gif": "image/gif"
-  };
-  return map[ext] || "image/png";
-}
-const MAX_CUSTOM_THEMES = 5;
-const MAX_BODY_BYTES = 32 * 1024 * 1024;
-let servicePromise = null;
-function listSharedCustomThemes() {
-  try {
-    const value = JSON.parse(fs__namespace.readFileSync(getStorePath(), "utf8"));
-    return validateThemes(value);
-  } catch {
-    return [];
-  }
-}
-function mergeSharedCustomThemes(input) {
-  const incoming = validateThemes(input);
-  const merged = [...listSharedCustomThemes()];
-  for (const theme of incoming) {
-    const index = merged.findIndex((item) => item.id === theme.id);
-    if (index >= 0) merged[index] = theme;
-    else merged.push(theme);
-  }
-  const limited = merged.slice(0, MAX_CUSTOM_THEMES);
-  writeSharedCustomThemes(limited);
-  return limited;
-}
-function selectQuickThemeIds(appId, availableThemeIds, currentThemeId, limit = 4) {
-  const usage = readThemeUsage()[appId] ?? {};
-  return [...availableThemeIds].sort((left, right) => {
-    if (left === currentThemeId) return -1;
-    if (right === currentThemeId) return 1;
-    const leftUsage = usage[left] ?? { count: 0, lastUsedAt: 0 };
-    const rightUsage = usage[right] ?? { count: 0, lastUsedAt: 0 };
-    return rightUsage.count - leftUsage.count || rightUsage.lastUsedAt - leftUsage.lastUsedAt;
-  }).slice(0, limit);
-}
-function recordThemeUsage(appId, themeId) {
-  if (!/^[a-z0-9-]+$/i.test(appId) || !/^[a-z0-9-]+$/i.test(themeId)) return;
-  const usage = readThemeUsage();
-  const appUsage = usage[appId] ?? {};
-  const current = appUsage[themeId] ?? { count: 0 };
-  appUsage[themeId] = { count: current.count + 1, lastUsedAt: Date.now() };
-  usage[appId] = appUsage;
-  writeJsonFile(getUsagePath(), usage);
-}
-function ensureSharedCustomThemeService() {
-  if (servicePromise) return servicePromise;
-  servicePromise = new Promise((resolve, reject) => {
-    const token = crypto__namespace.randomBytes(24).toString("hex");
-    const server = http__namespace.createServer((request, response) => {
-      response.setHeader("Access-Control-Allow-Origin", "*");
-      response.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type");
-      response.setHeader("Access-Control-Allow-Methods", "GET, PUT, POST, OPTIONS");
-      response.setHeader("Access-Control-Allow-Private-Network", "true");
-      if (request.method === "OPTIONS") {
-        response.writeHead(204).end();
-        return;
-      }
-      if (request.headers.authorization !== `Bearer ${token}`) {
-        response.writeHead(401).end("Unauthorized");
-        return;
-      }
-      if (request.url === "/theme-usage" && request.method === "POST") {
-        readJsonBody(request, response, (value) => {
-          if (typeof (value == null ? void 0 : value.appId) !== "string" || typeof (value == null ? void 0 : value.themeId) !== "string") throw new Error("Invalid theme usage payload");
-          recordThemeUsage(value.appId, value.themeId);
-          sendJson(response, 200, { success: true });
-        });
-        return;
-      }
-      if (request.url !== "/custom-themes") {
-        response.writeHead(404).end("Not found");
-        return;
-      }
-      if (request.method === "GET") {
-        sendJson(response, 200, listSharedCustomThemes());
-        return;
-      }
-      if (request.method !== "PUT") {
-        response.writeHead(405).end("Method not allowed");
-        return;
-      }
-      readJsonBody(request, response, (value) => {
-        const themes = validateThemes(value);
-        writeSharedCustomThemes(themes);
-        sendJson(response, 200, themes);
-      });
-    });
-    server.once("error", reject);
-    server.listen(0, "127.0.0.1", () => {
-      const address = server.address();
-      if (!address || typeof address === "string") {
-        server.close();
-        reject(new Error("Shared custom theme service did not expose a TCP port"));
-        return;
-      }
-      const origin = `http://127.0.0.1:${address.port}`;
-      resolve({ endpoint: `${origin}/custom-themes`, usageEndpoint: `${origin}/theme-usage`, token });
-    });
-  });
-  return servicePromise;
-}
-function getStorePath() {
-  return path__namespace.join(electron.app.getPath("userData"), "custom-themes.json");
-}
-function getUsagePath() {
-  return path__namespace.join(electron.app.getPath("userData"), "theme-usage.json");
-}
-function writeSharedCustomThemes(themes) {
-  writeJsonFile(getStorePath(), themes);
-}
-function readThemeUsage() {
-  try {
-    const value = JSON.parse(fs__namespace.readFileSync(getUsagePath(), "utf8"));
-    return value && typeof value === "object" && !Array.isArray(value) ? value : {};
-  } catch {
-    return {};
-  }
-}
-function writeJsonFile(filePath, value) {
-  fs__namespace.mkdirSync(path__namespace.dirname(filePath), { recursive: true });
-  fs__namespace.writeFileSync(filePath, `${JSON.stringify(value, null, 2)}
-`);
-}
-function readJsonBody(request, response, onValue) {
-  let size = 0;
-  const chunks = [];
-  request.on("data", (chunk) => {
-    size += chunk.length;
-    if (size > MAX_BODY_BYTES) {
-      response.writeHead(413).end("Payload too large");
-      request.destroy();
-      return;
-    }
-    chunks.push(chunk);
-  });
-  request.on("end", () => {
-    if (response.headersSent) return;
-    try {
-      onValue(JSON.parse(Buffer.concat(chunks).toString("utf8")));
-    } catch (error) {
-      response.writeHead(400).end(error.message);
-    }
-  });
-}
-function validateThemes(input) {
-  if (!Array.isArray(input)) throw new Error("Custom themes must be an array");
-  return input.slice(0, MAX_CUSTOM_THEMES).map((item, index) => {
-    var _a;
-    if (!item || typeof item !== "object") throw new Error(`Invalid custom theme at index ${index}`);
-    const value = item;
-    if (typeof value.id !== "string" || !/^custom-[a-z0-9-]+$/i.test(value.id)) throw new Error(`Invalid custom theme id at index ${index}`);
-    if (typeof value.name !== "string" || !value.name.trim()) throw new Error(`Invalid custom theme name at index ${index}`);
-    if (typeof value.dataUrl !== "string" || !/^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(value.dataUrl)) {
-      throw new Error(`Invalid custom theme image at index ${index}`);
-    }
-    for (const color of ["accent", "secondary", "surface", "text"]) {
-      if (typeof ((_a = value.colors) == null ? void 0 : _a[color]) !== "string" || !/^#[0-9a-f]{6}$/i.test(value.colors[color])) {
-        throw new Error(`Invalid custom theme color ${color} at index ${index}`);
-      }
-    }
-    return {
-      id: value.id,
-      name: value.name.trim(),
-      dataUrl: value.dataUrl,
-      colors: {
-        accent: value.colors.accent,
-        secondary: value.colors.secondary,
-        surface: value.colors.surface,
-        text: value.colors.text
-      }
-    };
-  });
-}
-function sendJson(response, status, value) {
-  response.writeHead(status, { "Content-Type": "application/json; charset=utf-8" });
-  response.end(JSON.stringify(value));
-}
-const STYLE_ID = "dream-work-style";
-const MENU_ID = "dream-work-menu";
-const hanaAgentPersistentScripts = /* @__PURE__ */ new Map();
-const hanaAgentWatchers = /* @__PURE__ */ new Map();
-const hanaAgentGenerations = /* @__PURE__ */ new Map();
-const WORKBUDDY_CSS_PLACEHOLDERS = {
-  id: "wb-dream-sentinel-id",
-  hero: "data:image/png;base64,WBDREAMHEROSENTINEL",
-  accent: "#010203",
-  secondary: "#040506",
-  surface: "#070809",
-  text: "#0a0b0c"
-};
-let CODEX_BASE_CSS = null;
-async function getCodexBaseCss() {
-  if (!CODEX_BASE_CSS) {
-    try {
-      const cssPath = path__namespace.resolve(__dirname, "manager", "codex-dream-skin.css");
-      CODEX_BASE_CSS = await promises.readFile(cssPath, "utf-8");
-    } catch (e) {
-      console.warn("[injector] Failed to load Codex base CSS:", e.message);
-      CODEX_BASE_CSS = "";
-    }
-  }
-  return CODEX_BASE_CSS;
-}
-async function applyTheme(appId, themeId, port, options = {}) {
-  const definition = getAppDefinition(appId);
-  const hints = options.rendererUrlHint ? [options.rendererUrlHint] : (definition == null ? void 0 : definition.rendererHints) ?? ["renderer/index.html", "index.html"];
-  let targets = [];
-  let lastError = "No renderer targets found";
-  for (const hint of hints) {
-    try {
-      console.log(`[injector] Trying hint "${hint}" on port ${port}`);
-      targets = await waitForRendererTargets(port, hint, { timeoutMs: 2e4, pollMs: 500 });
-      if (targets.length > 0) {
-        console.log(`[injector] Found ${targets.length} targets with hint "${hint}"`);
-        break;
-      }
-    } catch (e) {
-      lastError = e.message;
-      console.log(`[injector] Hint "${hint}" failed: ${e.message}`);
-    }
-  }
-  if (targets.length === 0) {
-    try {
-      console.log(`[injector] Strict hints failed, trying relaxed page-target fallback on port ${port}`);
-      const resp = await fetch(`http://127.0.0.1:${port}/json/list`, { signal: AbortSignal.timeout(5e3) });
-      const json = await resp.json();
-      const relaxed = (Array.isArray(json) ? json : []).filter(isAnyPageTarget).sort((a, b) => {
-        const la = [String(a.id ?? ""), a.url, a.webSocketDebuggerUrl];
-        const lb = [String(b.id ?? ""), b.url, b.webSocketDebuggerUrl];
-        for (let i = 0; i < la.length; i++) {
-          if (la[i] < lb[i]) return -1;
-          if (la[i] > lb[i]) return 1;
-        }
-        return 0;
-      });
-      if (relaxed.length > 0) {
-        console.log(`[injector] Relaxed fallback found ${relaxed.length} page targets`);
-        targets = relaxed;
-      }
-    } catch (e) {
-      console.log(`[injector] Relaxed fallback failed: ${e.message}`);
-    }
-  }
-  if (targets.length === 0) {
-    return { success: false, applied: 0, error: lastError };
-  }
-  try {
-    const allThemes = listThemes(appId);
-    console.log(`[injector] Loaded ${allThemes.length} themes`);
-    if (!allThemes.some((theme) => theme.id === themeId)) {
-      return { success: false, applied: 0, error: `Theme ${themeId} is not compatible with ${appId}` };
-    }
-    const quickThemeIds = selectQuickThemeIds(appId, allThemes.map((theme) => theme.id), themeId);
-    const themesById = new Map(allThemes.map((theme) => [theme.id, theme]));
-    const menuThemeEntries = quickThemeIds.map((id) => themesById.get(id)).filter(Boolean);
-    const themeEntries = /* @__PURE__ */ new Map();
-    for (const theme of menuThemeEntries) {
-      themeEntries.set(theme.id, {
-        name: theme.name,
-        css: buildAppCss(appId, theme.manifest, getThemeHeroDataUrl(theme)),
-        surface: theme.manifest.colors.surface
-      });
-    }
-    const menuThemes = Array.from(themeEntries.entries()).map(([id, entry]) => {
-      var _a;
-      return {
-        id,
-        name: entry.name,
-        css: entry.css,
-        surface: entry.surface,
-        accent: ((_a = allThemes.find((theme) => theme.id === id)) == null ? void 0 : _a.manifest.colors.accent) ?? "#24c9d7"
-      };
-    });
-    let sharedCustomThemes = listSharedCustomThemes();
-    if (sharedCustomThemes.length === 0) {
-      const storageKey = appId === "workbuddy" ? "dreamCustomThemes" : "dreamCodexCustomThemes";
-      for (const target of targets) {
-        const session = new CdpSession(target.webSocketDebuggerUrl);
-        try {
-          await session.open();
-          const serialized = await session.evaluate(`(() => localStorage.getItem(${JSON.stringify(storageKey)}) || '[]')()`);
-          const localThemes = JSON.parse(serialized);
-          if (Array.isArray(localThemes) && localThemes.length > 0) {
-            sharedCustomThemes = mergeSharedCustomThemes(localThemes);
-            break;
-          }
-        } catch (error) {
-          console.warn(`[injector] Failed to import existing custom themes from ${appId} target ${target.id}:`, error);
-        } finally {
-          session.close();
-        }
-      }
-    }
-    const sharedCustomThemeService = await ensureSharedCustomThemeService();
-    const menuScript = appId === "workbuddy" ? buildWorkBuddyMenuScript({
-      styleId: STYLE_ID,
-      menuId: MENU_ID,
-      currentThemeId: themeId,
-      themes: menuThemes,
-      sharedCustomThemes,
-      sharedCustomThemeService,
-      cssTemplate: buildWorkBuddyCss({
-        id: WORKBUDDY_CSS_PLACEHOLDERS.id,
-        colors: {
-          accent: WORKBUDDY_CSS_PLACEHOLDERS.accent,
-          secondary: WORKBUDDY_CSS_PLACEHOLDERS.secondary,
-          surface: WORKBUDDY_CSS_PLACEHOLDERS.surface,
-          text: WORKBUDDY_CSS_PLACEHOLDERS.text
-        },
-        copy: null
-      }, WORKBUDDY_CSS_PLACEHOLDERS.hero, {
-        accent: WORKBUDDY_CSS_PLACEHOLDERS.accent,
-        secondary: WORKBUDDY_CSS_PLACEHOLDERS.secondary,
-        surface: WORKBUDDY_CSS_PLACEHOLDERS.surface,
-        text: WORKBUDDY_CSS_PLACEHOLDERS.text
-      })
-    }) : appId === "hana-agent" ? buildHanaAgentMenuScript({
-      styleId: STYLE_ID,
-      menuId: MENU_ID,
-      currentThemeId: themeId,
-      themes: menuThemes,
-      sharedCustomThemes,
-      sharedCustomThemeService,
-      cssTemplate: buildHanaAgentCss({
-        id: WORKBUDDY_CSS_PLACEHOLDERS.id,
-        colors: {
-          accent: WORKBUDDY_CSS_PLACEHOLDERS.accent,
-          secondary: WORKBUDDY_CSS_PLACEHOLDERS.secondary,
-          surface: WORKBUDDY_CSS_PLACEHOLDERS.surface,
-          text: WORKBUDDY_CSS_PLACEHOLDERS.text
-        }
-      }, WORKBUDDY_CSS_PLACEHOLDERS.hero, {
-        accent: WORKBUDDY_CSS_PLACEHOLDERS.accent,
-        secondary: WORKBUDDY_CSS_PLACEHOLDERS.secondary,
-        surface: WORKBUDDY_CSS_PLACEHOLDERS.surface,
-        text: WORKBUDDY_CSS_PLACEHOLDERS.text
-      })
-    }) : buildMenuScript({
-      styleId: STYLE_ID,
-      menuId: MENU_ID,
-      currentThemeId: themeId,
-      appId,
-      themes: menuThemes,
-      sharedCustomThemes,
-      sharedCustomThemeService,
-      cssTemplate: buildAppCss(appId, {
-        id: WORKBUDDY_CSS_PLACEHOLDERS.id,
-        colors: {
-          accent: WORKBUDDY_CSS_PLACEHOLDERS.accent,
-          secondary: WORKBUDDY_CSS_PLACEHOLDERS.secondary,
-          surface: WORKBUDDY_CSS_PLACEHOLDERS.surface,
-          text: WORKBUDDY_CSS_PLACEHOLDERS.text
-        }
-      }, WORKBUDDY_CSS_PLACEHOLDERS.hero)
-    });
-    let applied = 0;
-    for (const target of targets) {
-      try {
-        console.log(`[injector] Injecting to target ${target.id}: ${target.url}`);
-        const session = new CdpSession(target.webSocketDebuggerUrl);
-        await session.open();
-        if (appId === "workbuddy") {
-          const isWorkBuddy = await session.evaluate(`(() => {
+`;try{const{stdout:n}=await ot("powershell.exe",["-NoLogo","-NoProfile","-NonInteractive","-ExecutionPolicy","Bypass","-Command",e],{encoding:"utf8",maxBuffer:4194304}),t=n.trim();return z(t)?t:null}catch{return null}}function lt(e,n){const t=c.basename(e).toLowerCase();return n.some(r=>r.toLowerCase()===t)}function z(e){try{return m.statSync(e).isFile()}catch{return!1}}async function dt(){if($.platform()!=="win32")return[];const e=[];for(const n of ce){const t=await Ee(n.id);t&&e.push({appId:n.id,name:n.name,path:t})}return e}const fe=se.promisify(X.execFile);async function mt(e){const n=E(e);if(!n)return!1;const t=[...new Set([n.processName,...n.exeNames].filter(Boolean))];if($.platform()==="win32"){for(const r of t)try{const{stdout:o}=await fe("tasklist.exe",["/FI",`IMAGENAME eq ${r}`,"/FO","CSV","/NH"],{encoding:"utf8",windowsHide:!0});if(o.split(/\r?\n/).some(a=>a.trim().toLowerCase().startsWith(`"${r.toLowerCase()}"`)))return!0}catch{}return!1}for(const r of t)try{return await fe("pgrep",["-f",r],{encoding:"utf8"}),!0}catch{}return!1}async function Ie(e,n){const t=E(e);if(!t)return{success:!1,error:`Unknown app: ${e}`};const r=t.defaultPort,o=[`--remote-debugging-port=${r}`];e==="codex"&&o.push("--disable-extensions"),n&&o.push(`--dream-theme=${n}`);try{const a=await xt(e);if(console.log(`[launcher] Killing existing ${e} instances...`),await wt(e),await yt(r,15e3),t.devToolsActivePort)try{m.unlinkSync(t.devToolsActivePort)}catch{}console.log(`[launcher] Launching ${a} with args: ${o.join(" ")}`);const s=X.spawn(a,o,{detached:!0,stdio:"ignore",env:ut()});s.unref(),console.log(`[launcher] Spawned process with PID: ${s.pid}`),console.log(`[launcher] Waiting for CDP port ${r} to be ready...`);let l=r;return t.devToolsActivePort?l=await ht(t.devToolsActivePort,t.rendererHints,3e4):await ft(r,3e4),console.log(`[launcher] CDP port ${l} is ready`),e==="hana-agent"&&await gt(l,t.rendererHints,3e4),{success:!0,port:l}}catch(a){return console.error("[launcher] Launch failed:",a),{success:!1,error:a.message}}}function ut(){const e={...process.env};for(const n of["VITE_DEV_SERVER_URL","ELECTRON_RENDERER_URL","MAIN_VITE_DEV_SERVER_URL","ELECTRON_RUN_AS_NODE"])delete e[n];return e}async function ht(e,n,t){const r=Date.now();let o=0;for(;Date.now()-r<t;){try{const a=m.readFileSync(e,"utf8").split(/\r?\n/,1)[0],s=Number(a);if(Number.isInteger(s)&&s>0)return o=s,await pt(s,n,3e3),s}catch{}await new Promise(a=>setTimeout(a,500))}throw new Error(`DevToolsActivePort did not expose a live renderer${o?` on port ${o}`:""}: ${e}`)}async function pt(e,n,t){const r=Date.now();for(;Date.now()-r<t;){try{const o=await fetch(`http://127.0.0.1:${e}/json/list`,{signal:AbortSignal.timeout(1e3)});if(o.ok){const a=await o.json();if(Array.isArray(a)&&a.some(s=>(s==null?void 0:s.type)==="page"&&n.some(l=>String(s.url).includes(l))))return}}catch{}await new Promise(o=>setTimeout(o,250))}throw new Error(`CDP renderer endpoint is not ready on port ${e}`)}async function gt(e,n,t){const r=Date.now();let o="",a=0;for(;Date.now()-r<t;){try{const i=(await(await fetch(`http://127.0.0.1:${e}/json/list`,{signal:AbortSignal.timeout(1e3)})).json()).find(d=>(d==null?void 0:d.type)==="page"&&n.some(u=>String(d.url).includes(u)));if(i!=null&&i.id){if(i.id!==o)o=i.id,a=Date.now();else if(Date.now()-a>=3e3){console.log(`[launcher] Stable HanaAgent renderer ${o} confirmed`);return}}}catch{}await new Promise(s=>setTimeout(s,250))}throw new Error(`HanaAgent renderer did not stabilize on port ${e}`)}async function ft(e,n){const t=Date.now();let r="unknown";for(;Date.now()-t<n;)try{await new Promise((o,a)=>{const s=Se.createConnection(e,"127.0.0.1",()=>{s.end(),o()});s.once("error",l=>{r=l.message,a(l)}),setTimeout(()=>{s.destroy(),a(new Error("timeout"))},1e3)}),console.log(`[launcher] Port ${e} is open, verifying CDP endpoint...`),await bt(e,15e3),console.log(`[launcher] CDP endpoint verified on port ${e}`);return}catch(o){r=o.message,console.log(`[launcher] Port check failed: ${o.message}, retrying...`),await new Promise(a=>setTimeout(a,1e3))}throw new Error(`CDP port ${e} did not become ready within ${n}ms (last error: ${r})`)}async function bt(e,n){const t=Date.now();for(;Date.now()-t<n;)try{await new Promise((r,o)=>{const a=Ce.request({hostname:"127.0.0.1",port:e,path:"/json/version",method:"GET",timeout:2e3},s=>{let l="";s.on("data",i=>{l+=i}),s.on("end",()=>{s.statusCode===200?(console.log(`[launcher] CDP version response: ${l.substring(0,200)}`),r()):o(new Error(`HTTP ${s.statusCode}`))})});a.on("error",o),a.on("timeout",()=>{a.destroy(),o(new Error("timeout"))}),a.end()});return}catch(r){if(Date.now()-t>=n)throw r;await new Promise(o=>setTimeout(o,1e3))}}async function wt(e){const n=$.platform(),t=E(e);if(!t)return;const r=[...new Set([t.processName,...t.exeNames].filter(Boolean))];try{if(n==="win32"){const{execSync:o}=require("child_process");for(const a of r)try{o(`taskkill /T /F /IM "${a}" 2>nul`,{stdio:"ignore"}),console.log(`[launcher] Killed existing ${a} process tree`)}catch{}}else if(n==="darwin"){const{execSync:o}=require("child_process");for(const a of r)try{o(`pkill -f "${a}" 2>/dev/null || true`,{stdio:"ignore"}),console.log(`[launcher] Killed existing ${a} processes`)}catch{}}else if(n==="linux"){const{execSync:o}=require("child_process");for(const a of r)try{o(`pkill -f "${a}" 2>/dev/null || true`,{stdio:"ignore"}),console.log(`[launcher] Killed existing ${a} processes`)}catch{}}}catch(o){console.warn("[launcher] Failed to kill existing instances:",o)}}async function yt(e,n){const t=Date.now();for(;Date.now()-t<n;){if(!await new Promise(o=>{const a=Se.createConnection(e,"127.0.0.1");a.once("connect",()=>{a.destroy(),o(!0)}),a.once("error",()=>o(!1)),a.setTimeout(500,()=>{a.destroy(),o(!1)})})){console.log(`[launcher] Previous CDP port ${e} is closed`);return}await new Promise(o=>setTimeout(o,250))}throw new Error(`Existing ${e} CDP service did not stop; refusing to inject into the old application instance`)}async function xt(e){if(!E(e))throw new Error(`Unknown app: ${e}`);const t=$.platform();if(t==="win32"){const r=await Ee(e);if(r)return r}else if(t==="darwin"){const r=["/Applications/WorkBuddy.app","/Applications/ChatGPT.app"];for(const o of r)if(m.existsSync(o))return o}else if(t==="linux"){const r=e==="workbuddy"?["workbuddy","WorkBuddy"]:["codex","Codex"],o=["/usr/bin","/usr/local/bin","/opt",c.join($.homedir(),".local","bin"),"/snap/bin"];for(const a of o)if(m.existsSync(a))for(const s of r){const l=c.join(a,s);if(m.existsSync(l))return l}for(const a of r)try{const{execSync:s}=require("child_process"),l=s(`which ${a} 2>/dev/null || echo ''`).toString().trim();if(l&&m.existsSync(l))return l}catch{}}throw new Error(`Could not find ${e} executable`)}const kt=5e3,vt=100,Ct=15e3,St=1e4,Tt=5e3;function $t(e){if(!Number.isInteger(e)||e<1024||e>65535)throw new TypeError("port must be an integer from 1024 through 65535");return e}function U(e,n,t={}){const r=t.allowZero?0:Number.EPSILON;if(!Number.isFinite(e)||e<r){const o=t.allowZero?"non-negative":"positive";throw new TypeError(`${n} must be a finite ${o} number`)}return e}function Pe(e){if(typeof e!="string"||e.length===0||e!==e.trim())throw new TypeError("webSocketDebuggerUrl must be a non-empty URL string");let n;try{n=new URL(e)}catch(t){throw new TypeError(`webSocketDebuggerUrl is invalid: ${t.message}`)}if(n.protocol!=="ws:"||n.hostname!=="127.0.0.1"||n.username||n.password||n.hash||!n.port)throw new TypeError("webSocketDebuggerUrl must use ws://127.0.0.1 with an explicit port");return $t(Number(n.port)),n}function Et(e,n){if(e===null||typeof e!="object"||Array.isArray(e)||e.type!=="page"||typeof e.url!="string"||typeof e.webSocketDebuggerUrl!="string")return!1;try{Pe(e.webSocketDebuggerUrl)}catch{return!1}return e.url.includes(n)}function de(e){if(e===null||typeof e!="object"||Array.isArray(e)||e.type!=="page"||typeof e.url!="string"||typeof e.webSocketDebuggerUrl!="string")return!1;try{return Pe(e.webSocketDebuggerUrl),!0}catch{return!1}}function It(e){return new Promise(n=>setTimeout(n,e))}async function be(e,n){const t=Math.max(0,n.deadline-Date.now());let r=null;try{return await Promise.race([e,new Promise((o,a)=>{r=setTimeout(()=>{var s;(s=n.onTimeout)==null||s.call(n),a(new Error(`${n.label} timed out after ${n.timeoutMs}ms`))},t)})])}finally{r&&clearTimeout(r)}}async function q(e,n,t={}){const r=U(t.timeoutMs??Tt,"timeoutMs",{allowZero:!1}),o=t.fetchImpl??globalThis.fetch;if(typeof o!="function")throw new TypeError("fetchImpl must be a function");const a=`http://127.0.0.1:${e}/json/list`,s=new AbortController,l=Date.now()+r,i=t.quiet===!0;i||console.log(`[cdp] fetchRendererTargets: port=${e}, timeoutMs=${r}, endpoint=${a}`);let d;try{d=await be(Promise.resolve(o(a,{redirect:"error",signal:s.signal})),{deadline:l,timeoutMs:r,label:"renderer target discovery",onTimeout:()=>s.abort()})}catch(h){throw i||console.log("[cdp] fetchRendererTargets error:",h),new Error(`failed to fetch renderer targets from ${a}: ${h.message}`)}if(d===null||typeof d!="object"||!d.ok)throw new Error(`renderer target discovery failed with HTTP ${(d==null?void 0:d.status)??"unknown"}`);let u;try{u=await be(Promise.resolve(d.json()),{deadline:l,timeoutMs:r,label:"renderer target discovery JSON",onTimeout:()=>s.abort()})}catch(h){throw new Error(`malformed renderer target JSON from ${a}: ${h.message}`)}if(!Array.isArray(u))throw new Error("malformed renderer target JSON: expected an array");return u.filter(h=>Et(h,n)).sort(At)}async function Pt(e,n,t={}){const r=U(t.timeoutMs??kt,"timeoutMs",{allowZero:!0}),o=U(t.pollMs??vt,"pollMs",{allowZero:!1}),a=t.fetchImpl??globalThis.fetch;let s=0;const l=Date.now()+r;let i=new Error("no renderer discovery attempt completed");for(console.log(`[cdp] waitForRendererTargets: port=${e}, hint=${n}, timeoutMs=${r}`);;){try{const u=Math.max(1,Math.min(r-s,l-Date.now()));console.log(`[cdp] Attempting fetch: elapsed=${s}ms, remainingBudget=${u}ms, deadline=${l}`);const h=await q(e,n,{fetchImpl:a,timeoutMs:u});if(h.length>0)return h;i=new Error("no matching renderer/index.html page targets")}catch(u){i=u instanceof Error?u:new Error(String(u)),console.log("[cdp] Fetch error:",i.message)}if(s>=r||Date.now()>=l)throw new Error(`timed out after ${r}ms waiting for renderer targets on 127.0.0.1:${e}: ${i.message}`);const d=Math.min(o,r-s);await It(d),s+=d}}class N{constructor(n,t={}){C(this,"webSocketDebuggerUrl");C(this,"WebSocketImpl");C(this,"commandTimeoutMs");C(this,"connectTimeoutMs");C(this,"socket",null);C(this,"nextRequestId",1);C(this,"pending",new Map);C(this,"socketOpen",!1);C(this,"opened",!1);C(this,"closed",!1);C(this,"closeStarted",!1);C(this,"terminalError",null);C(this,"openPromise",null);C(this,"resolveOpen",null);C(this,"rejectOpen",null);C(this,"connectTimer",null);this.webSocketDebuggerUrl=n;let r=null,o=null;try{r=require("ws")??null,r||(o="ws loaded but WebSocket is undefined")}catch(a){o=`ws require failed: ${(a==null?void 0:a.message)??a}`}if(!r)try{const a=require("undici");r=(a==null?void 0:a.WebSocket)??null,r||(o="undici loaded but WebSocket is undefined")}catch(a){o=`undici require failed: ${(a==null?void 0:a.message)??a}`}if(!r&&typeof globalThis.WebSocket=="function"&&(r=globalThis.WebSocket,o=null),!r){const a=o?` (${o})`:"";throw new Error(`No WebSocket implementation available for CDP${a}`)}this.WebSocketImpl=t.WebSocketImpl??r,this.commandTimeoutMs=U(t.commandTimeoutMs??Ct,"commandTimeoutMs"),this.connectTimeoutMs=U(t.connectTimeoutMs??St,"connectTimeoutMs")}open(){if(this.closed)return Promise.reject(this.terminalError??new Error("CDP session is closed"));if(this.opened)return Promise.resolve(this);if(this.openPromise)return this.openPromise;this.openPromise=new Promise((t,r)=>{this.resolveOpen=t,this.rejectOpen=r}),this.connectTimer=setTimeout(()=>{this.terminate(new Error(`CDP WebSocket connect timed out after ${this.connectTimeoutMs}ms`)),this.closeSocket()},this.connectTimeoutMs);try{this.socket=new this.WebSocketImpl(this.webSocketDebuggerUrl)}catch(t){return this.terminate(new Error(`failed to open CDP WebSocket: ${t.message}`)),this.openPromise}const n=this.socket;return n.onopen=()=>{this.closed||this.socketOpen||(this.clearConnectTimer(),this.socketOpen=!0,Promise.all([this.send("Runtime.enable"),this.send("Page.enable")]).then(()=>{if(this.closed)return;this.opened=!0;const t=this.resolveOpen;this.resolveOpen=null,this.rejectOpen=null,t==null||t(this)}).catch(t=>{this.terminate(t),this.closeSocket()}))},n.onmessage=t=>this.handleMessage(t),n.onerror=t=>{const r=t.error,o=r instanceof Error?r.message:typeof t.message=="string"&&t.message.length>0?t.message:"unknown socket error";this.terminate(new Error(`CDP WebSocket error: ${o}`)),this.closeSocket()},n.onclose=()=>{this.closeStarted=!0,this.terminate(new Error("CDP WebSocket closed"))},this.openPromise}send(n,t={},r={}){if(this.closed)return Promise.reject(this.terminalError??new Error("CDP session is closed"));if(!this.socketOpen||!this.socket)return Promise.reject(new Error("CDP session is not open"));if(typeof n!="string"||n.length===0)return Promise.reject(new TypeError("CDP method must be a non-empty string"));const o=U(r.timeoutMs??this.commandTimeoutMs,"timeoutMs"),a=this.nextRequestId++;return new Promise((s,l)=>{const i=setTimeout(()=>{this.pending.delete(a),l(new Error(`CDP ${n} timed out after ${o}ms`))},o);this.pending.set(a,{resolve:s,reject:l,timer:i});try{this.socket.send(JSON.stringify({id:a,method:n,params:t}))}catch(d){clearTimeout(i),this.pending.delete(a),l(new Error(`failed to send CDP ${n}: ${d.message}`))}})}async evaluate(n,t={}){var o,a,s;if(typeof n!="string")throw new TypeError("Runtime.evaluate expression must be a string");const r=await this.send("Runtime.evaluate",{expression:n,awaitPromise:!0,returnByValue:!0},t);if(r!=null&&r.exceptionDetails)throw new Error(`Runtime.evaluate failed: ${((o=r.exceptionDetails.exception)==null?void 0:o.description)??r.exceptionDetails.text??"unknown JavaScript exception"}`);if(((a=r==null?void 0:r.result)==null?void 0:a.type)!=="undefined")return(s=r==null?void 0:r.result)==null?void 0:s.value}async addScriptToEvaluateOnNewDocument(n){const t=await this.send("Page.addScriptToEvaluateOnNewDocument",{source:n});return t==null?void 0:t.identifier}async removeScriptToEvaluateOnNewDocument(n){await this.send("Page.removeScriptToEvaluateOnNewDocument",{identifier:n})}close(){this.closeStarted||(this.terminate(new Error("CDP session closed by client")),this.closeSocket())}handleMessage(n){if(typeof n.data!="string"){this.terminate(new Error("received a non-text CDP WebSocket message")),this.closeSocket();return}let t;try{t=JSON.parse(n.data)}catch(o){this.terminate(new Error(`received malformed CDP JSON: ${o.message}`)),this.closeSocket();return}if(!Number.isInteger(t==null?void 0:t.id))return;const r=this.pending.get(t.id);if(r){if(this.pending.delete(t.id),clearTimeout(r.timer),t.error){r.reject(new Error(`CDP error: ${t.error.message}`));return}r.resolve(t.result)}}terminate(n){if(this.terminalError)return;this.clearConnectTimer(),this.terminalError=n,this.closed=!0,this.socketOpen=!1;const t=this.rejectOpen;this.resolveOpen=null,this.rejectOpen=null,t==null||t(n);for(const{reject:r,timer:o}of this.pending.values())clearTimeout(o),r(n);this.pending.clear()}clearConnectTimer(){this.connectTimer!==null&&(clearTimeout(this.connectTimer),this.connectTimer=null)}closeSocket(){if(this.closeStarted||(this.closeStarted=!0,!this.socket||typeof this.socket.close!="function"))return;const n=this.WebSocketImpl.CLOSING??2,t=this.WebSocketImpl.CLOSED??3;this.socket.readyState===n||this.socket.readyState===t||this.socket.close()}}function At(e,n){const t=[String(e.id??""),e.url,e.webSocketDebuggerUrl],r=[String(n.id??""),n.url,n.webSocketDebuggerUrl];for(let o=0;o<t.length;o++){if(t[o]<r[o])return-1;if(t[o]>r[o])return 1}return 0}function Mt(){return c.join(w.app.getAppPath(),"themes")}function Ae(){const e=c.join(w.app.getPath("userData"),"themes");return m.mkdirSync(e,{recursive:!0}),e}function jt(){return[Ae(),Mt()]}const we=new Map;function Q(e){var o;const n=[],t=new Set;for(const a of jt()){if(!m.existsSync(a))continue;const s=m.readdirSync(a,{withFileTypes:!0});for(const l of s){if(!l.isDirectory())continue;const i=c.join(a,l.name),d=c.join(i,"theme.json");if(m.existsSync(d))try{const u=JSON.parse(m.readFileSync(d,"utf-8")),h=Lt(u);if(t.has(h.id))continue;const b=c.join(i,h.hero);if(!m.existsSync(b)||!m.statSync(b).isFile())throw new Error(`theme hero is missing: ${h.hero}`);if(e&&((o=h.apps[e])==null?void 0:o.compat)!==!0&&e!=="hana-agent")continue;t.add(h.id),n.push({id:h.id,name:h.name,author:h.author,path:i,manifest:h})}catch(u){console.error(`Failed to load theme ${l.name}:`,u)}}}const r=new Map;for(const a of n){const s=c.join(a.path,a.manifest.hero),l=oe(s),i=`${a.name.trim().toLocaleLowerCase()}\0${a.author.trim().toLocaleLowerCase()}\0${l}`,d=r.get(i);(!d||Dt(a.id,d.id))&&r.set(i,a)}return[...r.values()].sort((a,s)=>a.name.localeCompare(s.name))}function oe(e){const n=m.statSync(e),t=we.get(e);if(t&&t.size===n.size&&t.mtimeMs===n.mtimeMs)return t.hash;const r=ie.createHash("sha256").update(m.readFileSync(e)).digest("hex");return we.set(e,{size:n.size,mtimeMs:n.mtimeMs,hash:r}),r}function Dt(e,n){const t=e.startsWith("custom-"),r=n.startsWith("custom-");return t!==r?!t:e.length<n.length||e.length===n.length&&e.localeCompare(n)<0}function Me(e,n){return Q(n).find(t=>t.id===e)}function _t(e){const n=Me(e);if(!n)return;const t=c.resolve(n.path,n.manifest.hero);if(t.startsWith(`${c.resolve(n.path)}${c.sep}`))return t}function Ot(e){return`theme-asset://local/${encodeURIComponent(e)}`}function Nt(e){const n=c.join(e.path,e.manifest.hero),t=m.readFileSync(n);return`data:${Rt(e.manifest.hero)};base64,${t.toString("base64")}`}function Ut(e,n,t){const r=oe(t);return Q().some(o=>o.name.trim().toLowerCase()!==e.trim().toLowerCase()||o.author.trim().toLowerCase()!==n.trim().toLowerCase()?!1:oe(c.join(o.path,o.manifest.hero))===r)}function Lt(e){if(typeof e!="object"||e===null||Array.isArray(e))throw new Error("theme manifest must be an object");if(e.schemaVersion!==1)throw new Error(`unsupported theme schema ${e.schemaVersion}`);if(typeof e.id!="string"||!/^[a-z0-9-]+$/.test(e.id))throw new Error("theme id must use lowercase letters, numbers, and hyphens");if(typeof e.name!="string"||!e.name.trim())throw new Error("theme name must be a non-empty string");if(typeof e.author!="string")throw new Error("theme author must be a string");if(typeof e.hero!="string")throw new Error("theme hero must be a string");if(typeof e.colors!="object"||e.colors===null)throw new Error("theme colors must be an object");const n=["accent","secondary","surface","text"];for(const t of n)if(typeof e.colors[t]!="string"||!/^#[0-9a-fA-F]{6}$/.test(e.colors[t]))throw new Error(`theme color ${t} must be a hex color`);return{schemaVersion:1,id:e.id,name:e.name.trim(),author:e.author,hero:e.hero,colors:{accent:e.colors.accent,secondary:e.colors.secondary,surface:e.colors.surface,text:e.colors.text},copy:e.copy??void 0,apps:e.apps??{}}}function Rt(e){const n=c.extname(e).toLowerCase();return{".png":"image/png",".jpg":"image/jpeg",".jpeg":"image/jpeg",".webp":"image/webp",".gif":"image/gif"}[n]||"image/png"}const je=5,Bt=32*1024*1024;let J=null;function me(){try{const e=JSON.parse(m.readFileSync(De(),"utf8"));return ue(e)}catch{return[]}}function Wt(e){const n=ue(e),t=[...me()];for(const o of n){const a=t.findIndex(s=>s.id===o.id);a>=0?t[a]=o:t.push(o)}const r=t.slice(0,je);return Oe(r),r}function Ft(e,n,t,r=4){const o=Ne()[e]??{};return[...n].sort((a,s)=>{if(a===t)return-1;if(s===t)return 1;const l=o[a]??{count:0,lastUsedAt:0},i=o[s]??{count:0,lastUsedAt:0};return i.count-l.count||i.lastUsedAt-l.lastUsedAt}).slice(0,r)}function ae(e,n){if(!/^[a-z0-9-]+$/i.test(e)||!/^[a-z0-9-]+$/i.test(n))return;const t=Ne(),r=t[e]??{},o=r[n]??{count:0};r[n]={count:o.count+1,lastUsedAt:Date.now()},t[e]=r,Ue(_e(),t)}function Ht(){return J||(J=new Promise((e,n)=>{const t=ie.randomBytes(24).toString("hex"),r=Ce.createServer((o,a)=>{if(a.setHeader("Access-Control-Allow-Origin","*"),a.setHeader("Access-Control-Allow-Headers","Authorization, Content-Type"),a.setHeader("Access-Control-Allow-Methods","GET, PUT, POST, OPTIONS"),a.setHeader("Access-Control-Allow-Private-Network","true"),o.method==="OPTIONS"){a.writeHead(204).end();return}if(o.headers.authorization!==`Bearer ${t}`){a.writeHead(401).end("Unauthorized");return}if(o.url==="/theme-usage"&&o.method==="POST"){ye(o,a,s=>{if(typeof(s==null?void 0:s.appId)!="string"||typeof(s==null?void 0:s.themeId)!="string")throw new Error("Invalid theme usage payload");ae(s.appId,s.themeId),ne(a,200,{success:!0})});return}if(o.url!=="/custom-themes"){a.writeHead(404).end("Not found");return}if(o.method==="GET"){ne(a,200,me());return}if(o.method!=="PUT"){a.writeHead(405).end("Method not allowed");return}ye(o,a,s=>{const l=ue(s);Oe(l),ne(a,200,l)})});r.once("error",n),r.listen(0,"127.0.0.1",()=>{const o=r.address();if(!o||typeof o=="string"){r.close(),n(new Error("Shared custom theme service did not expose a TCP port"));return}const a=`http://127.0.0.1:${o.port}`;e({endpoint:`${a}/custom-themes`,usageEndpoint:`${a}/theme-usage`,token:t})})}),J)}function De(){return c.join(w.app.getPath("userData"),"custom-themes.json")}function _e(){return c.join(w.app.getPath("userData"),"theme-usage.json")}function Oe(e){Ue(De(),e)}function Ne(){try{const e=JSON.parse(m.readFileSync(_e(),"utf8"));return e&&typeof e=="object"&&!Array.isArray(e)?e:{}}catch{return{}}}function Ue(e,n){m.mkdirSync(c.dirname(e),{recursive:!0}),m.writeFileSync(e,`${JSON.stringify(n,null,2)}
+`)}function ye(e,n,t){let r=0;const o=[];e.on("data",a=>{if(r+=a.length,r>Bt){n.writeHead(413).end("Payload too large"),e.destroy();return}o.push(a)}),e.on("end",()=>{if(!n.headersSent)try{t(JSON.parse(Buffer.concat(o).toString("utf8")))}catch(a){n.writeHead(400).end(a.message)}})}function ue(e){if(!Array.isArray(e))throw new Error("Custom themes must be an array");return e.slice(0,je).map((n,t)=>{var o;if(!n||typeof n!="object")throw new Error(`Invalid custom theme at index ${t}`);const r=n;if(typeof r.id!="string"||!/^custom-[a-z0-9-]+$/i.test(r.id))throw new Error(`Invalid custom theme id at index ${t}`);if(typeof r.name!="string"||!r.name.trim())throw new Error(`Invalid custom theme name at index ${t}`);if(typeof r.dataUrl!="string"||!/^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(r.dataUrl))throw new Error(`Invalid custom theme image at index ${t}`);for(const a of["accent","secondary","surface","text"])if(typeof((o=r.colors)==null?void 0:o[a])!="string"||!/^#[0-9a-f]{6}$/i.test(r.colors[a]))throw new Error(`Invalid custom theme color ${a} at index ${t}`);return{id:r.id,name:r.name.trim(),dataUrl:r.dataUrl,colors:{accent:r.colors.accent,secondary:r.colors.secondary,surface:r.colors.surface,text:r.colors.text}}})}function ne(e,n,t){e.writeHead(n,{"Content-Type":"application/json; charset=utf-8"}),e.end(JSON.stringify(t))}const j="dream-work-style",T="dream-work-menu",L=new Map,F=new Map,O=new Map,f={id:"wb-dream-sentinel-id",hero:"data:image/png;base64,WBDREAMHEROSENTINEL",accent:"#010203",secondary:"#040506",surface:"#070809",text:"#0a0b0c"};let K=null;async function zt(){if(!K)try{const e=c.resolve(__dirname,"manager","codex-dream-skin.css");K=await Qe.readFile(e,"utf-8")}catch(e){console.warn("[injector] Failed to load Codex base CSS:",e.message),K=""}return K}async function Le(e,n,t,r={}){const o=E(e),a=r.rendererUrlHint?[r.rendererUrlHint]:(o==null?void 0:o.rendererHints)??["renderer/index.html","index.html"];let s=[],l="No renderer targets found";for(const i of a)try{if(console.log(`[injector] Trying hint "${i}" on port ${t}`),s=await Pt(t,i,{timeoutMs:2e4,pollMs:500}),s.length>0){console.log(`[injector] Found ${s.length} targets with hint "${i}"`);break}}catch(d){l=d.message,console.log(`[injector] Hint "${i}" failed: ${d.message}`)}if(s.length===0)try{console.log(`[injector] Strict hints failed, trying relaxed page-target fallback on port ${t}`);const d=await(await fetch(`http://127.0.0.1:${t}/json/list`,{signal:AbortSignal.timeout(5e3)})).json(),u=(Array.isArray(d)?d:[]).filter(de).sort((h,b)=>{const v=[String(h.id??""),h.url,h.webSocketDebuggerUrl],x=[String(b.id??""),b.url,b.webSocketDebuggerUrl];for(let I=0;I<v.length;I++){if(v[I]<x[I])return-1;if(v[I]>x[I])return 1}return 0});u.length>0&&(console.log(`[injector] Relaxed fallback found ${u.length} page targets`),s=u)}catch(i){console.log(`[injector] Relaxed fallback failed: ${i.message}`)}if(s.length===0)return{success:!1,applied:0,error:l};try{const i=Q(e);if(console.log(`[injector] Loaded ${i.length} themes`),!i.some(p=>p.id===n))return{success:!1,applied:0,error:`Theme ${n} is not compatible with ${e}`};const d=Ft(e,i.map(p=>p.id),n),u=new Map(i.map(p=>[p.id,p])),h=d.map(p=>u.get(p)).filter(Boolean),b=new Map;for(const p of h)b.set(p.id,{name:p.name,css:xe(e,p.manifest,Nt(p)),surface:p.manifest.colors.surface});const v=Array.from(b.entries()).map(([p,y])=>{var P;return{id:p,name:y.name,css:y.css,surface:y.surface,accent:((P=i.find(g=>g.id===p))==null?void 0:P.manifest.colors.accent)??"#24c9d7"}});let x=me();if(x.length===0){const p=e==="workbuddy"?"dreamCustomThemes":"dreamCodexCustomThemes";for(const y of s){const P=new N(y.webSocketDebuggerUrl);try{await P.open();const g=await P.evaluate(`(() => localStorage.getItem(${JSON.stringify(p)}) || '[]')()`),k=JSON.parse(g);if(Array.isArray(k)&&k.length>0){x=Wt(k);break}}catch(g){console.warn(`[injector] Failed to import existing custom themes from ${e} target ${y.id}:`,g)}finally{P.close()}}}const I=await Ht(),A=e==="workbuddy"?on({styleId:j,menuId:T,currentThemeId:n,themes:v,sharedCustomThemes:x,sharedCustomThemeService:I,cssTemplate:Be({id:f.id,colors:{accent:f.accent,secondary:f.secondary,surface:f.surface,text:f.text},copy:null},f.hero,{accent:f.accent,secondary:f.secondary,surface:f.surface,text:f.text})}):e==="hana-agent"?Yt({styleId:j,menuId:T,currentThemeId:n,themes:v,sharedCustomThemes:x,sharedCustomThemeService:I,cssTemplate:Re({id:f.id,colors:{accent:f.accent,secondary:f.secondary,surface:f.surface,text:f.text}},f.hero,{accent:f.accent,secondary:f.secondary,surface:f.surface,text:f.text})}):an({styleId:j,menuId:T,currentThemeId:n,appId:e,themes:v,sharedCustomThemes:x,sharedCustomThemeService:I,cssTemplate:xe(e,{id:f.id,colors:{accent:f.accent,secondary:f.secondary,surface:f.surface,text:f.text}},f.hero)});let B=0;for(const p of s)try{console.log(`[injector] Injecting to target ${p.id}: ${p.url}`);const y=new N(p.webSocketDebuggerUrl);if(await y.open(),e==="workbuddy"&&!await y.evaluate(`(() => {
             const body = document.body;
             return body?.dataset.applicationName === 'workbuddy' && Boolean(
               document.querySelector('[data-view-id], .teams-container, .conversation-list, .main-content')
             );
-          })()`);
-          if (!isWorkBuddy) {
-            console.warn(`[injector] Skipping non-WorkBuddy target ${target.id}: ${target.url}`);
-            session.close();
-            continue;
-          }
-        }
-        if (appId === "codex") {
-          const baseCss = await getCodexBaseCss();
-          if (baseCss) {
-            await session.evaluate(`(() => {
+          })()`)){console.warn(`[injector] Skipping non-WorkBuddy target ${p.id}: ${p.url}`),y.close();continue}if(e==="codex"){const g=await zt();g&&await y.evaluate(`(() => {
               const existing = document.getElementById('codex-dream-skin-base');
               if (!existing) {
                 const style = document.createElement('style');
                 style.id = 'codex-dream-skin-base';
-                style.textContent = ${JSON.stringify(baseCss)};
+                style.textContent = ${JSON.stringify(g)};
                 document.head.appendChild(style);
               }
-            })()`);
-          }
-        }
-        if (appId === "hana-agent") {
-          const persistentScript = `(() => {
-            const inject = () => ${menuScript};
+            })()`)}if(e==="hana-agent"){const g=`(() => {
+            const inject = () => ${A};
             if (document.readyState === 'loading') {
               window.addEventListener('DOMContentLoaded', inject, { once: true });
             } else {
               inject();
             }
-          })()`;
-          const previousIdentifier = hanaAgentPersistentScripts.get(target.id);
-          if (previousIdentifier) {
-            await session.removeScriptToEvaluateOnNewDocument(previousIdentifier).catch(() => {
-            });
-          }
-          const identifier = await session.addScriptToEvaluateOnNewDocument(persistentScript);
-          if (identifier) hanaAgentPersistentScripts.set(target.id, identifier);
-        }
-        const evalResult = await session.evaluate(appId === "hana-agent" ? `(() => { window.__dreamWorkForceApply = true; return ${menuScript}; })()` : menuScript);
-        console.log(`[injector] Injection result for target ${target.id}:`, evalResult);
-        if (appId === "hana-agent") {
-          let ready = false;
-          for (let attempt = 0; attempt < 20; attempt++) {
-            ready = await session.evaluate(`(() => {
-              const host = document.getElementById('${MENU_ID}-host');
+          })()`,k=L.get(p.id);k&&await y.removeScriptToEvaluateOnNewDocument(k).catch(()=>{});const S=await y.addScriptToEvaluateOnNewDocument(g);S&&L.set(p.id,S)}const P=await y.evaluate(e==="hana-agent"?`(() => { window.__dreamWorkForceApply = true; return ${A}; })()`:A);if(console.log(`[injector] Injection result for target ${p.id}:`,P),e==="hana-agent"){let g=!1;for(let k=0;k<20&&(g=await y.evaluate(`(() => {
+              const host = document.getElementById('${T}-host');
               return Boolean(
-                document.getElementById('${STYLE_ID}') &&
-                host?.shadowRoot?.getElementById('${MENU_ID}') &&
+                document.getElementById('${j}') &&
+                host?.shadowRoot?.getElementById('${T}') &&
                 document.documentElement.dataset.dreamTheme
               );
-            })()`).catch(() => false);
-            if (ready) break;
-            await new Promise((resolve) => setTimeout(resolve, 100));
-          }
-          if (!ready) {
-            console.warn(`[injector] HanaAgent injection did not become ready for target ${target.id}`);
-            session.close();
-            continue;
-          }
-        }
-        if (appId === "codex") {
-          for (let attempt = 1; attempt <= 4; attempt++) {
-            const codexDebug = await session.evaluate(`(() => {
+            })()`).catch(()=>!1),!g);k++)await new Promise(S=>setTimeout(S,100));if(!g){console.warn(`[injector] HanaAgent injection did not become ready for target ${p.id}`),y.close();continue}}if(e==="codex")for(let g=1;g<=4;g++){const k=await y.evaluate(`(() => {
               const shellMain = document.querySelector('main.main-surface') || document.querySelector('main');
               let homeCandidate = shellMain ? (shellMain.matches('[role="main"]') ? shellMain : shellMain.querySelector('[role="main"]')) : null;
               
@@ -1565,19 +74,7 @@ async function applyTheme(appId, themeId, port, options = {}) {
                 isHomeContainer,
                 isFallback
               };
-            })`);
-            if (codexDebug.homeClasses && codexDebug.homeClasses.includes("dream-skin-home")) {
-              console.log(`[injector] Codex home detection for ${target.id}: attempt=${attempt}`, JSON.stringify(codexDebug));
-              break;
-            }
-            if (attempt < 4) {
-              await new Promise((r) => setTimeout(r, 800));
-            }
-          }
-        }
-        if (appId === "codex") {
-          try {
-            const debugResult = await session.evaluate(`(() => {
+            })`);if(k.homeClasses&&k.homeClasses.includes("dream-skin-home")){console.log(`[injector] Codex home detection for ${p.id}: attempt=${g}`,JSON.stringify(k));break}g<4&&await new Promise(S=>setTimeout(S,800))}if(e==="codex")try{const g=await y.evaluate(`(() => {
               const html = document.documentElement;
               const body = document.body;
               const style = document.getElementById('dream-work-style');
@@ -1605,283 +102,44 @@ async function applyTheme(appId, themeId, port, options = {}) {
                 codexDreamSkinOnHtml: html.classList.contains('codex-dream-skin'),
                 dreamTheme: html.dataset.dreamTheme || null
               };
-            })()`);
-            console.log(`[injector] Codex debug info for ${target.id}:`, JSON.stringify(debugResult, null, 2));
-          } catch (e) {
-            console.error(`[injector] Failed to get debug info for ${target.id}:`, e);
-          }
-        }
-        session.close();
-        applied++;
-      } catch (e) {
-        console.error(`[injector] Failed to inject to target ${target.id}:`, e);
-      }
-    }
-    if (appId === "hana-agent" && applied > 0) {
-      const injectedTargetIds = new Set(targets.map((target) => target.id));
-      const deadline = Date.now() + 2e4;
-      let stableTargetId = "";
-      let stableSince = 0;
-      while (Date.now() < deadline) {
-        let currentTargets = [];
-        try {
-          currentTargets = await fetchRendererTargets(port, ".hanako/artifacts/renderer/", { timeoutMs: 2e3, quiet: true });
-        } catch {
-        }
-        const current = currentTargets[0];
-        if (!current) {
-          stableTargetId = "";
-          stableSince = 0;
-          await new Promise((resolve) => setTimeout(resolve, 250));
-          continue;
-        }
-        if (!injectedTargetIds.has(current.id)) {
-          console.log(`[injector] HanaAgent created renderer target ${current.id}; injecting theme`);
-          const session2 = new CdpSession(current.webSocketDebuggerUrl);
-          try {
-            await session2.open();
-            const persistentScript = `(() => {
-              const inject = () => ${menuScript};
+            })()`);console.log(`[injector] Codex debug info for ${p.id}:`,JSON.stringify(g,null,2))}catch(g){console.error(`[injector] Failed to get debug info for ${p.id}:`,g)}y.close(),B++}catch(y){console.error(`[injector] Failed to inject to target ${p.id}:`,y)}if(e==="hana-agent"&&B>0){const p=new Set(s.map(k=>k.id)),y=Date.now()+2e4;let P="",g=0;for(;Date.now()<y;){let k=[];try{k=await q(t,".hanako/artifacts/renderer/",{timeoutMs:2e3,quiet:!0})}catch{}const S=k[0];if(!S){P="",g=0,await new Promise(D=>setTimeout(D,250));continue}if(!p.has(S.id)){console.log(`[injector] HanaAgent created renderer target ${S.id}; injecting theme`);const D=new N(S.webSocketDebuggerUrl);try{await D.open();const ze=`(() => {
+              const inject = () => ${A};
               if (document.readyState === 'loading') window.addEventListener('DOMContentLoaded', inject, { once: true });
               else inject();
-            })()`;
-            const identifier = await session2.addScriptToEvaluateOnNewDocument(persistentScript);
-            if (identifier) hanaAgentPersistentScripts.set(current.id, identifier);
-            await session2.evaluate(`(() => { window.__dreamWorkForceApply = true; return ${menuScript}; })()`);
-            injectedTargetIds.add(current.id);
-          } finally {
-            session2.close();
-          }
-        }
-        const session = new CdpSession(current.webSocketDebuggerUrl);
-        let ready = false;
-        try {
-          await session.open();
-          ready = await session.evaluate(`(() => {
-            const host = document.getElementById('${MENU_ID}-host');
-            return Boolean(document.getElementById('${STYLE_ID}') && host?.shadowRoot?.getElementById('${MENU_ID}') && document.documentElement.dataset.dreamTheme);
-          })()`);
-        } catch {
-        } finally {
-          session.close();
-        }
-        if (ready) {
-          if (stableTargetId !== current.id) {
-            stableTargetId = current.id;
-            stableSince = Date.now();
-          } else if (Date.now() - stableSince >= 2e3) {
-            startHanaAgentWatcher(port, menuScript, injectedTargetIds);
-            recordThemeUsage(appId, themeId);
-            return { success: true, applied: 1 };
-          }
-        } else {
-          stableTargetId = "";
-          stableSince = 0;
-        }
-        await new Promise((resolve) => setTimeout(resolve, 250));
-      }
-      return { success: false, applied: 0, error: "HanaAgent renderer did not stabilize with the injected theme" };
-    }
-    if (applied > 0) recordThemeUsage(appId, themeId);
-    return { success: applied > 0, applied };
-  } catch (error) {
-    console.error("[injector] Injection failed:", error);
-    return { success: false, applied: 0, error: error.message };
-  }
-}
-async function getStatus(appId, port, options = {}) {
-  return readStatusOnce(appId, port, options);
-}
-function startHanaAgentWatcher(port, menuScript, injectedTargetIds) {
-  const existing = hanaAgentWatchers.get(port);
-  if (existing) clearInterval(existing);
-  const generation = (hanaAgentGenerations.get(port) ?? 0) + 1;
-  hanaAgentGenerations.set(port, generation);
-  let busy = false;
-  const timer = setInterval(async () => {
-    if (busy) return;
-    if (hanaAgentGenerations.get(port) !== generation) return;
-    busy = true;
-    try {
-      const targets = await fetchRendererTargets(port, ".hanako/artifacts/renderer/", { timeoutMs: 1e3, quiet: true });
-      const target = targets[0];
-      if (!target) return;
-      if (hanaAgentGenerations.get(port) !== generation) return;
-      const session = new CdpSession(target.webSocketDebuggerUrl);
-      try {
-        await session.open();
-        const state = await session.evaluate(`(() => {
-          const host = document.getElementById('${MENU_ID}-host');
+            })()`,pe=await D.addScriptToEvaluateOnNewDocument(ze);pe&&L.set(S.id,pe),await D.evaluate(`(() => { window.__dreamWorkForceApply = true; return ${A}; })()`),p.add(S.id)}finally{D.close()}}const Y=new N(S.webSocketDebuggerUrl);let he=!1;try{await Y.open(),he=await Y.evaluate(`(() => {
+            const host = document.getElementById('${T}-host');
+            return Boolean(document.getElementById('${j}') && host?.shadowRoot?.getElementById('${T}') && document.documentElement.dataset.dreamTheme);
+          })()`)}catch{}finally{Y.close()}if(he){if(P!==S.id)P=S.id,g=Date.now();else if(Date.now()-g>=2e3)return Jt(t,A,p),ae(e,n),{success:!0,applied:1}}else P="",g=0;await new Promise(D=>setTimeout(D,250))}return{success:!1,applied:0,error:"HanaAgent renderer did not stabilize with the injected theme"}}return B>0&&ae(e,n),{success:B>0,applied:B}}catch(i){return console.error("[injector] Injection failed:",i),{success:!1,applied:0,error:i.message}}}async function qt(e,n,t={}){return Gt(e,n,t)}function Jt(e,n,t){const r=F.get(e);r&&clearInterval(r);const o=(O.get(e)??0)+1;O.set(e,o);let a=!1;const s=setInterval(async()=>{if(!a&&O.get(e)===o){a=!0;try{const i=(await q(e,".hanako/artifacts/renderer/",{timeoutMs:1e3,quiet:!0}))[0];if(!i||O.get(e)!==o)return;const d=new N(i.webSocketDebuggerUrl);try{await d.open();const u=await d.evaluate(`(() => {
+          const host = document.getElementById('${T}-host');
           if (document.documentElement.dataset.dreamThemeRestored === 'true') return 'restored';
-          return document.getElementById('${STYLE_ID}') && host?.shadowRoot?.getElementById('${MENU_ID}') && document.documentElement.dataset.dreamTheme
+          return document.getElementById('${j}') && host?.shadowRoot?.getElementById('${T}') && document.documentElement.dataset.dreamTheme
             ? 'ready'
             : 'missing';
-        })()`).catch(() => "missing");
-        if (state === "ready" || state === "restored") {
-          injectedTargetIds.add(target.id);
-          return;
-        }
-        console.log(`[injector] HanaAgent watcher restoring theme on renderer target ${target.id}`);
-        if (hanaAgentGenerations.get(port) !== generation) return;
-        const persistentScript = `(() => {
-          const inject = () => ${menuScript};
+        })()`).catch(()=>"missing");if(u==="ready"||u==="restored"){t.add(i.id);return}if(console.log(`[injector] HanaAgent watcher restoring theme on renderer target ${i.id}`),O.get(e)!==o)return;const h=`(() => {
+          const inject = () => ${n};
           if (document.readyState === 'loading') window.addEventListener('DOMContentLoaded', inject, { once: true });
           else inject();
-        })()`;
-        if (!injectedTargetIds.has(target.id)) {
-          const identifier = await session.addScriptToEvaluateOnNewDocument(persistentScript);
-          if (identifier) hanaAgentPersistentScripts.set(target.id, identifier);
-        }
-        await session.evaluate(menuScript);
-        if (hanaAgentGenerations.get(port) !== generation) {
-          await session.evaluate(`(() => {
-            document.getElementById('${STYLE_ID}')?.remove();
-            document.getElementById('${MENU_ID}-host')?.remove();
+        })()`;if(!t.has(i.id)){const b=await d.addScriptToEvaluateOnNewDocument(h);b&&L.set(i.id,b)}if(await d.evaluate(n),O.get(e)!==o){await d.evaluate(`(() => {
+            document.getElementById('${j}')?.remove();
+            document.getElementById('${T}-host')?.remove();
             clearInterval(window.__dreamWorkMenuGuard);
             delete window.__dreamWorkMenuGuard;
             delete document.documentElement.dataset.dreamTheme;
-          })()`).catch(() => {
-          });
-          return;
-        }
-        injectedTargetIds.add(target.id);
-      } finally {
-        session.close();
-      }
-    } catch {
-      if (!await isPortReachable(port)) {
-        clearInterval(timer);
-        hanaAgentWatchers.delete(port);
-      }
-    } finally {
-      busy = false;
-    }
-  }, 1e3);
-  hanaAgentWatchers.set(port, timer);
-}
-async function isPortReachable(port) {
-  try {
-    const response = await fetch(`http://127.0.0.1:${port}/json/version`, { signal: AbortSignal.timeout(500) });
-    return response.ok;
-  } catch {
-    return false;
-  }
-}
-async function readStatusOnce(appId, port, options = {}) {
-  var _a;
-  const hints = options.rendererUrlHint ? [options.rendererUrlHint] : ((_a = getAppDefinition(appId)) == null ? void 0 : _a.rendererHints) ?? ["renderer/index.html", "index.html"];
-  let targets = [];
-  for (const hint of hints) {
-    try {
-      targets = await fetchRendererTargets(port, hint, { timeoutMs: 1e3, quiet: true });
-      if (targets.length > 0) break;
-    } catch {
-    }
-  }
-  if (targets.length === 0) {
-    try {
-      const resp = await fetch(`http://127.0.0.1:${port}/json/list`, { signal: AbortSignal.timeout(5e3) });
-      const json = await resp.json();
-      targets = (Array.isArray(json) ? json : []).filter(isAnyPageTarget).sort((a, b) => {
-        const la = [String(a.id ?? ""), a.url, a.webSocketDebuggerUrl];
-        const lb = [String(b.id ?? ""), b.url, b.webSocketDebuggerUrl];
-        for (let i = 0; i < la.length; i++) {
-          if (la[i] < lb[i]) return -1;
-          if (la[i] > lb[i]) return 1;
-        }
-        return 0;
-      });
-    } catch {
-    }
-  }
-  if (targets.length === 0) {
-    return { installed: false, menu: false, targets: 0 };
-  }
-  const states = [];
-  for (const target of targets) {
-    const session = new CdpSession(target.webSocketDebuggerUrl);
-    try {
-      await session.open();
-      if (appId === "workbuddy") {
-        const isWorkBuddy = await session.evaluate(`(() => document.body?.dataset.applicationName === 'workbuddy')()`);
-        if (!isWorkBuddy) continue;
-      }
-      const serializedState = await session.evaluate(`(() => {
-        const style = document.getElementById('${STYLE_ID}');
-        const menuHost = document.getElementById('${MENU_ID}-host');
-        const menu = document.getElementById('${MENU_ID}') || menuHost?.shadowRoot?.getElementById('${MENU_ID}');
+          })()`).catch(()=>{});return}t.add(i.id)}finally{d.close()}}catch{await Kt(e)||(clearInterval(s),F.delete(e))}finally{a=!1}}},1e3);F.set(e,s)}async function Kt(e){try{return(await fetch(`http://127.0.0.1:${e}/json/version`,{signal:AbortSignal.timeout(500)})).ok}catch{return!1}}async function Gt(e,n,t={}){var l;const r=t.rendererUrlHint?[t.rendererUrlHint]:((l=E(e))==null?void 0:l.rendererHints)??["renderer/index.html","index.html"];let o=[];for(const i of r)try{if(o=await q(n,i,{timeoutMs:1e3,quiet:!0}),o.length>0)break}catch{}if(o.length===0)try{const d=await(await fetch(`http://127.0.0.1:${n}/json/list`,{signal:AbortSignal.timeout(5e3)})).json();o=(Array.isArray(d)?d:[]).filter(de).sort((u,h)=>{const b=[String(u.id??""),u.url,u.webSocketDebuggerUrl],v=[String(h.id??""),h.url,h.webSocketDebuggerUrl];for(let x=0;x<b.length;x++){if(b[x]<v[x])return-1;if(b[x]>v[x])return 1}return 0})}catch{}if(o.length===0)return{installed:!1,menu:!1,targets:0};const a=[];for(const i of o){const d=new N(i.webSocketDebuggerUrl);try{if(await d.open(),e==="workbuddy"&&!await d.evaluate("(() => document.body?.dataset.applicationName === 'workbuddy')()"))continue;const u=await d.evaluate(`(() => {
+        const style = document.getElementById('${j}');
+        const menuHost = document.getElementById('${T}-host');
+        const menu = document.getElementById('${T}') || menuHost?.shadowRoot?.getElementById('${T}');
         return JSON.stringify({
           installed: Boolean(style),
           menu: Boolean(menu),
           themeId: document.documentElement.dataset.dreamTheme ?? undefined
         });
-      })()`);
-      const state = JSON.parse(serializedState);
-      states.push(state);
-    } catch (error) {
-      console.warn(`[injector] Status check failed for ${appId} target ${target.id}:`, error);
-    } finally {
-      session.close();
-    }
-  }
-  const active = states.find((state) => state.installed && state.themeId) ?? states.find((state) => state.installed);
-  return {
-    installed: states.some((state) => state.installed),
-    menu: states.some((state) => state.menu),
-    themeId: active == null ? void 0 : active.themeId,
-    targets: states.length
-  };
-}
-async function removeSkin(appId, port, options = {}) {
-  var _a;
-  if (appId === "hana-agent") {
-    hanaAgentGenerations.set(port, (hanaAgentGenerations.get(port) ?? 0) + 1);
-    const watcher = hanaAgentWatchers.get(port);
-    if (watcher) clearInterval(watcher);
-    hanaAgentWatchers.delete(port);
-  }
-  const rendererUrlHint = options.rendererUrlHint ?? ((_a = getAppDefinition(appId)) == null ? void 0 : _a.rendererHints[0]) ?? "renderer/index.html";
-  let targets = [];
-  try {
-    targets = await fetchRendererTargets(port, rendererUrlHint);
-  } catch {
-  }
-  if (targets.length === 0) {
-    try {
-      const resp = await fetch(`http://127.0.0.1:${port}/json/list`, { signal: AbortSignal.timeout(5e3) });
-      const json = await resp.json();
-      targets = (Array.isArray(json) ? json : []).filter(isAnyPageTarget).sort((a, b) => {
-        const la = [String(a.id ?? ""), a.url, a.webSocketDebuggerUrl];
-        const lb = [String(b.id ?? ""), b.url, b.webSocketDebuggerUrl];
-        for (let i = 0; i < la.length; i++) {
-          if (la[i] < lb[i]) return -1;
-          if (la[i] > lb[i]) return 1;
-        }
-        return 0;
-      });
-    } catch {
-    }
-  }
-  if (targets.length === 0) {
-    return { success: false };
-  }
-  for (const target of appId === "hana-agent" ? targets : targets.slice(0, 1)) {
-    const session = new CdpSession(target.webSocketDebuggerUrl);
-    await session.open();
-    if (appId === "hana-agent") {
-      const identifier = hanaAgentPersistentScripts.get(target.id);
-      if (identifier) {
-        await session.removeScriptToEvaluateOnNewDocument(identifier).catch(() => {
-        });
-        hanaAgentPersistentScripts.delete(target.id);
-      }
-    }
-    await session.evaluate(`(() => {
-      ${appId === "hana-agent" ? `try { localStorage.setItem('dream-work-theme:hana-agent:restored', '1'); } catch {}
-      document.documentElement.dataset.dreamThemeRestored = 'true';` : ""}
-      document.getElementById('${STYLE_ID}')?.remove();
-      document.getElementById('${MENU_ID}')?.remove();
-      document.getElementById('${MENU_ID}-host')?.remove();
+      })()`),h=JSON.parse(u);a.push(h)}catch(u){console.warn(`[injector] Status check failed for ${e} target ${i.id}:`,u)}finally{d.close()}}const s=a.find(i=>i.installed&&i.themeId)??a.find(i=>i.installed);return{installed:a.some(i=>i.installed),menu:a.some(i=>i.menu),themeId:s==null?void 0:s.themeId,targets:a.length}}async function Vt(e,n,t={}){var a;if(e==="hana-agent"){O.set(n,(O.get(n)??0)+1);const s=F.get(n);s&&clearInterval(s),F.delete(n)}const r=t.rendererUrlHint??((a=E(e))==null?void 0:a.rendererHints[0])??"renderer/index.html";let o=[];try{o=await q(n,r)}catch{}if(o.length===0)try{const l=await(await fetch(`http://127.0.0.1:${n}/json/list`,{signal:AbortSignal.timeout(5e3)})).json();o=(Array.isArray(l)?l:[]).filter(de).sort((i,d)=>{const u=[String(i.id??""),i.url,i.webSocketDebuggerUrl],h=[String(d.id??""),d.url,d.webSocketDebuggerUrl];for(let b=0;b<u.length;b++){if(u[b]<h[b])return-1;if(u[b]>h[b])return 1}return 0})}catch{}if(o.length===0)return{success:!1};for(const s of e==="hana-agent"?o:o.slice(0,1)){const l=new N(s.webSocketDebuggerUrl);if(await l.open(),e==="hana-agent"){const i=L.get(s.id);i&&(await l.removeScriptToEvaluateOnNewDocument(i).catch(()=>{}),L.delete(s.id))}await l.evaluate(`(() => {
+      ${e==="hana-agent"?`try { localStorage.setItem('dream-work-theme:hana-agent:restored', '1'); } catch {}
+      document.documentElement.dataset.dreamThemeRestored = 'true';`:""}
+      document.getElementById('${j}')?.remove();
+      document.getElementById('${T}')?.remove();
+      document.getElementById('${T}-host')?.remove();
       clearInterval(window.__dreamWorkMenuGuard);
       delete window.__dreamWorkMenuGuard;
       if (window.__dreamWorkOutsideClick) {
@@ -1891,58 +149,29 @@ async function removeSkin(appId, port, options = {}) {
       delete document.documentElement.dataset.dreamTheme;
       delete document.documentElement.dataset.dreamShell;
       return true;
-    })`);
-    session.close();
-  }
-  return { success: true };
-}
-function buildAppCss(appId, manifest, heroDataUrl) {
-  var _a, _b, _c, _d;
-  const colors = {
-    accent: ((_a = manifest.colors) == null ? void 0 : _a.accent) ?? "#24c9d7",
-    secondary: ((_b = manifest.colors) == null ? void 0 : _b.secondary) ?? "#ef8fd3",
-    surface: ((_c = manifest.colors) == null ? void 0 : _c.surface) ?? "#f7fbff",
-    text: ((_d = manifest.colors) == null ? void 0 : _d.text) ?? "#17344f"
-  };
-  if (appId === "codex") {
-    return buildCodexCss(manifest, heroDataUrl, colors);
-  }
-  const definition = getAppDefinition(appId);
-  if ((definition == null ? void 0 : definition.kind) === "vscode-work") {
-    return buildVsCodeWorkCss(manifest, heroDataUrl, colors);
-  }
-  if ((definition == null ? void 0 : definition.kind) === "generic-work") {
-    if (appId === "hana-agent") {
-      return buildHanaAgentCss(manifest, heroDataUrl, colors);
-    }
-    return buildGenericWorkCss(appId, manifest, heroDataUrl, colors);
-  }
-  return buildWorkBuddyCss({ ...manifest, copy: null }, heroDataUrl, colors);
-}
-function buildVsCodeWorkCss(manifest, heroDataUrl, colors) {
-  return `/* DREAM_THEME:${manifest.id} */
+    })`),l.close()}return{success:!0}}function xe(e,n,t){var a,s,l,i;const r={accent:((a=n.colors)==null?void 0:a.accent)??"#24c9d7",secondary:((s=n.colors)==null?void 0:s.secondary)??"#ef8fd3",surface:((l=n.colors)==null?void 0:l.surface)??"#f7fbff",text:((i=n.colors)==null?void 0:i.text)??"#17344f"};if(e==="codex")return nn(n,t,r);const o=E(e);return(o==null?void 0:o.kind)==="vscode-work"?Xt(n,t,r):(o==null?void 0:o.kind)==="generic-work"?e==="hana-agent"?Re(n,t,r):Zt(e,n,t,r):Be({...n,copy:null},t,r)}function Xt(e,n,t){return`/* DREAM_THEME:${e.id} */
 :root {
   --vscode-editor-background: transparent !important;
-  --vscode-foreground: ${colors.text} !important;
-  --vscode-sideBar-background: color-mix(in srgb, ${colors.surface} 92%, transparent) !important;
+  --vscode-foreground: ${t.text} !important;
+  --vscode-sideBar-background: color-mix(in srgb, ${t.surface} 92%, transparent) !important;
   --vscode-panel-background: transparent !important;
-  --vscode-input-background: color-mix(in srgb, ${colors.surface} 94%, transparent) !important;
-  --vscode-button-background: ${colors.accent} !important;
+  --vscode-input-background: color-mix(in srgb, ${t.surface} 94%, transparent) !important;
+  --vscode-button-background: ${t.accent} !important;
   --vscode-button-foreground: #ffffff !important;
-  --vscode-focusBorder: ${colors.accent} !important;
+  --vscode-focusBorder: ${t.accent} !important;
 }
 body.solo-lite {
-  background-color: ${colors.surface} !important;
-  color: ${colors.text} !important;
+  background-color: ${t.surface} !important;
+  color: ${t.text} !important;
 }
 body.solo-lite #root {
-  background-color: ${colors.surface} !important;
-  background-image: url(${JSON.stringify(heroDataUrl)}) !important;
+  background-color: ${t.surface} !important;
+  background-image: url(${JSON.stringify(n)}) !important;
   background-position: center center !important;
   background-size: cover !important;
   background-repeat: no-repeat !important;
   background-attachment: fixed !important;
-  color: ${colors.text} !important;
+  color: ${t.text} !important;
 }
 body.solo-lite #solo-lite-root {
   background-color: transparent !important;
@@ -1953,7 +182,7 @@ body.solo-lite #solo-lite-root {
 .solo-lite-chat-panel-container {
   background-color: transparent !important;
   background-image: none !important;
-  color: ${colors.text} !important;
+  color: ${t.text} !important;
 }
 .panel-content > *,
 .initial-chat-panel > *,
@@ -1972,13 +201,13 @@ body.solo-lite #solo-lite-root {
   background-image: none !important;
 }
 .messageInputContainer {
-  background-color: color-mix(in srgb, ${colors.surface} 76%, transparent) !important;
-  color: ${colors.text} !important;
+  background-color: color-mix(in srgb, ${t.surface} 76%, transparent) !important;
+  color: ${t.text} !important;
   backdrop-filter: blur(12px) saturate(105%);
 }
 .messageInputContainer {
-  border-color: color-mix(in srgb, ${colors.accent} 34%, transparent) !important;
-  box-shadow: 0 16px 44px color-mix(in srgb, ${colors.surface} 34%, transparent) !important;
+  border-color: color-mix(in srgb, ${t.accent} 34%, transparent) !important;
+  box-shadow: 0 16px 44px color-mix(in srgb, ${t.surface} 34%, transparent) !important;
 }
 .messageInputContainer :where(
   .chat-input-v2-editor-part,
@@ -2017,12 +246,12 @@ html body.solo-lite #root .solo-lite-chat-panel-content .messageInputContainer .
 }
 html body.solo-lite #root :where(.initial-chat-panel, .solo-lite-chat-panel-content) .messageInputContainer
   :where(button, button span, .messageInputPluginToolbarMore, .core-model-select-trigger, .rtcVoicePluginButton, .voiceCallButton, .inputBarButton-ncFFma) {
-  color: ${colors.text} !important;
-  -webkit-text-fill-color: ${colors.text} !important;
+  color: ${t.text} !important;
+  -webkit-text-fill-color: ${t.text} !important;
 }
 html body.solo-lite #root :where(.initial-chat-panel, .solo-lite-chat-panel-content) .messageInputContainer
   :where(button, [role="button"]) svg {
-  color: ${colors.text} !important;
+  color: ${t.text} !important;
   fill: currentColor !important;
   stroke: currentColor !important;
 }
@@ -2038,19 +267,19 @@ html body.solo-lite #root :where(.initial-chat-panel, .solo-lite-chat-panel-cont
   .voiceCallButton,
   .inputBarButton-ncFFma
 ) {
-  color: ${colors.text} !important;
-  -webkit-text-fill-color: ${colors.text} !important;
+  color: ${t.text} !important;
+  -webkit-text-fill-color: ${t.text} !important;
 }
 .messageInputContainer :where(button, [role="button"]) svg {
-  color: ${colors.text} !important;
+  color: ${t.text} !important;
   fill: currentColor !important;
   stroke: currentColor !important;
 }
 .messageInputContainer :where(button, [role="button"]):hover {
-  background-color: color-mix(in srgb, ${colors.accent} 16%, transparent) !important;
+  background-color: color-mix(in srgb, ${t.accent} 16%, transparent) !important;
 }
 .messageInputContainer .chat-input-v2-send-button:not(.disabled) {
-  background-color: ${colors.accent} !important;
+  background-color: ${t.accent} !important;
   color: #ffffff !important;
   -webkit-text-fill-color: #ffffff !important;
 }
@@ -2059,13 +288,13 @@ html body.solo-lite #root :where(.initial-chat-panel, .solo-lite-chat-panel-cont
 }
 .messageInputContainer .projectButtonPlaceholderWork-JV100D,
 .messageInputContainer [class*="Placeholder"] {
-  color: color-mix(in srgb, ${colors.text} 66%, transparent) !important;
-  -webkit-text-fill-color: color-mix(in srgb, ${colors.text} 66%, transparent) !important;
+  color: color-mix(in srgb, ${t.text} 66%, transparent) !important;
+  -webkit-text-fill-color: color-mix(in srgb, ${t.text} 66%, transparent) !important;
 }
 html[data-dream-shell="dark"] body.solo-lite #root .messageInputContainer
   :where(.inputBarButton-ncFFma, .inputBarButton-ncFFma *, .core-model-select-trigger, .core-model-select-trigger *) {
-  color: ${colors.text} !important;
-  -webkit-text-fill-color: ${colors.text} !important;
+  color: ${t.text} !important;
+  -webkit-text-fill-color: ${t.text} !important;
 }
 html[data-dream-shell="dark"] body.solo-lite #root
   :where(.task-list-base-content, .soloLiteMenubar, .task-list-base-footer)
@@ -2087,8 +316,8 @@ html[data-dream-shell="dark"] body.solo-lite #root
     .menubar-menu-title,
     .menubar-menu-title *
   ) {
-  color: ${colors.text} !important;
-  -webkit-text-fill-color: ${colors.text} !important;
+  color: ${t.text} !important;
+  -webkit-text-fill-color: ${t.text} !important;
 }
 html[data-dream-shell="dark"] body.solo-lite #root
   :where(.task-list-heading, .task-list-group-title, .menubar-menu-title) {
@@ -2096,7 +325,7 @@ html[data-dream-shell="dark"] body.solo-lite #root
 }
 html[data-dream-shell="dark"] body.solo-lite #root
   :where(.task-list-base-content, .soloLiteMenubar, .task-list-base-footer, .messageInputContainer) svg {
-  color: ${colors.text} !important;
+  color: ${t.text} !important;
 }
 html[data-dream-shell="dark"] body.solo-lite #root
   :where(.task-list-base-content, .soloLiteMenubar, .task-list-base-footer, .messageInputContainer)
@@ -2108,122 +337,182 @@ html[data-dream-shell="dark"] body.solo-lite #root
   :where(svg[stroke]:not([stroke="none"]), svg [stroke]:not([stroke="none"])) {
   stroke: currentColor !important;
 }
-`;
-}
-function buildGenericWorkCss(appId, manifest, heroDataUrl, colors) {
-  const mainSelectors = {
-    "qoder-work": '#root > div, [class*="layout"], [class*="content-area"], [class*="main-content"]',
-    catpaw: ".main-area, .main-content-container, .main-content, .chat-content-area",
-    zcode: 'main, main > div, [class*="min-h-0"][class*="flex-1"]',
-    "qwen-office": ".agents-content-area, .agents-parchment-paper-surface"
-  };
-  const sidebarSelectors = {
-    "qoder-work": '[class*="sidebar"]',
-    catpaw: ".sidebar-wrapper, .sidebar",
-    zcode: "#sidebar, aside",
-    "qwen-office": ".agents-sidebar, .group\\/sidebar"
-  };
-  const main = mainSelectors[appId] ?? 'main, [role="main"], [class*="main-content"]';
-  const sidebar = sidebarSelectors[appId] ?? 'aside, nav, [class*="sidebar"]';
-  const appSpecificCss = appId === "qoder-work" ? buildQoderWorkShellCss(colors) : appId === "catpaw" ? buildCatPawCss(heroDataUrl, colors) : "";
-  return `/* DREAM_THEME:${manifest.id} */
+`}function Zt(e,n,t,r){const o={"qoder-work":'#root > div, [class*="layout"], [class*="content-area"], [class*="main-content"]',catpaw:".main-area, .main-content-container, .main-content, .chat-content-area",zcode:'main, main > div, [class*="min-h-0"][class*="flex-1"]',"qwen-office":".agents-content-area, .agents-parchment-paper-surface"},a={"qoder-work":'[class*="sidebar"]',catpaw:".sidebar-wrapper, .sidebar",zcode:"#sidebar, aside","qwen-office":".agents-sidebar, .group\\/sidebar"},s=o[e]??'main, [role="main"], [class*="main-content"]',l=a[e]??'aside, nav, [class*="sidebar"]',i=e==="qoder-work"?en(r):e==="catpaw"?tn(t,r):e==="zcode"?Qt(r):"",d=e==="zcode"?'[class*="composer"], [class*="input-container"]':'[class*="message"], [class*="bubble"], [class*="composer"], [class*="input-container"]',u=e==="zcode"?`url(${JSON.stringify(t)}) center / cover no-repeat fixed !important`:`linear-gradient(90deg, color-mix(in srgb, ${r.surface} 82%, transparent) 0 12%, transparent 42%), url(${JSON.stringify(t)}) center / cover no-repeat fixed !important`;return`/* DREAM_THEME:${n.id} */
 :root {
-  --dream-work-accent: ${colors.accent};
-  --dream-work-secondary: ${colors.secondary};
-  --dream-work-surface: ${colors.surface};
-  --dream-work-text: ${colors.text};
-  --catpaw-bg-primary: ${colors.surface} !important;
-  --catpaw-text-primary: ${colors.text} !important;
-  --catpaw-text-secondary: color-mix(in srgb, ${colors.text} 72%, transparent) !important;
-  --agents-sidebar-material-bg: color-mix(in srgb, ${colors.surface} 90%, transparent) !important;
-  --text-base-primary: ${colors.text} !important;
-  --text-base-secondary: color-mix(in srgb, ${colors.text} 72%, transparent) !important;
-  --bg-base: color-mix(in srgb, ${colors.surface} 86%, transparent) !important;
+  --dream-work-accent: ${r.accent};
+  --dream-work-secondary: ${r.secondary};
+  --dream-work-surface: ${r.surface};
+  --dream-work-text: ${r.text};
+  --catpaw-bg-primary: ${r.surface} !important;
+  --catpaw-text-primary: ${r.text} !important;
+  --catpaw-text-secondary: color-mix(in srgb, ${r.text} 72%, transparent) !important;
+  --agents-sidebar-material-bg: color-mix(in srgb, ${r.surface} 90%, transparent) !important;
+  --text-base-primary: ${r.text} !important;
+  --text-base-secondary: color-mix(in srgb, ${r.text} 72%, transparent) !important;
+  --bg-base: color-mix(in srgb, ${r.surface} 86%, transparent) !important;
 }
-html, body, #root { background: ${colors.surface} !important; color: ${colors.text} !important; }
-:is(${sidebar}) {
-  background: color-mix(in srgb, ${colors.surface} 90%, transparent) !important;
-  color: ${colors.text} !important;
+html, body, #root { background: ${r.surface} !important; color: ${r.text} !important; }
+:is(${l}) {
+  background: color-mix(in srgb, ${r.surface} 90%, transparent) !important;
+  color: ${r.text} !important;
   backdrop-filter: blur(20px) saturate(108%);
 }
-:is(${main}) {
-  background: linear-gradient(90deg, color-mix(in srgb, ${colors.surface} 82%, transparent) 0 12%, transparent 42%), url(${JSON.stringify(heroDataUrl)}) center / cover no-repeat fixed !important;
-  color: ${colors.text} !important;
+:is(${s}) {
+  background: ${u};
+  color: ${r.text} !important;
 }
-:is(${main}) :where([class*="message"], [class*="chat"], [class*="composer"], [class*="editor"], [contenteditable="true"], textarea) {
-  color: ${colors.text} !important;
+:is(${s}) :where([class*="message"], [class*="chat"], [class*="composer"], [class*="editor"], [contenteditable="true"], textarea) {
+  color: ${r.text} !important;
 }
-:is(${main}) :where([class*="message"], [class*="bubble"], [class*="composer"], [class*="input-container"]) {
-  background-color: color-mix(in srgb, ${colors.surface} 88%, transparent) !important;
+:is(${s}) :where(${d}) {
+  background-color: color-mix(in srgb, ${r.surface} 88%, transparent) !important;
   backdrop-filter: blur(16px) saturate(108%);
 }
-:is(${main}) :where(p, span, li, h1, h2, h3, h4, strong, em) { color: ${colors.text} !important; }
-button[class*="bg-primary"], button[class*="bg-accent"] { background-color: ${colors.accent} !important; color: #fff !important; }
-${appSpecificCss}`;
+:is(${s}) :where(p, span, li, h1, h2, h3, h4, strong, em) { color: ${r.text} !important; }
+button[class*="bg-primary"], button[class*="bg-accent"] { background-color: ${r.accent} !important; color: #fff !important; }
+${i}`}function Qt(e){return`
+/* ZCode conversations: the wallpaper stays on the timeline, while each
+   semantic row receives its own readable surface instead of one large wash. */
+:is(main) :where(
+  [class*="chat"],
+  [class*="conversation"],
+  [class*="message"],
+  [class*="thread"],
+  [class*="virtual"]
+):has([data-row-id]) {
+  background-color: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
 }
-function buildHanaAgentCss(manifest, heroDataUrl, colors) {
-  return `/* DREAM_THEME:${manifest.id} */
+
+:is(main) :where(
+  [class~="group/user-row"] > div:first-child,
+  [class~="group/assistant-row"] > [data-conversation-selectable],
+  [data-row-id]:has([data-reasoning-content])
+) {
+  border: 1px solid color-mix(in srgb, ${e.accent} 30%, transparent) !important;
+  border-radius: 16px !important;
+  background: color-mix(in srgb, ${e.surface} 76%, transparent) !important;
+  box-shadow: 0 12px 30px color-mix(in srgb, ${e.surface} 30%, transparent), inset 0 1px color-mix(in srgb, white 12%, transparent) !important;
+  backdrop-filter: blur(14px) saturate(108%) !important;
+}
+
+:is(main) [class~="group/user-row"] > div:first-child {
+  border-color: color-mix(in srgb, ${e.accent} 44%, transparent) !important;
+  background: color-mix(in srgb, ${e.surface} 70%, transparent) !important;
+}
+
+:is(main) [class~="group/assistant-row"] > [data-conversation-selectable] {
+  padding: 14px 16px !important;
+}
+
+:is(main) [data-row-id]:has([data-reasoning-content]) {
+  padding: 12px 16px !important;
+}
+
+:is(main) [data-row-id]:has([data-reasoning-content]) [data-reasoning-content] {
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
+/* ---- 毛玻璃材质统一：左侧边栏 / 状态面板（Git 变更）/ 切换面板右侧栏 ----
+   与会话输入、模型输出行使用同一种玻璃材质（surface 76% + blur 14px），
+   并清除宽泛的 [class*="min-h-0"][class*="flex-1"] 壁纸选择器落在
+   这些面板内部容器上的直出壁纸。 */
+#sidebar[class],
+#sidebar aside aside {
+  background: transparent !important;
+  background-image: none !important;
+  backdrop-filter: none !important;
+}
+#sidebar aside {
+  background: color-mix(in srgb, ${e.surface} 76%, transparent) !important;
+  backdrop-filter: blur(14px) saturate(108%) !important;
+}
+#sidebar [class*="min-h-0"][class*="flex-1"] {
+  background: transparent !important;
+  background-image: none !important;
+}
+
+#root aside[class*="bg-[var(--color-popover)]"] {
+  background: color-mix(in srgb, ${e.surface} 76%, transparent) !important;
+  border-color: color-mix(in srgb, ${e.accent} 30%, transparent) !important;
+  backdrop-filter: blur(14px) saturate(108%) !important;
+}
+#root aside[class*="bg-[var(--color-popover)]"] [class*="min-h-0"][class*="flex-1"] {
+  background: transparent !important;
+  background-image: none !important;
+}
+
+.side-pane-open-tab-shell {
+  background: color-mix(in srgb, ${e.surface} 76%, transparent) !important;
+  backdrop-filter: blur(14px) saturate(108%) !important;
+}
+.side-pane-open-tab-shell [class*="min-h-0"][class*="flex-1"] {
+  background: transparent !important;
+  background-image: none !important;
+}
+`}function Re(e,n,t){return`/* DREAM_THEME:${e.id} */
 :root {
-  --dream-work-accent: ${colors.accent};
-  --dream-work-secondary: ${colors.secondary};
-  --dream-work-surface: ${colors.surface};
-  --dream-work-text: ${colors.text};
+  --dream-work-accent: ${t.accent};
+  --dream-work-secondary: ${t.secondary};
+  --dream-work-surface: ${t.surface};
+  --dream-work-text: ${t.text};
 }
 html, body, #react-root, .app-shell {
-  background-color: ${colors.surface} !important;
-  background-image: url(${JSON.stringify(heroDataUrl)}) !important;
+  background-color: ${t.surface} !important;
+  background-image: url(${JSON.stringify(n)}) !important;
   background-position: center center !important;
   background-size: cover !important;
   background-repeat: no-repeat !important;
   background-attachment: fixed !important;
-  color: ${colors.text} !important;
+  color: ${t.text} !important;
 }
 .titlebar, .app, .main-content, .chat-area, .input-area {
   background-color: transparent !important;
   background-image: none !important;
 }
 #sidebar, #jianSidebar .universal-card, #previewBody {
-  background: color-mix(in srgb, ${colors.surface} 66%, transparent) !important;
-  border-color: color-mix(in srgb, ${colors.accent} 24%, transparent) !important;
-  color: ${colors.text} !important;
+  background: color-mix(in srgb, ${t.surface} 66%, transparent) !important;
+  border-color: color-mix(in srgb, ${t.accent} 24%, transparent) !important;
+  color: ${t.text} !important;
   backdrop-filter: blur(20px) saturate(110%) !important;
 }
 .titlebar {
-  background: color-mix(in srgb, ${colors.surface} 62%, transparent) !important;
-  color: ${colors.text} !important;
+  background: color-mix(in srgb, ${t.surface} 62%, transparent) !important;
+  color: ${t.text} !important;
   backdrop-filter: blur(18px) saturate(108%) !important;
 }
 [class*="input-wrapper"] {
-  background: color-mix(in srgb, ${colors.surface} 78%, transparent) !important;
-  border-color: color-mix(in srgb, ${colors.accent} 30%, transparent) !important;
-  color: ${colors.text} !important;
-  box-shadow: 0 16px 42px color-mix(in srgb, ${colors.surface} 28%, transparent) !important;
+  background: color-mix(in srgb, ${t.surface} 78%, transparent) !important;
+  border-color: color-mix(in srgb, ${t.accent} 30%, transparent) !important;
+  color: ${t.text} !important;
+  box-shadow: 0 16px 42px color-mix(in srgb, ${t.surface} 28%, transparent) !important;
   backdrop-filter: blur(18px) saturate(108%) !important;
 }
 [class*="input-wrapper"] :where(textarea, input, [contenteditable="true"]) {
   background: transparent !important;
-  color: ${colors.text} !important;
-  caret-color: ${colors.accent} !important;
+  color: ${t.text} !important;
+  caret-color: ${t.accent} !important;
 }
 #sidebar :where(button, [role="button"]):hover,
 #jianSidebar :where(button, [role="button"]):hover {
-  background-color: color-mix(in srgb, ${colors.accent} 16%, transparent) !important;
+  background-color: color-mix(in srgb, ${t.accent} 16%, transparent) !important;
 }
 :where(button[class*="primary"], button[type="submit"]) {
-  background-color: ${colors.accent} !important;
+  background-color: ${t.accent} !important;
   color: #ffffff !important;
-}`;
-}
-function buildHanaAgentMenuScript(options) {
-  return `(() => {
-    const themes = ${JSON.stringify(options.themes)};
-    const cssTemplate = ${JSON.stringify(options.cssTemplate)};
-    const sentinels = ${JSON.stringify(WORKBUDDY_CSS_PLACEHOLDERS)};
+}`}function Yt(e){return`(() => {
+    const themes = ${JSON.stringify(e.themes)};
+    const cssTemplate = ${JSON.stringify(e.cssTemplate)};
+    const sentinels = ${JSON.stringify(f)};
     const restoreKey = 'dream-work-theme:hana-agent:restored';
     const customStorageKey = 'dreamCodexCustomThemes';
     const selectedKey = 'dream-work-theme:hana-agent:selected-theme';
-    const sharedCustomThemes = ${JSON.stringify(options.sharedCustomThemes)};
-    const sharedCustomThemeService = ${JSON.stringify(options.sharedCustomThemeService)};
+    const sharedCustomThemes = ${JSON.stringify(e.sharedCustomThemes)};
+    const sharedCustomThemeService = ${JSON.stringify(e.sharedCustomThemeService)};
     const recordPresetUsage = (themeId) => fetch(sharedCustomThemeService.usageEndpoint, {
       method: 'POST',
       headers: { Authorization: 'Bearer ' + sharedCustomThemeService.token, 'Content-Type': 'application/json' },
@@ -2240,10 +529,10 @@ function buildHanaAgentMenuScript(options) {
     if (restored) document.documentElement.dataset.dreamThemeRestored = 'true';
     else delete document.documentElement.dataset.dreamThemeRestored;
     let active = !restored;
-    let style = document.getElementById('${options.styleId}');
+    let style = document.getElementById('${e.styleId}');
     if (!style) {
       style = document.createElement('style');
-      style.id = '${options.styleId}';
+      style.id = '${e.styleId}';
     }
     const attachStyle = () => {
       if (active && !style.isConnected) document.head.appendChild(style);
@@ -2279,14 +568,14 @@ function buildHanaAgentMenuScript(options) {
       document.removeEventListener('pointerdown', window.__dreamWorkOutsideClick, true);
       delete window.__dreamWorkOutsideClick;
     }
-    document.getElementById('${options.menuId}-host')?.remove();
+    document.getElementById('${e.menuId}-host')?.remove();
     clearInterval(window.__dreamWorkMenuGuard);
     const host = document.createElement('div');
-    host.id = '${options.menuId}-host';
+    host.id = '${e.menuId}-host';
     host.style.cssText = 'all:initial!important;position:fixed!important;right:16px!important;bottom:16px!important;z-index:2147483647!important;display:block!important;pointer-events:auto!important;';
     const shadow = host.attachShadow({ mode: 'open' });
     const root = document.createElement('div');
-    root.id = '${options.menuId}';
+    root.id = '${e.menuId}';
     root.style.cssText = 'display:flex;flex-direction:column;align-items:flex-end;font:500 13px/1.4 system-ui;color:#17344f;';
     const panel = document.createElement('div');
     panel.style.cssText = 'display:none;margin-bottom:8px;min-width:190px;padding:6px;border-radius:12px;border:1px solid rgba(0,0,0,.1);background:rgba(255,255,255,.96);box-shadow:0 10px 30px rgba(0,0,0,.18);';
@@ -2530,90 +819,84 @@ function buildHanaAgentMenuScript(options) {
       if (!host.isConnected) document.documentElement.appendChild(host);
     }, 250);
     if (!restored || forceApply) {
-      let selectedId = '${options.currentThemeId}';
+      let selectedId = '${e.currentThemeId}';
       if (!forceApply) {
         try { selectedId = localStorage.getItem(selectedKey) || selectedId; } catch {}
       }
       const selectedCustom = loadCustoms().find((item) => item.id === selectedId);
       if (selectedCustom) applyCustomTheme(selectedCustom);
-      else applyTheme('${options.currentThemeId}');
+      else applyTheme('${e.currentThemeId}');
     }
     return true;
-  })()`;
-}
-function buildQoderWorkShellCss(colors) {
-  return `
+  })()`}function en(e){return`
 /* QoderWork shell controls */
 body > #root > div:first-child > div:first-child button[aria-label] {
   background-color: transparent !important;
-  color: ${colors.text} !important;
+  color: ${e.text} !important;
   border-color: transparent !important;
   box-shadow: none !important;
 }
 
 body > #root > div:first-child > div:first-child button[aria-label]:hover,
 body > #root > div:first-child > div:first-child button[aria-label]:focus-visible {
-  background-color: color-mix(in srgb, ${colors.accent} 16%, transparent) !important;
-  color: ${colors.text} !important;
+  background-color: color-mix(in srgb, ${e.accent} 16%, transparent) !important;
+  color: ${e.text} !important;
 }
 body > #root > div:first-child > div:first-child button[aria-label="Close"]:hover {
   background-color: color-mix(in srgb, #ef4444 20%, transparent) !important;
   color: #ef4444 !important;
 }
 .agents-sidebar :where(button, [role="button"], [class*="cursor-pointer"]) {
-  color: color-mix(in srgb, ${colors.text} 76%, transparent) !important;
+  color: color-mix(in srgb, ${e.text} 76%, transparent) !important;
 }
 .agents-sidebar :where(button, [role="button"], [class*="cursor-pointer"]):hover {
-  background-color: color-mix(in srgb, ${colors.accent} 14%, transparent) !important;
-  color: ${colors.text} !important;
+  background-color: color-mix(in srgb, ${e.accent} 14%, transparent) !important;
+  color: ${e.text} !important;
 }
 .agents-sidebar :where(button[aria-label="任务"], button[aria-label="频道"]) {
   background-color: transparent !important;
-  color: color-mix(in srgb, ${colors.text} 78%, transparent) !important;
+  color: color-mix(in srgb, ${e.text} 78%, transparent) !important;
   border-color: transparent !important;
   box-shadow: none !important;
 }
 .agents-sidebar :where(button[aria-label="任务"], button[aria-label="频道"])[data-state="active"],
 .agents-sidebar :where(button[aria-label="任务"], button[aria-label="频道"])[aria-selected="true"],
 .agents-sidebar :where(button[aria-label="任务"], button[aria-label="频道"]):focus-visible {
-  background-color: color-mix(in srgb, ${colors.accent} 20%, transparent) !important;
-  color: ${colors.text} !important;
+  background-color: color-mix(in srgb, ${e.accent} 20%, transparent) !important;
+  color: ${e.text} !important;
 }
 .agents-sidebar > :last-child button {
   background-color: transparent !important;
-  color: ${colors.text} !important;
+  color: ${e.text} !important;
   border-color: transparent !important;
   box-shadow: none !important;
 }
 .agents-sidebar > :last-child button:hover {
-  background-color: color-mix(in srgb, ${colors.accent} 14%, transparent) !important;
+  background-color: color-mix(in srgb, ${e.accent} 14%, transparent) !important;
 }
 .agents-content-area button.rounded-full:not(.SendButton-send),
 .agents-parchment-paper-surface button.rounded-full:not(.SendButton-send) {
-  background-color: color-mix(in srgb, ${colors.surface} 70%, transparent) !important;
-  color: ${colors.text} !important;
-  border-color: color-mix(in srgb, ${colors.text} 14%, transparent) !important;
+  background-color: color-mix(in srgb, ${e.surface} 70%, transparent) !important;
+  color: ${e.text} !important;
+  border-color: color-mix(in srgb, ${e.text} 14%, transparent) !important;
   box-shadow: none !important;
 }
 .agents-content-area button.rounded-full:not(.SendButton-send):hover,
 .agents-parchment-paper-surface button.rounded-full:not(.SendButton-send):hover {
-  background-color: color-mix(in srgb, ${colors.accent} 18%, transparent) !important;
-  border-color: color-mix(in srgb, ${colors.accent} 34%, transparent) !important;
+  background-color: color-mix(in srgb, ${e.accent} 18%, transparent) !important;
+  border-color: color-mix(in srgb, ${e.accent} 34%, transparent) !important;
 }
 .agents-content-area button svg,
 .agents-sidebar button svg,
 body > #root > div:first-child > div:first-child button[aria-label] svg {
   color: currentColor !important;
-}`;
-}
-function buildCatPawCss(heroDataUrl, colors) {
-  return `
+}`}function tn(e,n){return`
 /* CatPaw new-task and conversation surfaces */
 html body #root .main-area {
   position: relative !important;
   isolation: isolate !important;
-  background-color: ${colors.surface} !important;
-  background-image: url(${JSON.stringify(heroDataUrl)}) !important;
+  background-color: ${n.surface} !important;
+  background-image: url(${JSON.stringify(e)}) !important;
   background-position: center center !important;
   background-size: cover !important;
   background-repeat: no-repeat !important;
@@ -2631,9 +914,9 @@ html body #root .chat-content-area [class~="bg-catpaw-bg-primary"] {
 }
 html body #root .catpaw-desk-inputBox > .bg-catpaw-bg-card,
 html body #root .catpaw-desk-inputBox [class~="bg-catpaw-bg-card"] {
-  background-color: color-mix(in srgb, ${colors.surface} 78%, transparent) !important;
-  border: 1px solid color-mix(in srgb, ${colors.accent} 30%, transparent) !important;
-  box-shadow: 0 16px 42px color-mix(in srgb, ${colors.surface} 30%, transparent) !important;
+  background-color: color-mix(in srgb, ${n.surface} 78%, transparent) !important;
+  border: 1px solid color-mix(in srgb, ${n.accent} 30%, transparent) !important;
+  box-shadow: 0 16px 42px color-mix(in srgb, ${n.surface} 30%, transparent) !important;
   backdrop-filter: blur(16px) saturate(108%) !important;
 }
 html body #root .catpaw-desk-inputBox :where(
@@ -2646,31 +929,23 @@ html body #root .catpaw-desk-inputBox :where(
   background-color: transparent !important;
   background-image: none !important;
   backdrop-filter: none !important;
-  color: ${colors.text} !important;
+  color: ${n.text} !important;
 }
 html body #root .catpaw-desk-inputBox :where(button, [role="button"]) {
-  color: ${colors.text} !important;
+  color: ${n.text} !important;
 }
 html body #root .catpaw-desk-inputBox :where(button, [role="button"]):hover {
-  background-color: color-mix(in srgb, ${colors.accent} 15%, transparent) !important;
+  background-color: color-mix(in srgb, ${n.accent} 15%, transparent) !important;
 }
 html body #root .catpaw-desk-inputBox :where(svg, svg *) {
   color: currentColor !important;
 }
-`;
-}
-function copy(value, fallback = "") {
-  return JSON.stringify(typeof value === "string" ? value : fallback);
-}
-function buildWorkBuddyCss(manifest, heroDataUrl, colors) {
-  var _a, _b;
-  const id = String(manifest.id ?? "custom").replace(/[^a-z0-9_-]/gi, "");
-  return `/* DREAM_THEME:${id} */
+`}function ke(e,n=""){return JSON.stringify(typeof e=="string"?e:n)}function Be(e,n,t){var o,a;return`/* DREAM_THEME:${String(e.id??"custom").replace(/[^a-z0-9_-]/gi,"")} */
 body[data-application-name="workbuddy"] {
-  --wb-accent: ${colors.accent};
-  --wb-secondary: ${colors.secondary};
-  --wb-surface: ${colors.surface};
-  --wb-text: ${colors.text};
+  --wb-accent: ${t.accent};
+  --wb-secondary: ${t.secondary};
+  --wb-surface: ${t.surface};
+  --wb-text: ${t.text};
 
   /* 背景 */
   --cb-bg-primary: var(--wb-surface) !important;
@@ -2722,7 +997,7 @@ body[data-application-name="workbuddy"] {
 #root {
   color: var(--wb-text) !important;
   background-color: var(--wb-surface) !important;
-  background-image: url(${JSON.stringify(heroDataUrl)}) !important;
+  background-image: url(${JSON.stringify(n)}) !important;
   background-position: center center !important;
   background-size: cover !important;
   background-repeat: no-repeat !important;
@@ -2772,7 +1047,7 @@ body[data-application-name="workbuddy"] {
   z-index: 20;
   top: 60px;
   left: max(300px, 22vw);
-  content: ${copy((_a = manifest.copy) == null ? void 0 : _a.brand)};
+  content: ${ke((o=e.copy)==null?void 0:o.brand)};
   color: var(--wb-accent);
   font: 800 clamp(16px, 2vw, 30px)/1.2 ui-rounded, system-ui;
   text-shadow: 0 2px 10px white;
@@ -2786,46 +1061,37 @@ body[data-application-name="workbuddy"] {
   top: 104px;
   left: max(300px, 22vw);
   max-width: 42vw;
-  content: ${copy((_b = manifest.copy) == null ? void 0 : _b.headline)};
+  content: ${ke((a=e.copy)==null?void 0:a.headline)};
   color: var(--wb-text);
   font: 750 clamp(18px, 2.7vw, 42px)/1.15 ui-rounded, system-ui;
   text-shadow: 0 2px 12px white;
   pointer-events: none;
-}`;
-}
-function buildCodexCss(manifest, heroDataUrl, colors) {
-  const isLight = isLightHex(colors.surface);
-  const conversationSurface = isLight ? `color-mix(in srgb, ${colors.surface} 90%, transparent)` : `color-mix(in srgb, ${colors.surface} 86%, transparent)`;
-  const userSurface = isLight ? `color-mix(in srgb, ${colors.accent} 16%, ${colors.surface})` : `color-mix(in srgb, ${colors.accent} 42%, ${colors.surface})`;
-  const codeSurface = isLight ? "#172033" : `color-mix(in srgb, ${colors.surface} 72%, #000000)`;
-  const codeText = "#f2f6ff";
-  const themeVars = `/* DREAM_THEME:${manifest.id} */
+}`}function nn(e,n,t){const r=rn(t.surface),o=r?`color-mix(in srgb, ${t.surface} 90%, transparent)`:`color-mix(in srgb, ${t.surface} 86%, transparent)`,a=r?`color-mix(in srgb, ${t.accent} 16%, ${t.surface})`:`color-mix(in srgb, ${t.accent} 42%, ${t.surface})`,s=r?"#172033":`color-mix(in srgb, ${t.surface} 72%, #000000)`,l="#f2f6ff",i=`/* DREAM_THEME:${e.id} */
 :root.codex-dream-skin {
-  --ds-bg: ${colors.surface};
-  --ds-panel: ${colors.surface};
-  --ds-panel-2: ${colors.surface};
-  --ds-surface: ${colors.surface};
-  --ds-green: ${colors.accent};
-  --ds-lime: ${colors.secondary};
-  --ds-cyan: ${colors.secondary};
-  --ds-purple: ${colors.accent};
-  --ds-text: ${colors.text};
-  --ds-muted: color-mix(in srgb, ${colors.text} 82%, transparent);
-  --ds-line: color-mix(in srgb, ${colors.accent} 22%, transparent);
+  --ds-bg: ${t.surface};
+  --ds-panel: ${t.surface};
+  --ds-panel-2: ${t.surface};
+  --ds-surface: ${t.surface};
+  --ds-green: ${t.accent};
+  --ds-lime: ${t.secondary};
+  --ds-cyan: ${t.secondary};
+  --ds-purple: ${t.accent};
+  --ds-text: ${t.text};
+  --ds-muted: color-mix(in srgb, ${t.text} 82%, transparent);
+  --ds-line: color-mix(in srgb, ${t.accent} 22%, transparent);
   --ds-hero-height: 252px;
   --ds-radius: 24px;
-  --dream-skin-art: url(${JSON.stringify(heroDataUrl)});
-}`;
-  const bodyArt = `/* DREAM_THEME_BODY:${manifest.id} */
+  --dream-skin-art: url(${JSON.stringify(n)});
+}`,d=`/* DREAM_THEME_BODY:${e.id} */
 html.codex-dream-skin body {
-  background-color: ${colors.surface} !important;
+  background-color: ${t.surface} !important;
   background-image: none !important;
 }
 
 html.codex-dream-skin main.main-surface {
   position: relative !important;
   isolation: isolate !important;
-  background-color: ${colors.surface} !important;
+  background-color: ${t.surface} !important;
   background-image: none !important;
 }
 
@@ -2835,7 +1101,7 @@ html.codex-dream-skin main.main-surface::before {
   inset: 0 !important;
   z-index: -1 !important;
   pointer-events: none !important;
-  background-color: ${colors.surface} !important;
+  background-color: ${t.surface} !important;
   background-image: var(--dream-skin-art) !important;
   background-position: center center !important;
   background-size: cover !important;
@@ -2844,23 +1110,23 @@ html.codex-dream-skin main.main-surface::before {
 }
 
 html.codex-dream-skin main.main-surface > header.app-header-tint {
-  background: color-mix(in srgb, ${colors.surface} 76%, transparent) !important;
+  background: color-mix(in srgb, ${t.surface} 76%, transparent) !important;
   backdrop-filter: blur(14px) saturate(108%) !important;
 }
 
 html.codex-dream-skin main.main-surface [role="main"],
 html.codex-dream-skin main.main-surface .thread-scroll-container {
-  --color-token-conversation-body: ${colors.text} !important;
-  --color-token-text-secondary: color-mix(in srgb, ${colors.text} 76%, transparent) !important;
-  --color-token-text-tertiary: color-mix(in srgb, ${colors.text} 58%, transparent) !important;
-  --color-token-conversation-summary-leading: color-mix(in srgb, ${colors.text} 88%, transparent) !important;
-  --color-token-conversation-summary-trailing: color-mix(in srgb, ${colors.text} 68%, transparent) !important;
-  --color-token-conversation-header: color-mix(in srgb, ${colors.text} 78%, transparent) !important;
-  --color-token-description-foreground: color-mix(in srgb, ${colors.text} 72%, transparent) !important;
-  --shimmer-text-secondary: color-mix(in srgb, ${colors.text} 68%, transparent) !important;
-  --shimmer-contrast: ${colors.text} !important;
+  --color-token-conversation-body: ${t.text} !important;
+  --color-token-text-secondary: color-mix(in srgb, ${t.text} 76%, transparent) !important;
+  --color-token-text-tertiary: color-mix(in srgb, ${t.text} 58%, transparent) !important;
+  --color-token-conversation-summary-leading: color-mix(in srgb, ${t.text} 88%, transparent) !important;
+  --color-token-conversation-summary-trailing: color-mix(in srgb, ${t.text} 68%, transparent) !important;
+  --color-token-conversation-header: color-mix(in srgb, ${t.text} 78%, transparent) !important;
+  --color-token-description-foreground: color-mix(in srgb, ${t.text} 72%, transparent) !important;
+  --shimmer-text-secondary: color-mix(in srgb, ${t.text} 68%, transparent) !important;
+  --shimmer-contrast: ${t.text} !important;
   background-color: transparent !important;
-  color: ${colors.text} !important;
+  color: ${t.text} !important;
 }
 
 html.codex-dream-skin main.main-surface:not(.dream-skin-home-shell) {
@@ -2872,17 +1138,17 @@ html.codex-dream-skin main.main-surface:not(.dream-skin-home-shell) article,
 html.codex-dream-skin main.main-surface:not(.dream-skin-home-shell) .message,
 html.codex-dream-skin main.main-surface:not(.dream-skin-home-shell) [data-message-author-role],
 html.codex-dream-skin main.main-surface:not(.dream-skin-home-shell) [class*="surface"]:not(.composer-surface-chrome):not([class*="home-main-content"]) {
-  border-color: color-mix(in srgb, ${colors.accent} 24%, transparent) !important;
-  background: ${conversationSurface} !important;
-  color: ${colors.text} !important;
+  border-color: color-mix(in srgb, ${t.accent} 24%, transparent) !important;
+  background: ${o} !important;
+  color: ${t.text} !important;
   text-shadow: none !important;
   backdrop-filter: blur(18px) saturate(108%) !important;
 }
 
 html.codex-dream-skin main.main-surface:not(.dream-skin-home-shell) [data-message-author-role="user"],
 html.codex-dream-skin main.main-surface:not(.dream-skin-home-shell) [class*="bg-token-foreground"] {
-  background: ${userSurface} !important;
-  color: ${colors.text} !important;
+  background: ${a} !important;
+  color: ${t.text} !important;
 }
 
 html.codex-dream-skin main.main-surface:not(.dream-skin-home-shell)
@@ -2893,7 +1159,7 @@ html.codex-dream-skin main.main-surface:not(.dream-skin-home-shell)
   .thread-scroll-container :where(.text-token-conversation-body, .text-token-text-secondary, .group/activity-header),
 html.codex-dream-skin main.main-surface:not(.dream-skin-home-shell)
   .thread-scroll-container .group/activity-header :where(span, svg) {
-  color: ${colors.text} !important;
+  color: ${t.text} !important;
   text-shadow: none !important;
 }
 
@@ -2906,42 +1172,42 @@ html.codex-dream-skin main.main-surface:not(.dream-skin-home-shell)
     [data-message-author-role],
     [data-message-author-role] *
   ) {
-  color: ${colors.text} !important;
+  color: ${t.text} !important;
   text-shadow: none !important;
 }
 
 html.codex-dream-skin main.main-surface:not(.dream-skin-home-shell)
   .thread-scroll-container * {
-  color: ${colors.text} !important;
+  color: ${t.text} !important;
 }
 
 html.codex-dream-skin main.main-surface:not(.dream-skin-home-shell)
   .thread-scroll-container [class*="_markdownContent_"] a {
-  color: ${colors.accent} !important;
+  color: ${t.accent} !important;
 }
 
 html.codex-dream-skin .composer-surface-chrome {
-  background: color-mix(in srgb, ${colors.surface} 92%, transparent) !important;
-  color: ${colors.text} !important;
+  background: color-mix(in srgb, ${t.surface} 92%, transparent) !important;
+  color: ${t.text} !important;
 }
 
 html.codex-dream-skin .composer-surface-chrome *,
 html.codex-dream-skin .composer-surface-chrome .ProseMirror {
-  color: ${colors.text} !important;
-  caret-color: ${colors.accent} !important;
+  color: ${t.text} !important;
+  caret-color: ${t.accent} !important;
 }
 
 html.codex-dream-skin main.main-surface pre,
 html.codex-dream-skin main.main-surface code,
 html.codex-dream-skin main.main-surface table,
 html.codex-dream-skin main.main-surface [data-testid*="code"] {
-  background: ${codeSurface} !important;
-  color: ${codeText} !important;
+  background: ${s} !important;
+  color: ${l} !important;
   text-shadow: none !important;
 }
 
 html.codex-dream-skin main.main-surface :where(pre, code, table) * {
-  color: ${codeText} !important;
+  color: ${l} !important;
 }
 
 /* The main surface already owns the full artwork; avoid a second hero image. */
@@ -2968,32 +1234,11 @@ html.codex-dream-skin main.main-surface [class*="container-name:home-main-conten
   backdrop-filter: none !important;
 }
 html.codex-dream-skin .dream-skin-home .composer-surface-chrome {
-  background-color: color-mix(in srgb, ${colors.surface} 82%, transparent) !important;
+  background-color: color-mix(in srgb, ${t.surface} 82%, transparent) !important;
   backdrop-filter: blur(14px) saturate(106%) !important;
-}`;
-  return themeVars + "\n" + bodyArt;
-}
-function isLightHex(hex) {
-  const match = /^#([0-9a-f]{6})$/i.exec(hex);
-  if (!match) return true;
-  const value = parseInt(match[1], 16);
-  return 0.299 * (value >> 16 & 255) + 0.587 * (value >> 8 & 255) + 0.114 * (value & 255) > 140;
-}
-function buildWorkBuddyMenuScript(options) {
-  const payload = JSON.stringify({
-    styleId: options.styleId,
-    menuId: options.menuId,
-    activeId: options.currentThemeId,
-    themes: options.themes,
-    cssTemplate: options.cssTemplate,
-    sentinels: WORKBUDDY_CSS_PLACEHOLDERS,
-    storageKey: "dreamCustomThemes",
-    selectedKey: "wb-dream-selected",
-    sharedCustomThemes: options.sharedCustomThemes,
-    sharedCustomThemeService: options.sharedCustomThemeService
-  });
-  return `(() => {
-  const data = ${payload};
+}`;return i+`
+`+d}function rn(e){const n=/^#([0-9a-f]{6})$/i.exec(e);if(!n)return!0;const t=parseInt(n[1],16);return .299*(t>>16&255)+.587*(t>>8&255)+.114*(t&255)>140}function on(e){return`(() => {
+  const data = ${JSON.stringify({styleId:e.styleId,menuId:e.menuId,activeId:e.currentThemeId,themes:e.themes,cssTemplate:e.cssTemplate,sentinels:f,storageKey:"dreamCustomThemes",selectedKey:"wb-dream-selected",sharedCustomThemes:e.sharedCustomThemes,sharedCustomThemeService:e.sharedCustomThemeService})};
   const recordPresetUsage = (themeId) => fetch(data.sharedCustomThemeService.usageEndpoint, {
     method: "POST",
     headers: { Authorization: "Bearer " + data.sharedCustomThemeService.token, "Content-Type": "application/json" },
@@ -3313,21 +1558,15 @@ function buildWorkBuddyMenuScript(options) {
 
   window.__dreamTheme = { importFromDataUrl, setTheme, clearTheme, deleteCustom };
   return true;
-})()`;
-}
-function buildMenuScript(options) {
-  const themesJson = JSON.stringify(options.themes);
-  const cssTemplate = JSON.stringify(options.cssTemplate ?? "");
-  const appId = options.appId;
-  return `(() => {
-  const themes = ${themesJson};
-  const cssTemplate = ${cssTemplate};
-  const sentinels = ${JSON.stringify(WORKBUDDY_CSS_PLACEHOLDERS)};
-  const currentThemeId = '${options.currentThemeId}';
-  const appId = '${appId}';
+})()`}function an(e){const n=JSON.stringify(e.themes),t=JSON.stringify(e.cssTemplate??""),r=e.appId;return`(() => {
+  const themes = ${n};
+  const cssTemplate = ${t};
+  const sentinels = ${JSON.stringify(f)};
+  const currentThemeId = '${e.currentThemeId}';
+  const appId = '${r}';
   const customStorageKey = 'dreamCodexCustomThemes';
-  const sharedCustomThemes = ${JSON.stringify(options.sharedCustomThemes)};
-  const sharedCustomThemeService = ${JSON.stringify(options.sharedCustomThemeService)};
+  const sharedCustomThemes = ${JSON.stringify(e.sharedCustomThemes)};
+  const sharedCustomThemeService = ${JSON.stringify(e.sharedCustomThemeService)};
   const recordPresetUsage = (themeId) => fetch(sharedCustomThemeService.usageEndpoint, {
     method: 'POST',
     headers: { Authorization: 'Bearer ' + sharedCustomThemeService.token, 'Content-Type': 'application/json' },
@@ -3371,10 +1610,10 @@ function buildMenuScript(options) {
     });
   };
 
-  const style = document.getElementById('${options.styleId}');
+  const style = document.getElementById('${e.styleId}');
   if (!style) {
     const s = document.createElement('style');
-    s.id = '${options.styleId}';
+    s.id = '${e.styleId}';
     document.head.appendChild(s);
     window.__dreamWorkThemeStyle = s;
   } else {
@@ -3429,20 +1668,20 @@ function buildMenuScript(options) {
     panel.style.display = 'none';
   };
 
-  document.getElementById('${options.menuId}-host')?.remove();
-  document.getElementById('${options.menuId}')?.remove();
+  document.getElementById('${e.menuId}-host')?.remove();
+  document.getElementById('${e.menuId}')?.remove();
   if (window.__dreamWorkOutsideClick) {
     document.removeEventListener('pointerdown', window.__dreamWorkOutsideClick, true);
     delete window.__dreamWorkOutsideClick;
   }
 
   const host = document.createElement('div');
-  host.id = '${options.menuId}-host';
+  host.id = '${e.menuId}-host';
   host.style.cssText = "all:initial!important;position:fixed!important;right:16px!important;bottom:16px!important;z-index:2147483647!important;display:block!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;width:fit-content!important;height:fit-content!important;transform:none!important;filter:none!important;contain:none!important;isolation:isolate!important;";
   const mount = host.attachShadow({ mode: 'open' });
 
   const root = document.createElement('div');
-  root.id = '${options.menuId}';
+  root.id = '${e.menuId}';
   root.style.cssText = "position:relative;display:flex;flex-direction:column;align-items:flex-end;font:500 13px/1.4 system-ui;user-select:none;color-scheme:light;pointer-events:auto;color:#17344f!important;";
 
   const button = document.createElement('button');
@@ -3689,360 +1928,23 @@ function buildMenuScript(options) {
   }, 250);
   applyTheme(currentThemeId);
   ensureInjectedNodes();
-})()`;
-}
-async function createShortcut(profile) {
-  try {
-    if (os__namespace.platform() === "win32") {
-      return createWindowsShortcut(profile);
-    }
-    if (os__namespace.platform() === "darwin") {
-      return createMacShortcut(profile);
-    }
-    if (os__namespace.platform() === "linux") {
-      return createLinuxShortcut(profile);
-    }
-    return { success: false, error: `Unsupported platform: ${os__namespace.platform()}` };
-  } catch (error) {
-    return { success: false, error: error.message };
-  }
-}
-function createWindowsShortcut(profile) {
-  const desktopDir = path__namespace.join(os__namespace.homedir(), "Desktop");
-  const shortcutPath = path__namespace.join(desktopDir, `${profile.label}.lnk`);
-  const exePath = process.execPath;
-  const workingDir = path__namespace.dirname(exePath);
-  const script = `
+})()`}async function sn(e){try{return $.platform()==="win32"?cn(e):$.platform()==="darwin"?ln(e):$.platform()==="linux"?dn(e):{success:!1,error:`Unsupported platform: ${$.platform()}`}}catch(n){return{success:!1,error:n.message}}}function cn(e){const n=c.join($.homedir(),"Desktop"),t=c.join(n,`${e.label}.lnk`),r=process.execPath,o=c.dirname(r),a=`
     $WshShell = New-Object -comObject WScript.Shell
-    $Shortcut = $WshShell.CreateShortcut("${shortcutPath.replace(/\\/g, "\\\\")}")
-    $Shortcut.TargetPath = "${exePath.replace(/\\/g, "\\\\")}"
-    $Shortcut.Arguments = "--launch=${profile.appId}:${profile.themeId}"
-    $Shortcut.WorkingDirectory = "${workingDir.replace(/\\/g, "\\\\")}"
+    $Shortcut = $WshShell.CreateShortcut("${t.replace(/\\/g,"\\\\")}")
+    $Shortcut.TargetPath = "${r.replace(/\\/g,"\\\\")}"
+    $Shortcut.Arguments = "--launch=${e.appId}:${e.themeId}"
+    $Shortcut.WorkingDirectory = "${o.replace(/\\/g,"\\\\")}"
     $Shortcut.Save()
-  `;
-  return new Promise((resolve) => {
-    require("child_process").exec(`powershell -Command "${script.replace(/"/g, '\\"')}"`, (error) => {
-      if (error) {
-        resolve({ success: false, error: error.message });
-      } else {
-        resolve({ success: true, path: shortcutPath });
-      }
-    });
-  });
-}
-function createMacShortcut(profile) {
-  const desktopDir = path__namespace.join(os__namespace.homedir(), "Desktop");
-  const shortcutPath = path__namespace.join(desktopDir, `${profile.label}.app`);
-  const exePath = process.execPath;
-  const scriptContent = `
+  `;return new Promise(s=>{require("child_process").exec(`powershell -Command "${a.replace(/"/g,'\\"')}"`,l=>{s(l?{success:!1,error:l.message}:{success:!0,path:t})})})}function ln(e){const n=c.join($.homedir(),"Desktop"),t=c.join(n,`${e.label}.app`),o=`
     tell application "Terminal"
-      do script "'${exePath}' --launch=${profile.appId}:${profile.themeId}"
+      do script "'${process.execPath}' --launch=${e.appId}:${e.themeId}"
     end tell
-  `;
-  const scriptPath = path__namespace.join(desktopDir, `${profile.id}.scpt`);
-  fs__namespace.writeFileSync(scriptPath, scriptContent);
-  return new Promise((resolve) => {
-    require("child_process").exec(`osacompile -o "${shortcutPath}" "${scriptPath}"`, (error) => {
-      fs__namespace.unlinkSync(scriptPath);
-      if (error) {
-        resolve({ success: false, error: error.message });
-      } else {
-        resolve({ success: true, path: shortcutPath });
-      }
-    });
-  });
-}
-async function createLinuxShortcut(profile) {
-  const appsDir = path__namespace.join(os__namespace.homedir(), ".local", "share", "applications");
-  if (!fs__namespace.existsSync(appsDir)) {
-    fs__namespace.mkdirSync(appsDir, { recursive: true });
-  }
-  const shortcutPath = path__namespace.join(appsDir, `${profile.id}.desktop`);
-  const exePath = process.execPath;
-  const content = `[Desktop Entry]
+  `,a=c.join(n,`${e.id}.scpt`);return m.writeFileSync(a,o),new Promise(s=>{require("child_process").exec(`osacompile -o "${t}" "${a}"`,l=>{m.unlinkSync(a),s(l?{success:!1,error:l.message}:{success:!0,path:t})})})}async function dn(e){const n=c.join($.homedir(),".local","share","applications");m.existsSync(n)||m.mkdirSync(n,{recursive:!0});const t=c.join(n,`${e.id}.desktop`),r=process.execPath,o=`[Desktop Entry]
 Type=Application
-Name=${profile.label}
-Exec="${exePath}" --launch=${profile.appId}:${profile.themeId}
-Icon=${profile.icon || "utilities-terminal"}
+Name=${e.label}
+Exec="${r}" --launch=${e.appId}:${e.themeId}
+Icon=${e.icon||"utilities-terminal"}
 Terminal=false
 Categories=Utility;
-`;
-  fs__namespace.writeFileSync(shortcutPath, content);
-  fs__namespace.chmodSync(shortcutPath, 493);
-  return { success: true, path: shortcutPath };
-}
-const execFileAsync = util.promisify(child_process.execFile);
-const API_ORIGIN = "https://api.dreamskin.cc";
-const THEMES_ENDPOINT = `${API_ORIGIN}/v1/themes`;
-const MAX_PACKAGE_BYTES = 32 * 1024 * 1024;
-const PAGE_SIZE = 6;
-let nextOffset = 0;
-const SUPPORTED_APPS = ["workbuddy", "codex", "trae-work", "qoder-work", "catpaw", "zcode", "qwen-office", "hana-agent"];
-async function updateCommunityThemes() {
-  const offset = nextOffset;
-  const pageResult = await fetchRecentThemes(offset);
-  const themes = pageResult.items;
-  nextOffset = offset + themes.length >= pageResult.total ? 0 : offset + PAGE_SIZE;
-  const themesDir = getUserThemesDir();
-  const result = {
-    checked: themes.length,
-    imported: 0,
-    skipped: 0,
-    offset,
-    page: Math.floor(offset / PAGE_SIZE) + 1,
-    total: pageResult.total,
-    nextOffset,
-    failed: []
-  };
-  for (const metadata of themes) {
-    const id = normalizeId(metadata.themeId);
-    if (!metadata.applyCompatible || getThemeById(id)) {
-      result.skipped++;
-      continue;
-    }
-    try {
-      const imported = await downloadAndConvertTheme(metadata, themesDir, id);
-      if (imported) result.imported++;
-      else result.skipped++;
-    } catch (error) {
-      result.failed.push({ id: metadata.id, name: metadata.name, error: error.message });
-    }
-  }
-  return result;
-}
-async function fetchRecentThemes(offset) {
-  const url = `${THEMES_ENDPOINT}?limit=${PAGE_SIZE}&offset=${offset}&sort=recent`;
-  const response = await fetch(url, { signal: AbortSignal.timeout(3e4), redirect: "error" });
-  if (!response.ok) throw new Error(`Theme list request failed: HTTP ${response.status}`);
-  const body = await response.json();
-  if (!Array.isArray(body.items) || body.items.length > PAGE_SIZE || !Number.isInteger(body.total) || body.total < 0) {
-    throw new Error("Theme list response is invalid");
-  }
-  return { items: body.items, total: body.total };
-}
-async function downloadAndConvertTheme(metadata, themesDir, id) {
-  validateMetadata(metadata);
-  const tempRoot = fs__namespace.mkdtempSync(path__namespace.join(os__namespace.tmpdir(), "dream-work-theme-"));
-  const archivePath = path__namespace.join(tempRoot, "theme.zip");
-  const extractDir = path__namespace.join(tempRoot, "extract");
-  const stageDir = path__namespace.join(themesDir, `.updating-${id}-${process.pid}`);
-  try {
-    fs__namespace.mkdirSync(extractDir);
-    const downloadUrl = `${THEMES_ENDPOINT}/${metadata.id}/download`;
-    const response = await fetch(downloadUrl, { signal: AbortSignal.timeout(12e4), redirect: "error" });
-    if (!response.ok) throw new Error(`Theme download failed: HTTP ${response.status}`);
-    const bytes = Buffer.from(await response.arrayBuffer());
-    if (bytes.length !== metadata.packageBytes) throw new Error(`Downloaded size mismatch: expected ${metadata.packageBytes}, got ${bytes.length}`);
-    if (bytes.length > MAX_PACKAGE_BYTES) throw new Error("Theme package exceeds 32 MiB");
-    const hash = crypto__namespace.createHash("sha256").update(bytes).digest("hex");
-    if (hash !== metadata.packageSha256) throw new Error("Downloaded SHA-256 does not match metadata");
-    fs__namespace.writeFileSync(archivePath, bytes, { flag: "wx" });
-    await extractArchive(archivePath, extractDir);
-    const sourceDir = findThemeRoot(extractDir);
-    const sourceTheme = JSON.parse(fs__namespace.readFileSync(path__namespace.join(sourceDir, "theme.json"), "utf8"));
-    const imageName = sourceTheme.image;
-    if (typeof imageName !== "string" || path__namespace.basename(imageName) !== imageName || !/\.(png|jpe?g|webp)$/i.test(imageName)) {
-      throw new Error("Theme image name is invalid");
-    }
-    const imagePath = path__namespace.join(sourceDir, imageName);
-    const cssPath = path__namespace.join(sourceDir, "theme.css");
-    if (!fs__namespace.existsSync(imagePath) || !fs__namespace.statSync(imagePath).isFile()) throw new Error("Theme image is missing");
-    if (!fs__namespace.existsSync(cssPath) || !fs__namespace.statSync(cssPath).isFile()) throw new Error("theme.css is missing");
-    const manifest = convertTheme(sourceTheme, metadata, id, `hero${path__namespace.extname(imageName).toLowerCase()}`);
-    if (hasThemeContent(manifest.name, manifest.author, imagePath)) return false;
-    fs__namespace.mkdirSync(stageDir);
-    fs__namespace.copyFileSync(imagePath, path__namespace.join(stageDir, manifest.hero));
-    fs__namespace.copyFileSync(cssPath, path__namespace.join(stageDir, "theme.css"));
-    fs__namespace.writeFileSync(path__namespace.join(stageDir, "theme.json"), `${JSON.stringify(manifest, null, 2)}
-`);
-    fs__namespace.renameSync(stageDir, path__namespace.join(themesDir, id));
-    return true;
-  } finally {
-    fs__namespace.rmSync(stageDir, { recursive: true, force: true });
-    fs__namespace.rmSync(tempRoot, { recursive: true, force: true });
-  }
-}
-async function extractArchive(archivePath, destination) {
-  const { path7za } = require("7zip-bin");
-  await execFileAsync(path7za, ["x", archivePath, `-o${destination}`, "-y"], { windowsHide: true, timeout: 12e4 });
-}
-function findThemeRoot(extractDir) {
-  const candidates = [extractDir, ...fs__namespace.readdirSync(extractDir, { withFileTypes: true }).filter((item) => item.isDirectory()).map((item) => path__namespace.join(extractDir, item.name))];
-  const matches = candidates.filter((candidate) => fs__namespace.existsSync(path__namespace.join(candidate, "theme.json")) && fs__namespace.existsSync(path__namespace.join(candidate, "theme.css")));
-  if (matches.length !== 1) throw new Error("Theme ZIP must contain one theme root");
-  return matches[0];
-}
-function validateMetadata(metadata) {
-  if (!/^ver_[a-z0-9]{8,64}$/.test(metadata.id)) throw new Error("Theme version ID is invalid");
-  if (!Number.isInteger(metadata.packageBytes) || metadata.packageBytes < 1 || metadata.packageBytes > MAX_PACKAGE_BYTES) throw new Error("Theme package size is invalid");
-  if (!/^[a-f0-9]{64}$/.test(metadata.packageSha256)) throw new Error("Theme package SHA-256 is invalid");
-}
-function normalizeId(value) {
-  return String(value).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").replace(/-+/g, "-") || "community-theme";
-}
-function convertTheme(source, metadata, id, hero) {
-  const appearance = source.appearance === "dark" ? "dark" : "light";
-  const base = appearance === "dark" ? "#10141c" : "#f4f7fa";
-  const colors = source.colors || {};
-  return {
-    schemaVersion: 1,
-    id,
-    name: String(source.name || metadata.name || id).trim(),
-    author: metadata.authorDisplayName || "DreamSkin Community",
-    hero,
-    colors: {
-      accent: parseColor(colors.accent, "#4f8cff", base),
-      secondary: parseColor(colors.secondary || colors.accentAlt, "#7ba7d8", base),
-      surface: parseColor(colors.panelAlt || colors.panel || colors.background, base, base),
-      text: parseColor(colors.text, appearance === "dark" ? "#eef2f7" : "#1f2937", base)
-    },
-    copy: null,
-    apps: Object.fromEntries(SUPPORTED_APPS.map((appId) => [appId, { compat: true }]))
-  };
-}
-function parseColor(value, fallback, base) {
-  if (typeof value !== "string") return fallback;
-  const hex = value.trim().match(/^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i);
-  if (hex) {
-    let raw = hex[1];
-    if (raw.length === 3) raw = raw.split("").map((char) => char + char).join("");
-    return `#${raw.slice(0, 6).toLowerCase()}`;
-  }
-  const rgba = value.trim().match(/^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*(0|1|0?\.\d+))?\s*\)$/i);
-  if (!rgba) return fallback;
-  const alpha = rgba[4] === void 0 ? 1 : Number(rgba[4]);
-  const background = parseColor(base, fallback, fallback).slice(1).match(/../g).map((part) => parseInt(part, 16));
-  const rgb = [1, 2, 3].map((index) => Math.round(Number(rgba[index]) * alpha + background[index - 1] * (1 - alpha)));
-  return `#${rgb.map((channel) => channel.toString(16).padStart(2, "0")).join("")}`;
-}
-let mainWindow = null;
-electron.protocol.registerSchemesAsPrivileged([
-  { scheme: "theme-asset", privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } }
-]);
-function createWindow() {
-  mainWindow = new electron.BrowserWindow({
-    width: 1200,
-    height: 800,
-    webPreferences: {
-      preload: path__namespace.join(__dirname, "preload.js"),
-      contextIsolation: true,
-      nodeIntegration: false
-    }
-  });
-  if (process.env.VITE_DEV_SERVER_URL) {
-    mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL);
-  } else {
-    mainWindow.loadFile(path__namespace.join(__dirname, "../renderer/dist/index.html"));
-  }
-}
-electron.app.whenReady().then(() => {
-  electron.protocol.handle("theme-asset", (request) => {
-    const id = decodeURIComponent(new URL(request.url).pathname.replace(/^\//, ""));
-    const assetPath = getThemeAssetPath(id);
-    if (!assetPath) return new Response("Theme asset not found", { status: 404 });
-    return new Response(fs__namespace.readFileSync(assetPath), {
-      headers: { "Content-Type": getThemeAssetMime(assetPath), "Cache-Control": "public, max-age=3600" }
-    });
-  });
-  createWindow();
-});
-function getThemeAssetMime(assetPath) {
-  const extension = path__namespace.extname(assetPath).toLowerCase();
-  if (extension === ".jpg" || extension === ".jpeg") return "image/jpeg";
-  if (extension === ".webp") return "image/webp";
-  return "image/png";
-}
-electron.app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") electron.app.quit();
-});
-electron.app.on("activate", () => {
-  if (electron.BrowserWindow.getAllWindows().length === 0) createWindow();
-});
-const launchArgs = process.argv.find((arg) => arg.startsWith("--launch="));
-if (launchArgs) {
-  const [, appAndTheme] = launchArgs.split("=");
-  const [appId, themeId] = appAndTheme.split(":");
-  if (appId && themeId) {
-    console.log(`[main] Received launch args: ${appId}:${themeId}`);
-    setTimeout(async () => {
-      try {
-        const result = await launchApp(appId, themeId);
-        if (result.success) {
-          console.log(`[main] Launched ${appId} with theme ${themeId} on port ${result.port}`);
-          setTimeout(async () => {
-            try {
-              console.log(`[main] Starting theme injection for ${appId}:${themeId} on port ${result.port}`);
-              const injectResult = await applyTheme(appId, themeId, result.port);
-              console.log(`[main] Injection result:`, injectResult);
-            } catch (e) {
-              console.error("[main] Failed to inject theme:", e);
-            }
-          }, 3e3);
-        } else {
-          console.error(`[main] Failed to launch ${appId}: ${result.error}`);
-        }
-      } catch (e) {
-        console.error("[main] Launch error:", e);
-      }
-    }, 1e3);
-  }
-}
-electron.ipcMain.handle("discover-apps", async () => {
-  return discoverApps();
-});
-electron.ipcMain.handle("launch-app", async (_event, appId, themeId) => {
-  return launchApp(appId, themeId);
-});
-electron.ipcMain.handle("apply-theme", async (_event, appId, themeId, port) => {
-  return applyTheme(appId, themeId, port);
-});
-electron.ipcMain.handle("create-shortcut", async (_event, profile) => {
-  const fullProfile = {
-    ...profile,
-    id: `${profile.appId}-${profile.themeId}-${Date.now()}`
-  };
-  return createShortcut(fullProfile);
-});
-electron.ipcMain.handle("list-themes", async (_event, appId) => {
-  return listThemes(appId).map((t) => ({
-    id: t.id,
-    name: t.name,
-    author: t.author,
-    hero: getThemeAssetUrl(t.id)
-  }));
-});
-electron.ipcMain.handle("update-themes", async () => updateCommunityThemes());
-electron.ipcMain.handle("get-status", async (_event, appId, port) => {
-  var _a;
-  const running = await isAppRunning(appId);
-  if (!running) return { installed: false, menu: false, targets: 0, running: false };
-  return {
-    ...await getStatus(appId, port || ((_a = getAppDefinition(appId)) == null ? void 0 : _a.defaultPort) || 9339),
-    running: true
-  };
-});
-electron.ipcMain.handle("remove-skin", async (_event, appId, port) => {
-  return removeSkin(appId, port);
-});
-electron.ipcMain.handle("debug-targets", async (_event, port) => {
-  try {
-    const response = await fetch(`http://127.0.0.1:${port}/json/list`, {
-      signal: AbortSignal.timeout(5e3)
-    });
-    const all = await response.json();
-    return {
-      success: true,
-      count: all.length,
-      raw: all,
-      targets: all.map((t) => ({
-        id: t.id,
-        type: t.type,
-        url: t.url,
-        title: t.title,
-        webSocketDebuggerUrl: t.webSocketDebuggerUrl
-      }))
-    };
-  } catch (e) {
-    return { success: false, error: e.message };
-  }
-});
+`;return m.writeFileSync(t,o),m.chmodSync(t,493),{success:!0,path:t}}const mn=se.promisify(X.execFile),un="https://api.dreamskin.cc",We=`${un}/v1/themes`,Fe=32*1024*1024,V=6;let re=0;const hn=["workbuddy","codex","trae-work","qoder-work","catpaw","zcode","qwen-office","hana-agent"];async function pn(){const e=re,n=await gn(e),t=n.items;re=e+t.length>=n.total?0:e+V;const r=Ae(),o={checked:t.length,imported:0,skipped:0,offset:e,page:Math.floor(e/V)+1,total:n.total,nextOffset:re,failed:[]};for(const a of t){const s=xn(a.themeId);if(!a.applyCompatible||Me(s)){o.skipped++;continue}try{await fn(a,r,s)?o.imported++:o.skipped++}catch(l){o.failed.push({id:a.id,name:a.name,error:l.message})}}return o}async function gn(e){const n=`${We}?limit=${V}&offset=${e}&sort=recent`,t=await fetch(n,{signal:AbortSignal.timeout(3e4),redirect:"error"});if(!t.ok)throw new Error(`Theme list request failed: HTTP ${t.status}`);const r=await t.json();if(!Array.isArray(r.items)||r.items.length>V||!Number.isInteger(r.total)||r.total<0)throw new Error("Theme list response is invalid");return{items:r.items,total:r.total}}async function fn(e,n,t){yn(e);const r=m.mkdtempSync(c.join($.tmpdir(),"dream-work-theme-")),o=c.join(r,"theme.zip"),a=c.join(r,"extract"),s=c.join(n,`.updating-${t}-${process.pid}`);try{m.mkdirSync(a);const l=`${We}/${e.id}/download`,i=await fetch(l,{signal:AbortSignal.timeout(12e4),redirect:"error"});if(!i.ok)throw new Error(`Theme download failed: HTTP ${i.status}`);const d=Buffer.from(await i.arrayBuffer());if(d.length!==e.packageBytes)throw new Error(`Downloaded size mismatch: expected ${e.packageBytes}, got ${d.length}`);if(d.length>Fe)throw new Error("Theme package exceeds 32 MiB");if(ie.createHash("sha256").update(d).digest("hex")!==e.packageSha256)throw new Error("Downloaded SHA-256 does not match metadata");m.writeFileSync(o,d,{flag:"wx"}),await bn(o,a);const h=wn(a),b=JSON.parse(m.readFileSync(c.join(h,"theme.json"),"utf8")),v=b.image;if(typeof v!="string"||c.basename(v)!==v||!/\.(png|jpe?g|webp)$/i.test(v))throw new Error("Theme image name is invalid");const x=c.join(h,v),I=c.join(h,"theme.css");if(!m.existsSync(x)||!m.statSync(x).isFile())throw new Error("Theme image is missing");if(!m.existsSync(I)||!m.statSync(I).isFile())throw new Error("theme.css is missing");const A=kn(b,e,t,`hero${c.extname(v).toLowerCase()}`);return Ut(A.name,A.author,x)?!1:(m.mkdirSync(s),m.copyFileSync(x,c.join(s,A.hero)),m.copyFileSync(I,c.join(s,"theme.css")),m.writeFileSync(c.join(s,"theme.json"),`${JSON.stringify(A,null,2)}
+`),m.renameSync(s,c.join(n,t)),!0)}finally{m.rmSync(s,{recursive:!0,force:!0}),m.rmSync(r,{recursive:!0,force:!0})}}async function bn(e,n){const{path7za:t}=require("7zip-bin");await mn(t,["x",e,`-o${n}`,"-y"],{windowsHide:!0,timeout:12e4})}function wn(e){const t=[e,...m.readdirSync(e,{withFileTypes:!0}).filter(r=>r.isDirectory()).map(r=>c.join(e,r.name))].filter(r=>m.existsSync(c.join(r,"theme.json"))&&m.existsSync(c.join(r,"theme.css")));if(t.length!==1)throw new Error("Theme ZIP must contain one theme root");return t[0]}function yn(e){if(!/^ver_[a-z0-9]{8,64}$/.test(e.id))throw new Error("Theme version ID is invalid");if(!Number.isInteger(e.packageBytes)||e.packageBytes<1||e.packageBytes>Fe)throw new Error("Theme package size is invalid");if(!/^[a-f0-9]{64}$/.test(e.packageSha256))throw new Error("Theme package SHA-256 is invalid")}function xn(e){return String(e).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"").replace(/-+/g,"-")||"community-theme"}function kn(e,n,t,r){const o=e.appearance==="dark"?"dark":"light",a=o==="dark"?"#10141c":"#f4f7fa",s=e.colors||{};return{schemaVersion:1,id:t,name:String(e.name||n.name||t).trim(),author:n.authorDisplayName||"DreamSkin Community",hero:r,colors:{accent:W(s.accent,"#4f8cff",a),secondary:W(s.secondary||s.accentAlt,"#7ba7d8",a),surface:W(s.panelAlt||s.panel||s.background,a,a),text:W(s.text,o==="dark"?"#eef2f7":"#1f2937",a)},copy:null,apps:Object.fromEntries(hn.map(l=>[l,{compat:!0}]))}}function W(e,n,t){if(typeof e!="string")return n;const r=e.trim().match(/^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i);if(r){let i=r[1];return i.length===3&&(i=i.split("").map(d=>d+d).join("")),`#${i.slice(0,6).toLowerCase()}`}const o=e.trim().match(/^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*(0|1|0?\.\d+))?\s*\)$/i);if(!o)return n;const a=o[4]===void 0?1:Number(o[4]),s=W(t,n,n).slice(1).match(/../g).map(i=>parseInt(i,16));return`#${[1,2,3].map(i=>Math.round(Number(o[i])*a+s[i-1]*(1-a))).map(i=>i.toString(16).padStart(2,"0")).join("")}`}let H=null;w.protocol.registerSchemesAsPrivileged([{scheme:"theme-asset",privileges:{standard:!0,secure:!0,supportFetchAPI:!0,stream:!0}}]);function He(){H=new w.BrowserWindow({width:1200,height:800,webPreferences:{preload:c.join(__dirname,"preload.js"),contextIsolation:!0,nodeIntegration:!1}}),process.env.VITE_DEV_SERVER_URL?H.loadURL(process.env.VITE_DEV_SERVER_URL):H.loadFile(c.join(__dirname,"../renderer/dist/index.html"))}w.app.whenReady().then(()=>{w.protocol.handle("theme-asset",e=>{const n=decodeURIComponent(new URL(e.url).pathname.replace(/^\//,"")),t=_t(n);return t?new Response(m.readFileSync(t),{headers:{"Content-Type":vn(t),"Cache-Control":"public, max-age=3600"}}):new Response("Theme asset not found",{status:404})}),He()});function vn(e){const n=c.extname(e).toLowerCase();return n===".jpg"||n===".jpeg"?"image/jpeg":n===".webp"?"image/webp":"image/png"}w.app.on("window-all-closed",()=>{process.platform!=="darwin"&&w.app.quit()});w.app.on("activate",()=>{w.BrowserWindow.getAllWindows().length===0&&He()});const ve=process.argv.find(e=>e.startsWith("--launch="));if(ve){const[,e]=ve.split("="),[n,t]=e.split(":");n&&t&&(console.log(`[main] Received launch args: ${n}:${t}`),setTimeout(async()=>{try{const r=await Ie(n,t);r.success?(console.log(`[main] Launched ${n} with theme ${t} on port ${r.port}`),setTimeout(async()=>{try{console.log(`[main] Starting theme injection for ${n}:${t} on port ${r.port}`);const o=await Le(n,t,r.port);console.log("[main] Injection result:",o)}catch(o){console.error("[main] Failed to inject theme:",o)}},3e3)):console.error(`[main] Failed to launch ${n}: ${r.error}`)}catch(r){console.error("[main] Launch error:",r)}},1e3))}w.ipcMain.handle("discover-apps",async()=>dt());w.ipcMain.handle("list-app-path-configurations",()=>et());w.ipcMain.handle("choose-custom-app-path",async(e,n)=>{if(process.platform!=="win32")return{success:!1,error:"自定义应用路径目前仅支持 Windows。"};const t=E(n);if(!t)return{success:!1,error:`Unknown app: ${n}`};const r={title:`选择 ${t.name} 的可执行文件`,buttonLabel:"选择此文件",properties:["openFile"],filters:[{name:`${t.name} 可执行文件`,extensions:["exe"]}]},o=H?await w.dialog.showOpenDialog(H,r):await w.dialog.showOpenDialog(r);if(o.canceled||o.filePaths.length===0)return{success:!1,cancelled:!0};try{return{success:!0,path:nt(n,o.filePaths[0])}}catch(a){return{success:!1,error:(a==null?void 0:a.message)||String(a)}}});w.ipcMain.handle("clear-custom-app-path",(e,n)=>{try{return rt(n),{success:!0}}catch(t){return{success:!1,error:(t==null?void 0:t.message)||String(t)}}});w.ipcMain.handle("launch-app",async(e,n,t)=>Ie(n,t));w.ipcMain.handle("apply-theme",async(e,n,t,r)=>Le(n,t,r));w.ipcMain.handle("create-shortcut",async(e,n)=>{const t={...n,id:`${n.appId}-${n.themeId}-${Date.now()}`};return sn(t)});w.ipcMain.handle("list-themes",async(e,n)=>Q(n).map(t=>({id:t.id,name:t.name,author:t.author,hero:Ot(t.id)})));w.ipcMain.handle("update-themes",async()=>pn());w.ipcMain.handle("get-status",async(e,n,t)=>{var o;return await mt(n)?{...await qt(n,t||((o=E(n))==null?void 0:o.defaultPort)||9339),running:!0}:{installed:!1,menu:!1,targets:0,running:!1}});w.ipcMain.handle("remove-skin",async(e,n,t)=>Vt(n,t));w.ipcMain.handle("debug-targets",async(e,n)=>{try{const r=await(await fetch(`http://127.0.0.1:${n}/json/list`,{signal:AbortSignal.timeout(5e3)})).json();return{success:!0,count:r.length,raw:r,targets:r.map(o=>({id:o.id,type:o.type,url:o.url,title:o.title,webSocketDebuggerUrl:o.webSocketDebuggerUrl}))}}catch(t){return{success:!1,error:t.message}}});

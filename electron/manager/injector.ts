@@ -922,6 +922,11 @@ function buildGenericWorkCss(appId: string, manifest: any, heroDataUrl: string, 
   const contentSurfaceSelectors = appId === 'zcode'
     ? '[class*="composer"], [class*="input-container"]'
     : '[class*="message"], [class*="bubble"], [class*="composer"], [class*="input-container"]';
+  // ZCode conversation rows carry their own translucent surfaces
+  // (buildZCodeConversationCss), so its wallpaper needs no gradient mask.
+  const mainBackground = appId === 'zcode'
+    ? `url(${JSON.stringify(heroDataUrl)}) center / cover no-repeat fixed !important`
+    : `linear-gradient(90deg, color-mix(in srgb, ${colors.surface} 82%, transparent) 0 12%, transparent 42%), url(${JSON.stringify(heroDataUrl)}) center / cover no-repeat fixed !important`;
   return `/* DREAM_THEME:${manifest.id} */
 :root {
   --dream-work-accent: ${colors.accent};
@@ -943,7 +948,7 @@ html, body, #root { background: ${colors.surface} !important; color: ${colors.te
   backdrop-filter: blur(20px) saturate(108%);
 }
 :is(${main}) {
-  background: linear-gradient(90deg, color-mix(in srgb, ${colors.surface} 82%, transparent) 0 12%, transparent 42%), url(${JSON.stringify(heroDataUrl)}) center / cover no-repeat fixed !important;
+  background: ${mainBackground};
   color: ${colors.text} !important;
 }
 :is(${main}) :where([class*="message"], [class*="chat"], [class*="composer"], [class*="editor"], [contenteditable="true"], textarea) {
@@ -1004,6 +1009,44 @@ function buildZCodeConversationCss(colors: any): string {
   background: transparent !important;
   box-shadow: none !important;
   backdrop-filter: none !important;
+}
+
+/* ---- 毛玻璃材质统一：左侧边栏 / 状态面板（Git 变更）/ 切换面板右侧栏 ----
+   与会话输入、模型输出行使用同一种玻璃材质（surface 76% + blur 14px），
+   并清除宽泛的 [class*="min-h-0"][class*="flex-1"] 壁纸选择器落在
+   这些面板内部容器上的直出壁纸。 */
+#sidebar[class],
+#sidebar aside aside {
+  background: transparent !important;
+  background-image: none !important;
+  backdrop-filter: none !important;
+}
+#sidebar aside {
+  background: color-mix(in srgb, ${colors.surface} 76%, transparent) !important;
+  backdrop-filter: blur(14px) saturate(108%) !important;
+}
+#sidebar [class*="min-h-0"][class*="flex-1"] {
+  background: transparent !important;
+  background-image: none !important;
+}
+
+#root aside[class*="bg-[var(--color-popover)]"] {
+  background: color-mix(in srgb, ${colors.surface} 76%, transparent) !important;
+  border-color: color-mix(in srgb, ${colors.accent} 30%, transparent) !important;
+  backdrop-filter: blur(14px) saturate(108%) !important;
+}
+#root aside[class*="bg-[var(--color-popover)]"] [class*="min-h-0"][class*="flex-1"] {
+  background: transparent !important;
+  background-image: none !important;
+}
+
+.side-pane-open-tab-shell {
+  background: color-mix(in srgb, ${colors.surface} 76%, transparent) !important;
+  backdrop-filter: blur(14px) saturate(108%) !important;
+}
+.side-pane-open-tab-shell [class*="min-h-0"][class*="flex-1"] {
+  background: transparent !important;
+  background-image: none !important;
 }
 `;
 }
