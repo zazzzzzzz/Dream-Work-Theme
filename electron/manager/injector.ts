@@ -678,12 +678,60 @@ export async function removeSkin(
   return { success: true };
 };
 
+// ---- 文字对比度工具：根据主题 surface 明暗动态提升 text 对比度 ----
+function hexToRgb(hex: string): [number, number, number] {
+  const m = /^#([0-9a-f]{6})$/i.exec(hex);
+  if (!m) return [255, 255, 255];
+  const v = parseInt(m[1], 16);
+  return [(v >> 16) & 255, (v >> 8) & 255, v & 255];
+}
+
+function srgbToLinear(c: number): number {
+  const x = c / 255;
+  return x <= 0.04045 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4);
+}
+
+function relativeLuminance(hex: string): number {
+  const [r, g, b] = hexToRgb(hex);
+  return 0.2126 * srgbToLinear(r) + 0.7152 * srgbToLinear(g) + 0.0722 * srgbToLinear(b);
+}
+
+function contrastRatio(a: string, b: string): number {
+  const la = relativeLuminance(a);
+  const lb = relativeLuminance(b);
+  const [hi, lo] = la > lb ? [la, lb] : [lb, la];
+  return (hi + 0.05) / (lo + 0.05);
+}
+
+function mixHex(a: string, b: string, t: number): string {
+  const [ar, ag, ab] = hexToRgb(a);
+  const [br, bg, bb] = hexToRgb(b);
+  const mix = (x: number, y: number) => Math.round(x + (y - x) * t);
+  return '#' + [mix(ar, br), mix(ag, bg), mix(ab, bb)].map(v => v.toString(16).padStart(2, '0')).join('');
+}
+
+/** 若 fg 与 bg 的 WCAG 对比度不足 target，则向黑（浅背景）或白（深背景）方向
+    混合提升，直到达标；已达标时原样返回。 */
+function ensureContrast(fg: string, bg: string, target: number): string {
+  if (contrastRatio(fg, bg) >= target) return fg;
+  const toward = relativeLuminance(bg) > 0.5 ? '#000000' : '#ffffff';
+  let lo = 0;
+  let hi = 1;
+  for (let i = 0; i < 12; i++) {
+    const mid = (lo + hi) / 2;
+    if (contrastRatio(mixHex(fg, toward, mid), bg) >= target) hi = mid;
+    else lo = mid;
+  }
+  return mixHex(fg, toward, hi);
+}
+
 function buildAppCss(appId: string, manifest: any, heroDataUrl: string): string {
   const colors = {
     accent: manifest.colors?.accent ?? '#24c9d7',
     secondary: manifest.colors?.secondary ?? '#ef8fd3',
     surface: manifest.colors?.surface ?? '#f7fbff',
-    text: manifest.colors?.text ?? '#17344f',
+    // 动态提升：与 surface 的 WCAG 对比度不足 4.5:1 时自动调亮/调暗
+    text: ensureContrast(manifest.colors?.text ?? '#17344f', manifest.colors?.surface ?? '#f7fbff', 4.5),
   };
 
   if (appId === 'codex') {
@@ -933,6 +981,10 @@ function buildGenericWorkCss(appId: string, manifest: any, heroDataUrl: string, 
   --dream-work-secondary: ${colors.secondary};
   --dream-work-surface: ${colors.surface};
   --dream-work-text: ${colors.text};
+  /* ZCode 原生前景色变量：跟随动态提升后的文字色，毛玻璃背景上保持可读 */
+  --color-foreground: ${colors.text} !important;
+  --color-foreground-subtle: color-mix(in srgb, ${colors.text} 88%, ${colors.surface}) !important;
+  --color-foreground-subtlest: color-mix(in srgb, ${colors.text} 80%, ${colors.surface}) !important;
   --catpaw-bg-primary: ${colors.surface} !important;
   --catpaw-text-primary: ${colors.text} !important;
   --catpaw-text-secondary: color-mix(in srgb, ${colors.text} 72%, transparent) !important;
@@ -1091,6 +1143,49 @@ html:has(aside.min-w-0 nav) main :where(
   background-color: transparent !important;
   border-color: color-mix(in srgb, ${colors.accent} 30%, transparent) !important;
   box-shadow: none !important;
+}
+
+/* 辅助对话（侧边面板，不在 main 内）的消息行：同款毛玻璃材质。 */
+div.border-l.border-border :where(
+  [class~="group/user-row"] > div:first-child,
+  [class~="group/assistant-row"] > [data-conversation-selectable],
+  [data-row-id]:has([data-reasoning-content])
+) {
+  border: 1px solid color-mix(in srgb, ${colors.accent} 30%, transparent) !important;
+  border-radius: 16px !important;
+  background: color-mix(in srgb, ${colors.surface} 76%, transparent) !important;
+  box-shadow: 0 12px 30px color-mix(in srgb, ${colors.surface} 30%, transparent), inset 0 1px color-mix(in srgb, white 12%, transparent) !important;
+  backdrop-filter: blur(14px) saturate(108%) !important;
+  color: ${colors.text} !important;
+  text-shadow: none !important;
+}
+div.border-l.border-border [class~="group/user-row"] > div:first-child {
+  border-color: color-mix(in srgb, ${colors.accent} 44%, transparent) !important;
+  background: color-mix(in srgb, ${colors.surface} 70%, transparent) !important;
+}
+
+/* 子代理输出（主对话与辅助对话面板中）同款毛玻璃材质。 */
+:is(main, div.border-l.border-border) :where(
+  [class*="agent-row"] > [data-conversation-selectable],
+  [class*="subagent"] > [data-conversation-selectable],
+  [class*="subagent-row"] > div,
+  [class*="agent-row"] > div
+) {
+  border: 1px solid color-mix(in srgb, ${colors.accent} 30%, transparent) !important;
+  border-radius: 16px !important;
+  background: color-mix(in srgb, ${colors.surface} 76%, transparent) !important;
+  box-shadow: 0 12px 30px color-mix(in srgb, ${colors.surface} 30%, transparent), inset 0 1px color-mix(in srgb, white 12%, transparent) !important;
+  backdrop-filter: blur(14px) saturate(108%) !important;
+  color: ${colors.text} !important;
+  text-shadow: none !important;
+}
+
+/* 已执行命令的输出卡片（bg-panel 白底）同款毛玻璃材质。 */
+:is(main, div.border-l.border-border) div[class*="bg-panel"][class*="rounded-xl"] {
+  background: color-mix(in srgb, ${colors.surface} 76%, transparent) !important;
+  border: 1px solid color-mix(in srgb, ${colors.accent} 30%, transparent) !important;
+  backdrop-filter: blur(14px) saturate(108%) !important;
+  color: ${colors.text} !important;
 }
 `;
 }
