@@ -546,6 +546,109 @@ div.border-l.border-border [class~="group/user-row"] > div:first-child {
   backdrop-filter: blur(14px) saturate(108%) !important;
   color: ${e.text} !important;
 }
+
+/* ---- 选中/悬停态：与主题一致的底色（accent 混 surface），强化视觉反馈。
+   通用毛玻璃规则会抹平原生选中样式，这里补回更明显的激活态。 ---- */
+/* 标签页与按钮的激活态（Radix data-state=active / aria-selected） */
+:is(main, #sidebar, aside, [role="dialog"], [role="menu"]) :is(button, [role="tab"], [role="button"], a):where(
+  [data-state="active"], [aria-selected="true"], [data-active="true"]
+) {
+  background: color-mix(in srgb, ${e.accent} 16%, ${e.surface}) !important;
+  color: ${e.text} !important;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, ${e.accent} 38%, transparent) !important;
+}
+
+/* 悬停态：轻微 accent 底色，仅作用于交互元素 */
+:is(main, #sidebar, aside, [role="dialog"], [role="menu"]) :is(button, [role="button"], a, li[class*="cursor-pointer"]):hover {
+  background-color: color-mix(in srgb, ${e.accent} 10%, transparent) !important;
+}
+
+/* 侧栏/列表选中项（bg-selected、激活任务项）：accent 混 surface 底 + 左缘强调线 */
+:is(#sidebar, main, aside) :where(
+  li[class*="bg-selected"],
+  [class*="group/task-item"][data-state="active"],
+  [class*="group/task-item"][aria-current="true"]
+) {
+  background: color-mix(in srgb, ${e.accent} 18%, ${e.surface}) !important;
+  box-shadow: inset 2px 0 0 ${e.accent},
+    inset 0 0 0 1px color-mix(in srgb, ${e.accent} 30%, transparent) !important;
+}
+
+/* 开关（Radix switch）选中时轨道染主题 accent */
+:is([role="switch"][data-state="checked"], button[class*="switch"][data-state="checked"]) {
+  background-color: ${e.accent} !important;
+  border-color: color-mix(in srgb, ${e.accent} 70%, transparent) !important;
+}
+
+/* 设置页内的激活控件：覆盖设置页通用毛玻璃（属性选择器提高优先级） */
+html:has(aside.min-w-0 nav) main :is(button, [role="tab"], a, input, select):where(
+  [data-state="active"], [aria-selected="true"], [class*="bg-selected"]
+) {
+  background: color-mix(in srgb, ${e.accent} 16%, ${e.surface}) !important;
+  border-color: color-mix(in srgb, ${e.accent} 44%, transparent) !important;
+  color: ${e.text} !important;
+}
+html:has(aside.min-w-0 nav) main :is(button, [role="tab"], a):where(
+  [data-state="active"], [aria-selected="true"]
+):hover {
+  background: color-mix(in srgb, ${e.accent} 24%, ${e.surface}) !important;
+}
+
+/* ---- 悬停浮层与点击弹窗（tooltip / popover / 下拉菜单 / 对话框 / 命令面板）：
+   这类组件 portal 挂载在 body 下，不随 main/#sidebar 作用域，这里统一为
+   与会话行一致的毛玻璃材质（surface + blur 14px + accent 30% 边框）。 ---- */
+:is(
+  [data-radix-popper-content-wrapper] > *,
+  [role="menu"],
+  [role="listbox"],
+  [role="dialog"],
+  [role="alertdialog"],
+  [class*="cmdk-root"],
+  div[class*="Popover"],
+  div[class*="DropdownMenu"],
+  div[class*="DialogContent"],
+  div[class*="HoverCard"],
+  div[class*="bg-popover"],
+  div[class*="bg-dropdown"]
+):not([class*="Overlay"]):not([data-radix-dialog-overlay]):not([class*="backdrop"]) {
+  background: color-mix(in srgb, ${e.surface} 88%, transparent) !important;
+  border: 1px solid color-mix(in srgb, ${e.accent} 30%, transparent) !important;
+  box-shadow: 0 12px 30px color-mix(in srgb, ${e.surface} 30%, transparent) !important;
+  backdrop-filter: blur(14px) saturate(108%) !important;
+  color: ${e.text} !important;
+  text-shadow: none !important;
+}
+
+/* tooltip 更小更密：更高不透明度保证可读性 */
+[role="tooltip"] {
+  background: color-mix(in srgb, ${e.surface} 92%, transparent) !important;
+  border: 1px solid color-mix(in srgb, ${e.accent} 30%, transparent) !important;
+  box-shadow: 0 8px 20px color-mix(in srgb, ${e.surface} 30%, transparent) !important;
+  backdrop-filter: blur(14px) saturate(108%) !important;
+  color: ${e.text} !important;
+  text-shadow: none !important;
+}
+
+/* 弹层内部的菜单项/选项：默认透明，悬停与选中用 accent 底色 */
+:is([role="menu"], [role="listbox"]) :is(
+  [role="menuitem"], [role="menuitemcheckbox"], [role="menuitemradio"], [role="option"], a, button
+) {
+  background: transparent !important;
+  color: ${e.text} !important;
+}
+:is([role="menu"], [role="listbox"]) :is(
+  [role="menuitem"], [role="menuitemcheckbox"], [role="menuitemradio"], [role="option"], a, button
+):hover,
+:is([role="menu"], [role="listbox"]) :is([role="option"], [role="menuitem"]):where([aria-selected="true"], [data-state="checked"]) {
+  background: color-mix(in srgb, ${e.accent} 14%, ${e.surface}) !important;
+  color: ${e.text} !important;
+}
+
+/* 对话框标题/正文/标签跟随主题文字色（输入类控件背景交由上方毛玻璃容器透出） */
+:is([role="dialog"], [role="alertdialog"]) :where(h1, h2, h3, h4, label, p, span, li, [class*="DialogLabel"], [class*="DialogTitle"], [class*="DialogDescription"]) {
+  color: ${e.text} !important;
+  text-shadow: none !important;
+}
 `}function Ze(e,n,t){return`/* DREAM_THEME:${e.id} */
 :root {
   --dream-work-accent: ${t.accent};
