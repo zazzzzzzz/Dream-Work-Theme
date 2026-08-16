@@ -1,9 +1,13 @@
 import { readFile } from 'fs/promises';
+import * as fs from 'fs';
 import * as path from 'path';
+import { nativeImage } from 'electron';
 import { CdpSession, fetchRendererTargets, waitForRendererTargets, isAnyPageTarget } from './cdp';
 import { getThemeHeroDataUrl, listThemes } from './theme-store';
 import { getAppDefinition } from './app-registry';
 import { ensureSharedCustomThemeService, listSharedCustomThemes, mergeSharedCustomThemes, recordThemeUsage, selectQuickThemeIds } from './custom-theme-store';
+import { Rgb, hexToRgb, rgbToHex, mixRgb, ensureContrastAgainstAll } from './contrast';
+import { decodePngAverageRgb } from './hero-png';
 
 const STYLE_ID = 'dream-work-style';
 const MENU_ID = 'dream-work-menu';
@@ -17,7 +21,58 @@ const WORKBUDDY_CSS_PLACEHOLDERS = {
   secondary: '#040506',
   surface: '#070809',
   text: '#0a0b0c',
+  // 派生文字色的独立哨兵：模板里次级文字位置放这些值，
+  // 页面端按提取调色板推导后替换，避免与主文字色耦合。
+  textSubtle: '#0d0e0f',
+  textSubtlest: '#101112',
+  textSecondary: '#131415',
 };
+
+// 各应用中文字实际落在的半透明表面（surface 对壁纸的 alpha 列表，与
+// buildGenericWorkCss / buildZCodeConversationCss / buildCodexCss 等生成
+// 的材质对应）。对比度按 surface×alpha + 壁纸平均色×(1-alpha) 的合成
+// 背景计算，而不是纯 surface，否则半透明玻璃上的真实对比度会被高估。
+const HERO_BACKED_SURFACE_ALPHAS: Record<string, number[]> = {
+  zcode: [0.70, 0.76, 0.88, 0.90],
+  codex: [0.76, 0.82, 0.86, 0.90, 0.92],
+  catpaw: [0.78, 0.82],
+  'qoder-work': [0.70, 0.82, 0.86, 0.90],
+  'qwen-office': [0.86, 0.90],
+  workbuddy: [0.58, 0.62, 0.92],
+  'hana-agent': [0.62, 0.66, 0.78],
+};
+const DEFAULT_SURFACE_ALPHAS = [0.70, 0.76, 0.88, 0.90];
+
+function surfaceAlphasFor(appId: string): number[] {
+  return HERO_BACKED_SURFACE_ALPHAS[appId] ?? DEFAULT_SURFACE_ALPHAS;
+}
+
+const heroAverageCache = new Map<string, { size: number; mtimeMs: number; rgb: Rgb | null }>();
+
+/** 主进程侧对 hero 图采样平均色：缩到 1×1 再解码 PNG（Chromium 缩放即全图加权平均）。
+    失败返回 null，调用方回退为纯 surface 计算对比度。 */
+function getHeroAverageRgb(heroPath: string): Rgb | null {
+  let stats: fs.Stats;
+  try {
+    stats = fs.statSync(heroPath);
+  } catch {
+    return null;
+  }
+  const cached = heroAverageCache.get(heroPath);
+  if (cached && cached.size === stats.size && cached.mtimeMs === stats.mtimeMs) return cached.rgb;
+  let rgb: Rgb | null = null;
+  try {
+    const image = nativeImage.createFromPath(heroPath);
+    if (!image.isEmpty()) {
+      const dataUrl = image.resize({ width: 1, height: 1 }).toDataURL();
+      rgb = decodePngAverageRgb(Buffer.from(dataUrl.slice(dataUrl.indexOf(',') + 1), 'base64'));
+    }
+  } catch (e) {
+    console.warn('[injector] Hero average sampling failed:', (e as Error).message);
+  }
+  heroAverageCache.set(heroPath, { size: stats.size, mtimeMs: stats.mtimeMs, rgb });
+  return rgb;
+}
 
 // Load base Codex skin CSS (from codex-themes-main)
 let CODEX_BASE_CSS: string | null = null;
@@ -102,7 +157,7 @@ export async function applyTheme(
     for (const theme of menuThemeEntries) {
       themeEntries.set(theme.id, {
         name: theme.name,
-        css: buildAppCss(appId, theme.manifest, getThemeHeroDataUrl(theme)),
+        css: buildAppCss(appId, theme.manifest, getThemeHeroDataUrl(theme), getHeroAverageRgb(path.join(theme.path, theme.manifest.hero))),
         surface: theme.manifest.colors.surface,
       });
     }
@@ -191,6 +246,8 @@ export async function applyTheme(
           themes: menuThemes,
           sharedCustomThemes,
           sharedCustomThemeService,
+          // 模板模式：占位哨兵色原样透传进 CSS，页面端替换真实调色板后
+          // 再做对比度提升（见脚本内 deriveTextColors）。
           cssTemplate: buildAppCss(appId, {
             id: WORKBUDDY_CSS_PLACEHOLDERS.id,
             colors: {
@@ -199,7 +256,8 @@ export async function applyTheme(
               surface: WORKBUDDY_CSS_PLACEHOLDERS.surface,
               text: WORKBUDDY_CSS_PLACEHOLDERS.text,
             },
-          }, WORKBUDDY_CSS_PLACEHOLDERS.hero),
+          }, WORKBUDDY_CSS_PLACEHOLDERS.hero, null, { template: true }),
+          surfaceAlphas: surfaceAlphasFor(appId),
         });
 
     // Inject to all targets
@@ -678,60 +736,46 @@ export async function removeSkin(
   return { success: true };
 };
 
-// ---- 文字对比度工具：根据主题 surface 明暗动态提升 text 对比度 ----
-function hexToRgb(hex: string): [number, number, number] {
-  const m = /^#([0-9a-f]{6})$/i.exec(hex);
-  if (!m) return [255, 255, 255];
-  const v = parseInt(m[1], 16);
-  return [(v >> 16) & 255, (v >> 8) & 255, v & 255];
+// ---- 文字对比度推导：工具函数见 ./contrast.ts ----
+// 主文字 4.5:1、次级文字 3:1（WCAG 大字号下限），背景取各半透明表面
+// 与壁纸平均色的合成色，保证毛玻璃上的真实可读性。
+function deriveTextColors(surfaceHex: string, textHex: string, heroAverage: Rgb | null, alphas: number[]) {
+  const surface = hexToRgb(surfaceHex);
+  // hero 未采样到时退化为纯 surface（mixRgb(surface, surface, a) === surface）
+  const backgrounds = alphas.map((alpha) => mixRgb(heroAverage ?? surface, surface, alpha));
+  const text = ensureContrastAgainstAll(hexToRgb(textHex), backgrounds, 4.5);
+  return {
+    text: rgbToHex(text),
+    textSubtle: rgbToHex(ensureContrastAgainstAll(mixRgb(surface, text, 0.88), backgrounds, 3)),
+    textSubtlest: rgbToHex(ensureContrastAgainstAll(mixRgb(surface, text, 0.80), backgrounds, 3)),
+    textSecondary: rgbToHex(ensureContrastAgainstAll(mixRgb(surface, text, 0.72), backgrounds, 3)),
+  };
 }
 
-function srgbToLinear(c: number): number {
-  const x = c / 255;
-  return x <= 0.04045 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4);
-}
-
-function relativeLuminance(hex: string): number {
-  const [r, g, b] = hexToRgb(hex);
-  return 0.2126 * srgbToLinear(r) + 0.7152 * srgbToLinear(g) + 0.0722 * srgbToLinear(b);
-}
-
-function contrastRatio(a: string, b: string): number {
-  const la = relativeLuminance(a);
-  const lb = relativeLuminance(b);
-  const [hi, lo] = la > lb ? [la, lb] : [lb, la];
-  return (hi + 0.05) / (lo + 0.05);
-}
-
-function mixHex(a: string, b: string, t: number): string {
-  const [ar, ag, ab] = hexToRgb(a);
-  const [br, bg, bb] = hexToRgb(b);
-  const mix = (x: number, y: number) => Math.round(x + (y - x) * t);
-  return '#' + [mix(ar, br), mix(ag, bg), mix(ab, bb)].map(v => v.toString(16).padStart(2, '0')).join('');
-}
-
-/** 若 fg 与 bg 的 WCAG 对比度不足 target，则向黑（浅背景）或白（深背景）方向
-    混合提升，直到达标；已达标时原样返回。 */
-function ensureContrast(fg: string, bg: string, target: number): string {
-  if (contrastRatio(fg, bg) >= target) return fg;
-  const toward = relativeLuminance(bg) > 0.5 ? '#000000' : '#ffffff';
-  let lo = 0;
-  let hi = 1;
-  for (let i = 0; i < 12; i++) {
-    const mid = (lo + hi) / 2;
-    if (contrastRatio(mixHex(fg, toward, mid), bg) >= target) hi = mid;
-    else lo = mid;
-  }
-  return mixHex(fg, toward, hi);
-}
-
-function buildAppCss(appId: string, manifest: any, heroDataUrl: string): string {
+export function buildAppCss(
+  appId: string,
+  manifest: any,
+  heroDataUrl: string,
+  heroAverage: Rgb | null = null,
+  options: { template?: boolean } = {}
+): string {
+  const surface = manifest.colors?.surface ?? '#f7fbff';
+  const text = manifest.colors?.text ?? '#17344f';
+  // 模板模式下占位哨兵色必须原样透传：一旦在这里跑对比度提升，
+  // 哨兵字符串（如 #0a0b0c）会被改写，页面端 split/join 替换将永远不命中。
+  const derived = options.template
+    ? {
+        text,
+        textSubtle: WORKBUDDY_CSS_PLACEHOLDERS.textSubtle,
+        textSubtlest: WORKBUDDY_CSS_PLACEHOLDERS.textSubtlest,
+        textSecondary: WORKBUDDY_CSS_PLACEHOLDERS.textSecondary,
+      }
+    : deriveTextColors(surface, text, heroAverage, surfaceAlphasFor(appId));
   const colors = {
     accent: manifest.colors?.accent ?? '#24c9d7',
     secondary: manifest.colors?.secondary ?? '#ef8fd3',
-    surface: manifest.colors?.surface ?? '#f7fbff',
-    // 动态提升：与 surface 的 WCAG 对比度不足 4.5:1 时自动调亮/调暗
-    text: ensureContrast(manifest.colors?.text ?? '#17344f', manifest.colors?.surface ?? '#f7fbff', 4.5),
+    surface,
+    ...derived,
   };
 
   if (appId === 'codex') {
@@ -981,16 +1025,17 @@ function buildGenericWorkCss(appId: string, manifest: any, heroDataUrl: string, 
   --dream-work-secondary: ${colors.secondary};
   --dream-work-surface: ${colors.surface};
   --dream-work-text: ${colors.text};
-  /* ZCode 原生前景色变量：跟随动态提升后的文字色，毛玻璃背景上保持可读 */
+  /* ZCode 原生前景色变量：跟随动态提升后的文字色，毛玻璃背景上保持可读；
+     次级色按 88%/80%/72% 混合并保证 3:1 对比度下限（见 deriveTextColors） */
   --color-foreground: ${colors.text} !important;
-  --color-foreground-subtle: color-mix(in srgb, ${colors.text} 88%, ${colors.surface}) !important;
-  --color-foreground-subtlest: color-mix(in srgb, ${colors.text} 80%, ${colors.surface}) !important;
+  --color-foreground-subtle: ${colors.textSubtle} !important;
+  --color-foreground-subtlest: ${colors.textSubtlest} !important;
   --catpaw-bg-primary: ${colors.surface} !important;
   --catpaw-text-primary: ${colors.text} !important;
-  --catpaw-text-secondary: color-mix(in srgb, ${colors.text} 72%, transparent) !important;
+  --catpaw-text-secondary: ${colors.textSecondary} !important;
   --agents-sidebar-material-bg: color-mix(in srgb, ${colors.surface} 90%, transparent) !important;
   --text-base-primary: ${colors.text} !important;
-  --text-base-secondary: color-mix(in srgb, ${colors.text} 72%, transparent) !important;
+  --text-base-secondary: ${colors.textSecondary} !important;
   --bg-base: color-mix(in srgb, ${colors.surface} 86%, transparent) !important;
 }
 html, body, #root { background: ${colors.surface} !important; color: ${colors.text} !important; }
@@ -1600,7 +1645,7 @@ body > #root > div:first-child > div:first-child button[aria-label="Close"]:hove
   color: #ef4444 !important;
 }
 .agents-sidebar :where(button, [role="button"], [class*="cursor-pointer"]) {
-  color: color-mix(in srgb, ${colors.text} 76%, transparent) !important;
+  color: ${colors.textSecondary} !important;
 }
 .agents-sidebar :where(button, [role="button"], [class*="cursor-pointer"]):hover {
   background-color: color-mix(in srgb, ${colors.accent} 14%, transparent) !important;
@@ -1608,7 +1653,7 @@ body > #root > div:first-child > div:first-child button[aria-label="Close"]:hove
 }
 .agents-sidebar :where(button[aria-label="任务"], button[aria-label="频道"]) {
   background-color: transparent !important;
-  color: color-mix(in srgb, ${colors.text} 78%, transparent) !important;
+  color: ${colors.textSecondary} !important;
   border-color: transparent !important;
   box-shadow: none !important;
 }
@@ -2379,23 +2424,26 @@ function buildWorkBuddyMenuScript(options: {
 })()`;
 }
 
-export function buildMenuScript(options: { 
-  styleId: string; 
-  menuId: string; 
-  currentThemeId: string; 
+export function buildMenuScript(options: {
+  styleId: string;
+  menuId: string;
+  currentThemeId: string;
   themes: Array<{ id: string; name: string; css: string; surface: string; accent?: string }>;
   appId: string;
   cssTemplate?: string;
+  surfaceAlphas?: number[];
   sharedCustomThemes: any[];
   sharedCustomThemeService: { endpoint: string; usageEndpoint: string; token: string };
 }): string {
   const themesJson = JSON.stringify(options.themes);
   const cssTemplate = JSON.stringify(options.cssTemplate ?? '');
   const appId = options.appId;
+  const surfaceAlphas = options.surfaceAlphas ?? DEFAULT_SURFACE_ALPHAS;
   return `(() => {
   const themes = ${themesJson};
   const cssTemplate = ${cssTemplate};
   const sentinels = ${JSON.stringify(WORKBUDDY_CSS_PLACEHOLDERS)};
+  const surfaceAlphas = ${JSON.stringify(surfaceAlphas)};
   const currentThemeId = '${options.currentThemeId}';
   const appId = '${appId}';
   const customStorageKey = 'dreamCodexCustomThemes';
@@ -2407,9 +2455,17 @@ export function buildMenuScript(options: {
     body: JSON.stringify({ appId, themeId }),
   }).catch(() => {});
   const themeBlobUrls = new Map();
+  const isBase64Char = (code) => (code >= 48 && code <= 57) || (code >= 65 && code <= 90) || (code >= 97 && code <= 122) || code === 43 || code === 47 || code === 61;
+  // 不用正则提取 data URL：大体积 hero（10MB+ base64）会让旧版 V8 的正则
+  // 回溯栈溢出（RangeError: Maximum call stack size exceeded）。
   const materializeCss = (css, cacheKey) => {
-    const dataUrl = css.match(new RegExp('data:image/(?:png|jpeg|webp|gif);base64,[A-Za-z0-9+/=]+'))?.[0];
-    if (!dataUrl) return css;
+    const head = css.indexOf('data:image/');
+    if (head < 0) return css;
+    const comma = css.indexOf(';base64,', head);
+    if (comma < 0) return css;
+    let end = comma + 8;
+    while (end < css.length && isBase64Char(css.charCodeAt(end))) end++;
+    const dataUrl = css.slice(head, end);
     let blobUrl = themeBlobUrls.get(cacheKey);
     if (!blobUrl) {
       const [header, encoded] = dataUrl.split(',', 2);
@@ -2553,13 +2609,142 @@ export function buildMenuScript(options: {
     item.dataset.themeId = theme.id;
   }
 
-  const buildCustomCss = (dataUrl, colors, customId) => cssTemplate
-    .split(sentinels.hero).join(dataUrl)
-    .split(sentinels.accent).join(colors.accent)
-    .split(sentinels.secondary).join(colors.secondary)
-    .split(sentinels.surface).join(colors.surface)
-    .split(sentinels.text).join(colors.text)
-    .split(sentinels.id).join(customId);
+  /* __DREAM_PAGE_CONTRAST_START__（与 electron/manager/contrast.ts 保持同逻辑） */
+  const pageHexToRgb = (value) => {
+    const m = /^#([0-9a-f]{6})$/i.exec(value || '');
+    if (!m) return [255, 255, 255];
+    const v = parseInt(m[1], 16);
+    return [(v >> 16) & 255, (v >> 8) & 255, v & 255];
+  };
+  const pageRgbToHex = (rgb) => '#' + rgb.map((value) => Math.max(0, Math.min(255, Math.round(value))).toString(16).padStart(2, '0')).join('');
+  const pageMixRgb = (a, b, t) => a.map((value, index) => value + (b[index] - value) * t);
+  const pageRgbToHsl = (rgb) => {
+    const r = rgb[0] / 255, g = rgb[1] / 255, b = rgb[2] / 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b);
+    const l = (max + min) / 2;
+    if (max === min) return [0, 0, l];
+    const d = max - min;
+    const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    let h;
+    if (max === r) h = (g - b) / d + (g < b ? 6 : 0);
+    else if (max === g) h = (b - r) / d + 2;
+    else h = (r - g) / d + 4;
+    return [h / 6, s, l];
+  };
+  const pageHslToRgb = (h, s, l) => {
+    if (s <= 0) { const v = l * 255; return [v, v, v]; }
+    const hue2rgb = (p, q, t) => {
+      if (t < 0) t += 1;
+      if (t > 1) t -= 1;
+      if (t < 1 / 6) return p + (q - p) * 6 * t;
+      if (t < 1 / 2) return q;
+      if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+      return p;
+    };
+    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+    const p = 2 * l - q;
+    // 保持浮点精度，只在 pageRgbToHex 输出时取整一次
+    return [hue2rgb(p, q, h + 1 / 3) * 255, hue2rgb(p, q, h) * 255, hue2rgb(p, q, h - 1 / 3) * 255];
+  };
+  const pageSrgbToLinear = (c) => { const x = c / 255; return x <= 0.04045 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); };
+  const pageLuminance = (rgb) => 0.2126 * pageSrgbToLinear(rgb[0]) + 0.7152 * pageSrgbToLinear(rgb[1]) + 0.0722 * pageSrgbToLinear(rgb[2]);
+  const pageContrast = (a, b) => {
+    const la = pageLuminance(a), lb = pageLuminance(b);
+    return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+  };
+  // 色相保持：只调明度达标，避免推向无彩色黑白；方向按“远离背景亮度”选择；
+  // 不可能时才退回黑白混合
+  const pageEnsureOne = (fg, bg, target) => {
+    if (pageContrast(fg, bg) >= target) return fg;
+    const aim = target + Math.max(0.02, target * 0.02);
+    const lfg = pageLuminance(fg), lbg = pageLuminance(bg);
+    const darken = lfg < lbg || (lfg === lbg && lbg > 0.475);
+    const [h, s, l] = pageRgbToHsl(fg);
+    if (s >= 0.02) {
+      let lo = darken ? 0 : l, hi = darken ? l : 1;
+      for (let i = 0; i < 14; i++) {
+        const mid = (lo + hi) / 2;
+        if (pageContrast(pageHslToRgb(h, s, mid), bg) >= aim) {
+          if (darken) lo = mid; else hi = mid;
+        } else {
+          if (darken) hi = mid; else lo = mid;
+        }
+      }
+      const candidate = pageHslToRgb(h, s, darken ? lo : hi);
+      if (pageContrast(candidate, bg) >= target) return candidate;
+    }
+    const toward = darken ? [0, 0, 0] : [255, 255, 255];
+    let lo = 0, hi = 1;
+    for (let i = 0; i < 12; i++) {
+      const mid = (lo + hi) / 2;
+      if (pageContrast(pageMixRgb(fg, toward, mid), bg) >= aim) hi = mid;
+      else lo = mid;
+    }
+    return pageMixRgb(fg, toward, hi);
+  };
+  const pageEnsureAll = (fg, backgrounds, target) => {
+    const minContrast = (color) => Math.min(...backgrounds.map((bg) => pageContrast(color, bg)));
+    let current = fg;
+    for (let round = 0; round < 4; round++) {
+      if (minContrast(current) >= target) return current;
+      const before = minContrast(current);
+      let worst = null, worstRatio = Infinity;
+      for (const bg of backgrounds) {
+        const ratio = pageContrast(current, bg);
+        if (ratio < worstRatio) { worstRatio = ratio; worst = bg; }
+      }
+      const boosted = pageEnsureOne(current, worst, target);
+      if (minContrast(boosted) <= before + 1e-9) break;
+      current = boosted;
+    }
+    if (minContrast(current) >= target) return current;
+    const [h, s] = pageRgbToHsl(fg);
+    const candidates = [fg, current];
+    for (const l of [0.02, 0.06, 0.12, 0.22, 0.78, 0.88, 0.95, 0.99]) {
+      candidates.push(pageHslToRgb(h, s, l));
+    }
+    let bestColor = current, bestRatio = minContrast(current);
+    for (const candidate of candidates) {
+      const ratio = minContrast(candidate);
+      if (ratio > bestRatio + 1e-9) { bestRatio = ratio; bestColor = candidate; }
+    }
+    return bestColor;
+  };
+  // 替换出真实调色板后再做对比度提升：主文字 4.5:1、次级 3:1，
+  // 背景用 surface 与图片平均色按各表面透明度合成（colors.average 由
+  // extractPalette 计算；旧存档没有该字段时退化为纯 surface）。
+  const deriveTextColors = (colors) => {
+    const surface = pageHexToRgb(colors.surface);
+    const hero = pageHexToRgb(colors.average || colors.surface);
+    const backgrounds = surfaceAlphas.map((alpha) => pageMixRgb(hero, surface, alpha));
+    const text = pageEnsureAll(pageHexToRgb(colors.text), backgrounds, 4.5);
+    return {
+      text: pageRgbToHex(text),
+      textSubtle: pageRgbToHex(pageEnsureAll(pageMixRgb(surface, text, 0.88), backgrounds, 3)),
+      textSubtlest: pageRgbToHex(pageEnsureAll(pageMixRgb(surface, text, 0.80), backgrounds, 3)),
+      textSecondary: pageRgbToHex(pageEnsureAll(pageMixRgb(surface, text, 0.72), backgrounds, 3)),
+    };
+  };
+  /* __DREAM_PAGE_CONTRAST_END__ */
+  const buildCustomCss = (dataUrl, colors, customId) => {
+    const derived = deriveTextColors(colors);
+    // 极端壁纸下兜底色可能恰好等于某个哨兵十六进制串，替换前轻微提亮避开，
+    // 防止后续 split/join 把它当成哨兵再次替换
+    const sentinelHexes = [sentinels.accent, sentinels.secondary, sentinels.surface, sentinels.text, sentinels.textSubtle, sentinels.textSubtlest, sentinels.textSecondary];
+    const dodgeSentinel = (hex) => sentinelHexes.includes(hex)
+      ? pageRgbToHex(pageMixRgb(pageHexToRgb(hex), [255, 255, 255], 0.05))
+      : hex;
+    return cssTemplate
+      .split(sentinels.hero).join(dataUrl)
+      .split(sentinels.accent).join(colors.accent)
+      .split(sentinels.secondary).join(colors.secondary)
+      .split(sentinels.surface).join(colors.surface)
+      .split(sentinels.text).join(dodgeSentinel(derived.text))
+      .split(sentinels.textSubtle).join(dodgeSentinel(derived.textSubtle))
+      .split(sentinels.textSubtlest).join(dodgeSentinel(derived.textSubtlest))
+      .split(sentinels.textSecondary).join(dodgeSentinel(derived.textSecondary))
+      .split(sentinels.id).join(customId);
+  };
   const hex = (r, g, b) => '#' + [r, g, b].map((value) => Math.max(0, Math.min(255, Math.round(value))).toString(16).padStart(2, '0')).join('');
   const mix = (a, b, amount) => a.map((value, index) => value + (b[index] - value) * amount);
   const extractPalette = (canvas) => {
@@ -2567,12 +2752,16 @@ export function buildMenuScript(options: {
     const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
     const buckets = new Map();
     let luminanceSum = 0;
+    let rSum = 0, gSum = 0, bSum = 0;
     let count = 0;
     for (let index = 0; index < pixels.length; index += 4) {
       const r = pixels[index], g = pixels[index + 1], b = pixels[index + 2];
       const max = Math.max(r, g, b), min = Math.min(r, g, b);
       const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
       luminanceSum += luminance;
+      rSum += r;
+      gSum += g;
+      bSum += b;
       count += 1;
       const saturation = max === 0 ? 0 : (max - min) / max;
       if (saturation < 0.18 || luminance < 24 || luminance > 245) continue;
@@ -2593,11 +2782,13 @@ export function buildMenuScript(options: {
     const accent = ranked[0]?.rgb || [36, 201, 215];
     const secondary = ranked.find((entry) => Math.abs(entry.hue - (ranked[0]?.hue || 0)) > 50)?.rgb || mix(accent, [255, 255, 255], 0.35);
     const light = averageLuminance > 128;
+    // average：整图平均色，供 deriveTextColors 与 surface 合成实际背景
     return {
       accent: hex(...accent),
       secondary: hex(...secondary),
       surface: hex(...(light ? mix(accent, [252, 252, 255], 0.92) : mix(accent, [12, 12, 18], 0.86))),
       text: hex(...(light ? mix(accent, [16, 24, 40], 0.82) : mix(accent, [244, 246, 252], 0.85))),
+      average: hex(rSum / (count || 1), gSum / (count || 1), bSum / (count || 1)),
     };
   };
   const MAX_CUSTOM = 5;

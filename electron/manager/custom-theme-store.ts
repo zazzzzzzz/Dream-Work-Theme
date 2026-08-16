@@ -63,7 +63,9 @@ export function selectQuickThemeIds(appId: string, availableThemeIds: string[], 
       if (right === currentThemeId) return 1;
       const leftUsage = usage[left] ?? { count: 0, lastUsedAt: 0 };
       const rightUsage = usage[right] ?? { count: 0, lastUsedAt: 0 };
-      return rightUsage.count - leftUsage.count || rightUsage.lastUsedAt - leftUsage.lastUsedAt;
+      // 快捷列表展示“最近应用”：最近使用时间优先，历史次数仅作并列时的次级排序，
+      // 否则高频老主题会永久占满列表，新近应用的低频主题永远无法出现
+      return rightUsage.lastUsedAt - leftUsage.lastUsedAt || rightUsage.count - leftUsage.count;
     })
     .slice(0, limit);
 }
@@ -195,10 +197,15 @@ function validateThemes(input: unknown): SharedCustomTheme[] {
       throw new Error(`Invalid custom theme image at index ${index}`);
     }
     for (const color of ['accent', 'secondary', 'surface', 'text']) {
-      if (typeof value.colors?.[color] !== 'string' || !/^#[0-9a-f]{6}$/i.test(value.colors[color])) {
+      if (typeof value.colors?.[color] !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(value.colors[color])) {
         throw new Error(`Invalid custom theme color ${color} at index ${index}`);
       }
     }
+    // average：整图平均色（页面端提取），用于与 surface 合成实际背景计算对比度；
+    // 旧数据没有该字段时缺省，页面端回退为纯 surface。
+    const average = typeof value.colors?.average === 'string' && /^#[0-9a-fA-F]{6}$/.test(value.colors.average)
+      ? value.colors.average
+      : undefined;
     return {
       id: value.id,
       name: value.name.trim(),
@@ -208,6 +215,7 @@ function validateThemes(input: unknown): SharedCustomTheme[] {
         secondary: value.colors.secondary,
         surface: value.colors.surface,
         text: value.colors.text,
+        ...(average ? { average } : {}),
       },
     };
   });
