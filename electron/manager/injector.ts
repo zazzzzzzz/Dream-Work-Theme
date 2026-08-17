@@ -1305,6 +1305,28 @@ html:has(aside.min-w-0 nav) main :is(button, [role="tab"], a):where(
   text-shadow: none !important;
 }
 
+/* ZCode 模型选择器的供应商菜单会把 Radix 子菜单 portal 挂在主菜单内部。
+   backdrop-filter 会让主菜单成为 fixed 子菜单的包含块，随后子菜单又被主菜单的
+   overflow 裁切。把模糊材质移到伪元素后，外观不变，子菜单可以继续相对视口定位。 */
+body.zcode-startup-ready [role="menu"][data-slot="dropdown-menu-content"]:has([data-model-provider-key]) {
+  position: relative !important;
+  isolation: isolate;
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+body.zcode-startup-ready [role="menu"][data-slot="dropdown-menu-content"]:has([data-model-provider-key])::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: color-mix(in srgb, ${colors.surface} 88%, transparent);
+  backdrop-filter: blur(14px) saturate(108%);
+  -webkit-backdrop-filter: blur(14px) saturate(108%);
+  pointer-events: none;
+}
+
 /* tooltip 更小更密：更高不透明度保证可读性 */
 [role="tooltip"] {
   background: color-mix(in srgb, ${colors.surface} 92%, transparent) !important;
