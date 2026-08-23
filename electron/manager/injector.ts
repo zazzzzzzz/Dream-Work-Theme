@@ -1037,6 +1037,10 @@ function buildGenericWorkCss(appId: string, manifest: any, heroDataUrl: string, 
   --text-base-primary: ${colors.text} !important;
   --text-base-secondary: ${colors.textSecondary} !important;
   --bg-base: color-mix(in srgb, ${colors.surface} 86%, transparent) !important;
+  /* ZCode 选中/悬停变量：组件自身的 data-active:!bg-selected 类带 !important
+     引用 --color-selected，接管变量让这类选中背景也跟随主题 accent */
+  --color-selected: color-mix(in srgb, ${colors.accent} 16%, ${colors.surface}) !important;
+  --color-hover: color-mix(in srgb, ${colors.accent} 10%, ${colors.surface}) !important;
 }
 html, body, #root { background: ${colors.surface} !important; color: ${colors.text} !important; }
 :is(${sidebar}) {
@@ -1190,6 +1194,14 @@ html:has(aside.min-w-0 nav) main :where(
   box-shadow: none !important;
 }
 
+/* 输入框外层的毛玻璃区域：圆角 0px 时直角浅色玻璃会在编辑器胶囊
+   （rounded-2xl）四周形成"白色长方形框"，圆角化后与胶囊边缘贴合 */
+.chat-composer-region,
+.chat-composer-input-surface {
+  border-radius: 16px !important;
+  border: 1px solid color-mix(in srgb, ${colors.accent} 30%, transparent) !important;
+}
+
 /* 辅助对话（侧边面板，不在 main 内）的消息行：同款毛玻璃材质。 */
 div.border-l.border-border :where(
   [class~="group/user-row"] > div:first-child,
@@ -1237,7 +1249,7 @@ div.border-l.border-border [class~="group/user-row"] > div:first-child {
    通用毛玻璃规则会抹平原生选中样式，这里补回更明显的激活态。 ---- */
 /* 标签页与按钮的激活态（Radix data-state=active / aria-selected） */
 :is(main, #sidebar, aside, [role="dialog"], [role="menu"]) :is(button, [role="tab"], [role="button"], a):where(
-  [data-state="active"], [aria-selected="true"], [data-active="true"]
+  [data-state="active"], [aria-selected="true"], [data-active], [data-active="true"]
 ) {
   background: color-mix(in srgb, ${colors.accent} 16%, ${colors.surface}) !important;
   color: ${colors.text} !important;
@@ -1249,15 +1261,16 @@ div.border-l.border-border [class~="group/user-row"] > div:first-child {
   background-color: color-mix(in srgb, ${colors.accent} 10%, transparent) !important;
 }
 
-/* 侧栏/列表选中项（bg-selected、激活任务项）：accent 混 surface 底 + 左缘强调线 */
+/* 侧栏/列表选中项（bg-selected、激活任务项）：accent 混 surface 底 + 左缘强调线；
+   不再添加 inset 1px 描边环 —— 会话导轨的选中项几乎占满导轨宽度，
+   描边环会被看成"整个导轨被边框包起来" */
 :is(#sidebar, main, aside) :where(
   li[class*="bg-selected"],
   [class*="group/task-item"][data-state="active"],
   [class*="group/task-item"][aria-current="true"]
 ) {
   background: color-mix(in srgb, ${colors.accent} 18%, ${colors.surface}) !important;
-  box-shadow: inset 2px 0 0 ${colors.accent},
-    inset 0 0 0 1px color-mix(in srgb, ${colors.accent} 30%, transparent) !important;
+  box-shadow: inset 2px 0 0 ${colors.accent} !important;
 }
 
 /* 开关（Radix switch）选中时轨道染主题 accent */
@@ -1278,6 +1291,32 @@ html:has(aside.min-w-0 nav) main :is(button, [role="tab"], a):where(
   [data-state="active"], [aria-selected="true"]
 ):hover {
   background: color-mix(in srgb, ${colors.accent} 24%, ${colors.surface}) !important;
+}
+
+/* 设置页插件/技能/MCP 列表：外层卡片保留 accent 边框与毛玻璃，
+   内部行按钮去掉各自重复的边框，避免盒中盒双重边框；行间 hover 用 accent 底区分 */
+html:has(aside.min-w-0 nav) main [class*="max-w-4xl"] div[class*="rounded-xl"] :is(
+  button[class*="flex-1"], button[class*="min-w-0"], button[class*="w-full"]
+) {
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+/* 设置页计数标签（插件/MCP/技能）的轨道：玻璃底已生效但为直角，
+   呈现白色矩形框；圆角化与胶囊标签协调 */
+html:has(aside.min-w-0 nav) main [class*="max-w-4xl"] [class*="tabs-list"] {
+  border-radius: 999px !important;
+}
+
+/* 会话列左缘的历史会话导航导轨（NAV.w-12 竖向细轨）：选中态规则会给
+   指示按钮加 accent 内描边环与底色，看起来像"导轨被边框包起来"；
+   用户要求导轨无边框也无底色 —— 完全还原为透明，仅保留原生形态 */
+#root nav[class*="inset-y-0"][class*="left-0"] :is(button, [role="button"]) {
+  background: transparent !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+  outline: none !important;
 }
 
 /* ---- 悬停浮层与点击弹窗（tooltip / popover / 下拉菜单 / 对话框 / 命令面板）：
@@ -1356,6 +1395,39 @@ body.zcode-startup-ready [role="menu"][data-slot="dropdown-menu-content"]:has([d
 :is([role="dialog"], [role="alertdialog"]) :where(h1, h2, h3, h4, label, p, span, li, [class*="DialogLabel"], [class*="DialogTitle"], [class*="DialogDescription"]) {
   color: ${colors.text} !important;
   text-shadow: none !important;
+}
+
+/* ---- 插件市场页（独立整页，含 H1 标题，无设置侧栏）：
+   设置页规则按 aside.min-w-0 nav 作用域，市场页不命中导致搜索框原生纯白、
+   插件图标与卡片透明浮在壁纸上。这里按 max-w-4xl:has(h1) 精确限定，
+   与会话列（无 h1）区分开。 ---- */
+main [class*="max-w-4xl"]:has(h1) :is(
+  input,
+  button,
+  div[class*="group/card"],
+  div[class*="bg-card"],
+  div[class*="rounded-xl"],
+  div[class*="min-h-11"]
+):not([class*="bg-accent"]):not([class*="bg-primary"]) {
+  background: color-mix(in srgb, ${colors.surface} 76%, transparent) !important;
+  border: 1px solid color-mix(in srgb, ${colors.accent} 30%, transparent) !important;
+  box-shadow: 0 12px 30px color-mix(in srgb, ${colors.surface} 30%, transparent) !important;
+  backdrop-filter: blur(14px) saturate(108%) !important;
+  color: ${colors.text} !important;
+  text-shadow: none !important;
+}
+main [class*="max-w-4xl"]:has(h1) :is(
+  button, div[class*="group/card"], div[class*="bg-card"]
+):not([class*="bg-accent"]):not([class*="bg-primary"]):hover {
+  background: color-mix(in srgb, ${colors.accent} 14%, ${colors.surface}) !important;
+}
+main [class*="max-w-4xl"]:has(h1) input {
+  color: ${colors.text} !important;
+  caret-color: ${colors.accent} !important;
+}
+main [class*="max-w-4xl"]:has(h1) input::placeholder {
+  color: ${colors.textSecondary} !important;
+  opacity: 1 !important;
 }
 `;
 }
