@@ -12,3 +12,6 @@ node_modules.rar
 *.swp
 *.swo
 *~
+
+# Superdesign local state
+.superdesign/

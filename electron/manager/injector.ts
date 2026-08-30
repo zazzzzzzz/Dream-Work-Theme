@@ -1083,8 +1083,8 @@ function buildZCodeConversationCss(colors: any): string {
 
 :is(main) :where(
   [class~="group/user-row"] > div:first-child,
-  [class~="group/assistant-row"] > [data-conversation-selectable],
-  [data-row-id]:has([data-reasoning-content])
+  [class~="group/user-row"] > div[class*="rounded-xl"],
+  [class~="group/assistant-row"] > [data-conversation-selectable]
 ) {
   border: 1px solid color-mix(in srgb, ${colors.accent} 30%, transparent) !important;
   border-radius: 16px !important;
@@ -1093,7 +1093,7 @@ function buildZCodeConversationCss(colors: any): string {
   backdrop-filter: blur(14px) saturate(108%) !important;
 }
 
-:is(main) [class~="group/user-row"] > div:first-child {
+:is(main) [class~="group/user-row"] > div:is(:first-child, [class*="rounded-xl"]) {
   border-color: color-mix(in srgb, ${colors.accent} 44%, transparent) !important;
   background: color-mix(in srgb, ${colors.surface} 70%, transparent) !important;
 }
@@ -1112,6 +1112,29 @@ function buildZCodeConversationCss(colors: any): string {
   backdrop-filter: none !important;
 }
 
+/* 思考行（Radix collapsible）：折叠态的"思考 · 持续了…"标签裸露，不加玻璃包裹；
+   仅 data-state="open"（思考内容已展开）时整行恢复与会话行同款玻璃卡片。
+   默认规则覆盖 main 与辅助对话面板两种作用域；缺 data-state 时宁可保持裸露也不误包。 */
+:is(main, div.border-l.border-border) [data-row-id]:has([data-reasoning-content]) {
+  background: transparent !important;
+  background-image: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+:is(main, div.border-l.border-border) [data-row-id]:has([data-reasoning-content][data-state="open"]) {
+  border: 1px solid color-mix(in srgb, ${colors.accent} 30%, transparent) !important;
+  border-radius: 16px !important;
+  background: color-mix(in srgb, ${colors.surface} 76%, transparent) !important;
+  box-shadow: 0 12px 30px color-mix(in srgb, ${colors.surface} 30%, transparent), inset 0 1px color-mix(in srgb, white 12%, transparent) !important;
+  backdrop-filter: blur(14px) saturate(108%) !important;
+  -webkit-backdrop-filter: blur(14px) saturate(108%) !important;
+  color: ${colors.text} !important;
+  text-shadow: none !important;
+}
+
 /* ---- 毛玻璃材质统一：左侧边栏 / 状态面板（Git 变更）/ 切换面板右侧栏 ----
    与会话输入、模型输出行使用同一种玻璃材质（surface 76% + blur 14px），
    并清除宽泛的 [class*="min-h-0"][class*="flex-1"] 壁纸选择器落在
@@ -1125,6 +1148,12 @@ function buildZCodeConversationCss(colors: any): string {
 #sidebar aside {
   background: color-mix(in srgb, ${colors.surface} 76%, transparent) !important;
   backdrop-filter: blur(14px) saturate(108%) !important;
+}
+/* 侧边栏整列包裹主题自适应边框：accent 30% 混透明，与会话行/输入区同配方。
+   边框落在 #sidebar 外层列上，连同底部账号区一起被包住；贴窗缘的三边
+   与窗口框重合，视觉上主要呈现为侧栏与主区之间的 accent 分隔线。 */
+#sidebar[class] {
+  border: 2px solid color-mix(in srgb, ${colors.accent} 30%, transparent) !important;
 }
 #sidebar [class*="min-h-0"][class*="flex-1"] {
   background: transparent !important;
@@ -1171,11 +1200,13 @@ html:has(aside.min-w-0 nav) main :is(button, input, select):where(
   border-color: color-mix(in srgb, ${colors.accent} 46%, transparent) !important;
 }
 
-/* 设置页内容区里的分块背景区域（卡片/区块/分段容器）同款毛玻璃材质。 */
+/* 设置页内容区里的分块背景区域（卡片/区块/分段容器）同款毛玻璃材质。
+   使用统计等子页的统计卡/趋势图/模型用量是 section.bg-surface，与 div 一并接住。 */
 html:has(aside.min-w-0 nav) main :where(
   div[class*="group/card"],
   div[class*="bg-card"],
   div[class*="bg-surface"],
+  section[class*="bg-surface"],
   div[role="tablist"]
 ) {
   background: color-mix(in srgb, ${colors.surface} 76%, transparent) !important;
@@ -1202,11 +1233,69 @@ html:has(aside.min-w-0 nav) main :where(
   border: 1px solid color-mix(in srgb, ${colors.accent} 30%, transparent) !important;
 }
 
-/* 辅助对话（侧边面板，不在 main 内）的消息行：同款毛玻璃材质。 */
+/* 辅助对话面板打开时与主对话之间的分割线：原生 border-l 是无主题色的灰线，
+   换成 accent 30% 主题自适应边框，与 #sidebar 边框同配方同宽度（2px）。 */
+div.border-l.border-border {
+  border-left: 2px solid color-mix(in srgb, ${colors.accent} 30%, transparent) !important;
+}
+
+/* 主对话顶部工具条（workspace-header）：原生只有灰色 border-b，
+   换成主题自适应包裹边框（2px accent 30%，与侧栏/分割线同配方）。
+   左边不留框 —— 与侧栏的边界由侧栏边框充当，避免平行双线。 */
+header[class*="workspace-header"] {
+  border: solid color-mix(in srgb, ${colors.accent} 30%, transparent) !important;
+  border-width: 2px 2px 2px 0 !important;
+}
+
+/* 辅助面板顶部标签条：主题自适应包裹。
+   作用域挂在辅助面板（div.border-l.border-border）之下，避免波及设置页的 tabs-list。
+   上边不留框（工具条下边框充当分隔）、左边不留框（面板分割线充当），
+   重合处归一成一条线。 */
+div.border-l.border-border div[data-slot="tabs-list"] {
+  border: solid color-mix(in srgb, ${colors.accent} 30%, transparent) !important;
+  border-width: 0 2px 2px 0 !important;
+}
+
+/* 标签条内的按钮（折叠箭头 / 加号）：与会话行同款毛玻璃。
+   玻璃底与边框放 ::before 伪元素 —— 这些按钮自带分层的透明底 !important
+   （Tailwind v4 分层 important 压过未分层注入），伪元素绕开该优先级；
+   本体只接管文字色。圆角统一 10px —— 0 圆角玻璃会被看成白色矩形框。
+   标签胶囊（tooltip-trigger / tabs-trigger）不上毛玻璃（用户定稿），
+   只压掉原生不透明白底，保持透明、文字走全局主题变量。 */
+div.border-l.border-border div[data-slot="tabs-list"] :is(button, [role="tab"]) {
+  position: relative !important;
+  isolation: isolate !important;
+  color: ${colors.text} !important;
+  text-shadow: none !important;
+}
+
+div.border-l.border-border div[data-slot="tabs-list"] :is(button, [role="tab"])::before {
+  content: "" !important;
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: -1 !important;
+  border-radius: 10px !important;
+  border: 1px solid color-mix(in srgb, ${colors.accent} 30%, transparent) !important;
+  background: color-mix(in srgb, ${colors.surface} 76%, transparent) !important;
+  backdrop-filter: blur(14px) saturate(108%) !important;
+  -webkit-backdrop-filter: blur(14px) saturate(108%) !important;
+  pointer-events: none !important;
+}
+
+/* 标签胶囊（tooltip-trigger / tabs-trigger）保持原生 —— 皮肤不碰它的底色与边框。
+   玻璃只给条内的独立按钮（折叠箭头 / 加号）；胶囊内的 × 关闭按钮
+   通过 content:none 豁免，避免在原生胶囊上再叠玻璃方块。 */
+div.border-l.border-border div[data-slot="tabs-list"] [data-slot="tooltip-trigger"] button::before,
+div.border-l.border-border div[data-slot="tabs-list"] [data-slot="tabs-trigger"] button::before {
+  content: none !important;
+}
+
+/* 辅助对话（侧边面板，不在 main 内）的消息行：同款毛玻璃材质。
+   思考行不在此列 —— 折叠裸露/展开玻璃由上方统一规则覆盖两种作用域。 */
 div.border-l.border-border :where(
   [class~="group/user-row"] > div:first-child,
-  [class~="group/assistant-row"] > [data-conversation-selectable],
-  [data-row-id]:has([data-reasoning-content])
+  [class~="group/user-row"] > div[class*="rounded-xl"],
+  [class~="group/assistant-row"] > [data-conversation-selectable]
 ) {
   border: 1px solid color-mix(in srgb, ${colors.accent} 30%, transparent) !important;
   border-radius: 16px !important;
@@ -1216,7 +1305,7 @@ div.border-l.border-border :where(
   color: ${colors.text} !important;
   text-shadow: none !important;
 }
-div.border-l.border-border [class~="group/user-row"] > div:first-child {
+div.border-l.border-border [class~="group/user-row"] > div:is(:first-child, [class*="rounded-xl"]) {
   border-color: color-mix(in srgb, ${colors.accent} 44%, transparent) !important;
   background: color-mix(in srgb, ${colors.surface} 70%, transparent) !important;
 }
@@ -1366,6 +1455,18 @@ body.zcode-startup-ready [role="menu"][data-slot="dropdown-menu-content"]:has([d
   pointer-events: none;
 }
 
+/* 菜单底部的粘性页脚（如模型菜单的"管理模型"项，sticky bottom-0 z-10 bg-menu
+   + after:bg-menu 补缝条）自带不透明原生底，会盖住菜单玻璃形成黑块。
+   换成与弹层同款玻璃（surface 88% + blur14），滚动经过的菜单项在其后被磨砂遮住。 */
+[role="menu"] .bg-menu {
+  background: color-mix(in srgb, ${colors.surface} 88%, transparent) !important;
+  backdrop-filter: blur(14px) saturate(108%) !important;
+  -webkit-backdrop-filter: blur(14px) saturate(108%) !important;
+}
+[role="menu"] .bg-menu::after {
+  background: color-mix(in srgb, ${colors.surface} 88%, transparent) !important;
+}
+
 /* tooltip 更小更密：更高不透明度保证可读性 */
 [role="tooltip"] {
   background: color-mix(in srgb, ${colors.surface} 92%, transparent) !important;
@@ -1429,7 +1530,49 @@ main [class*="max-w-4xl"]:has(h1) input::placeholder {
   color: ${colors.textSecondary} !important;
   opacity: 1 !important;
 }
-`;
+
+/* ---- 会话流光：accent 亮弧沿 输入框 / 助手消息盒 / 侧栏选中会话
+   的边框周长巡游，颜色随主题 ----
+   @property 注册角度变量使 conic-gradient 可动画；reduced-motion 时静止。
+   亮弧头部全亮 accent、带 30° 渐起与 45° 渐散的彗尾。 */
+@property --dream-flow { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+:is(main) .chat-composer-region,
+:is(main, div.border-l.border-border) [class~="group/assistant-row"] > [data-conversation-selectable],
+#sidebar li[class*="bg-selected"] {
+  position: relative !important;
+}
+:is(main) .chat-composer-region::after,
+:is(main, div.border-l.border-border) [class~="group/assistant-row"] > [data-conversation-selectable]::after,
+#sidebar li[class*="bg-selected"]::after {
+  content: "" !important;
+  position: absolute !important;
+  inset: -2px !important;
+  border-radius: 18px !important;
+  padding: 2px !important;
+  background: conic-gradient(from var(--dream-flow), color-mix(in srgb, ${colors.accent} 30%, transparent) 0deg, transparent 55deg, transparent 305deg, color-mix(in srgb, ${colors.accent} 30%, transparent) 360deg), conic-gradient(from var(--dream-flow), transparent 0deg, ${colors.accent} 55deg, transparent 100deg) !important;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0) !important;
+  -webkit-mask-composite: xor !important;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0) !important;
+  mask-composite: exclude !important;
+  animation: dream-flow-orbit 8s linear infinite !important;
+  pointer-events: none !important;
+}
+#sidebar li[class*="bg-selected"]::after {
+  border-radius: 10px !important;
+  inset: -1.5px !important;
+}
+#sidebar li[class*="bg-selected"] {
+  border: 1px solid color-mix(in srgb, ${colors.accent} 45%, transparent) !important;
+}
+#sidebar li[class*="bg-selected"] {
+  border: 1px solid color-mix(in srgb, ${colors.accent} 45%, transparent) !important;
+}
+@keyframes dream-flow-orbit { to { --dream-flow: 360deg; } }
+@media (prefers-reduced-motion: reduce) {
+  :is(main) .chat-composer-region::after,
+  :is(main, div.border-l.border-border) [class~="group/assistant-row"] > [data-conversation-selectable]::after,
+  #sidebar li[class*="bg-selected"]::after { animation: none !important; }
+}`;
 }
 
 function buildHanaAgentCss(manifest: any, heroDataUrl: string, colors: any): string {
@@ -2947,11 +3090,15 @@ export function buildMenuScript(options: {
   const extractPalette = (canvas) => {
     const context = canvas.getContext('2d');
     const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
-    const buckets = new Map();
+    // 24 个色相桶 + 圆周均值：比旧版 6 桶细一倍，色相均值跨 0°/360° 不跳变，
+    // 桶内平均色相不再是"第一个像素"的色相
+    const HUE_BUCKETS = 24;
+    const buckets = new Array(HUE_BUCKETS).fill(null);
     let luminanceSum = 0;
     let rSum = 0, gSum = 0, bSum = 0;
     let count = 0;
     for (let index = 0; index < pixels.length; index += 4) {
+      if (pixels[index + 3] < 128) continue; // 透明像素不参与统计，避免黑边污染
       const r = pixels[index], g = pixels[index + 1], b = pixels[index + 2];
       const max = Math.max(r, g, b), min = Math.min(r, g, b);
       const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
@@ -2961,25 +3108,58 @@ export function buildMenuScript(options: {
       bSum += b;
       count += 1;
       const saturation = max === 0 ? 0 : (max - min) / max;
-      if (saturation < 0.18 || luminance < 24 || luminance > 245) continue;
+      // 无彩/过曝/死黑的像素不参与色相投票
+      if (saturation < 0.14 || luminance < 20 || luminance > 248) continue;
       const delta = max - min || 1;
       const hue = max === r ? (g - b) / delta + (g < b ? 6 : 0) : max === g ? (b - r) / delta + 2 : (r - g) / delta + 4;
-      const bucket = (Math.round(hue) % 6) * 2 + (saturation > 0.55 ? 1 : 0);
-      const entry = buckets.get(bucket) || { weight: 0, r: 0, g: 0, b: 0, hue: hue * 60 };
+      const bucket = Math.min(HUE_BUCKETS - 1, Math.floor(hue * HUE_BUCKETS / 6));
+      // 频次 × 彩度²：既看"多"也看"艳"，小面积高彩点缀不再碾压大面积主色
       const weight = saturation * saturation;
+      let entry = buckets[bucket];
+      if (!entry) {
+        entry = { weight: 0, r: 0, g: 0, b: 0, hueX: 0, hueY: 0 };
+        buckets[bucket] = entry;
+      }
+      const angle = hue * (Math.PI / 3);
       entry.weight += weight;
       entry.r += r * weight;
       entry.g += g * weight;
       entry.b += b * weight;
-      buckets.set(bucket, entry);
+      entry.hueX += Math.cos(angle) * weight;
+      entry.hueY += Math.sin(angle) * weight;
     }
     const averageLuminance = count ? luminanceSum / count : 128;
-    const ranked = [...buckets.values()].sort((left, right) => right.weight - left.weight)
-      .map((entry) => ({ rgb: [entry.r / entry.weight, entry.g / entry.weight, entry.b / entry.weight], hue: entry.hue }));
-    const accent = ranked[0]?.rgb || [36, 201, 215];
-    const secondary = ranked.find((entry) => Math.abs(entry.hue - (ranked[0]?.hue || 0)) > 50)?.rgb || mix(accent, [255, 255, 255], 0.35);
     const light = averageLuminance > 128;
-    // average：整图平均色，供 deriveTextColors 与 surface 合成实际背景
+    const ranked = [];
+    for (const entry of buckets) {
+      if (!entry) continue;
+      let hueDeg = Math.atan2(entry.hueY, entry.hueX) * 180 / Math.PI;
+      if (hueDeg < 0) hueDeg += 360;
+      ranked.push({ rgb: [entry.r / entry.weight, entry.g / entry.weight, entry.b / entry.weight], hue: hueDeg, weight: entry.weight });
+    }
+    ranked.sort((left, right) => right.weight - left.weight);
+    const accent = ranked.length > 0 ? ranked[0].rgb : [36, 201, 215];
+    // secondary：取与 accent 色相距离 ≥28° 且权重足够（≥accent 的 18% 且 ≥
+    // 全彩权重的 6%）的最大色块；都不达标就由 accent 旋转 +42° 调和出辅色，
+    // 不再随机向白混合成灰粉
+    const hueDistance = (a, b) => { const d = Math.abs(a - b) % 360; return d > 180 ? 360 - d : d; };
+    let secondary = null;
+    if (ranked.length > 0) {
+      const totalWeight = ranked.reduce((sum, entry) => sum + entry.weight, 0);
+      for (let index = 1; index < ranked.length; index++) {
+        const entry = ranked[index];
+        if (hueDistance(entry.hue, ranked[0].hue) < 28) continue;
+        if (entry.weight < ranked[0].weight * 0.18 || entry.weight < totalWeight * 0.06) continue;
+        secondary = entry.rgb;
+        break;
+      }
+    }
+    if (!secondary) {
+      const accentHsl = pageRgbToHsl(accent);
+      const secLight = Math.min(0.85, Math.max(0.15, light ? accentHsl[2] + 0.2 : accentHsl[2] - 0.15));
+      secondary = pageHslToRgb((accentHsl[0] + 42 / 360) % 1, Math.min(1, accentHsl[1] * 0.9 + 0.06), secLight);
+    }
+    // average：整图平均色（不透明像素），供 deriveTextColors 与 surface 合成实际背景
     return {
       accent: hex(...accent),
       secondary: hex(...secondary),
@@ -3068,8 +3248,9 @@ export function buildMenuScript(options: {
       full.height = Math.round(image.height * scale);
       full.getContext('2d').drawImage(image, 0, 0, full.width, full.height);
       const sample = document.createElement('canvas');
-      sample.width = 48;
-      sample.height = Math.max(1, Math.round(48 * image.height / image.width));
+      // 64px 采样：48 → 64 提升色相统计稳定性，开销仍可忽略（~4K 像素单趟）
+      sample.width = 64;
+      sample.height = Math.max(1, Math.round(64 * image.height / image.width));
       sample.getContext('2d').drawImage(image, 0, 0, sample.width, sample.height);
       const colors = extractPalette(sample);
       const compressed = full.toDataURL('image/webp', 0.8);
