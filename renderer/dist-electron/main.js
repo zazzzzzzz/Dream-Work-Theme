@@ -469,6 +469,36 @@ ${i}`}function br(e){return`
 #sidebar[class] {
   border: 2px solid color-mix(in srgb, ${e.accent} 30%, transparent) !important;
 }
+/* 项目 / 任务分区标签行辉光层染（Atmospheric Glow）：仅标签行（h-7 表头），
+   展开列表区域不加。行背景不画渐变（28px 行高会把渐变硬裁出可见边界），
+   改由 ::after 向上下各外扩 14px 绘椭圆径向渐变，透明色标恰好落在扩展边缘
+   （垂直半径 60px、transparent 46% ≈ 27.6px），全向平滑归零无任何可见边界。
+   左缘 2px accent 竖线（::before）自上而下渐隐作锚点。 */
+#sidebar section[class~="group/purpose-section"] > div > div[class~="h-7"] {
+  position: relative !important;
+  background: transparent !important;
+}
+#sidebar section[class~="group/purpose-section"] > div > div[class~="h-7"]::after {
+  content: "" !important;
+  position: absolute !important;
+  left: 0 !important;
+  right: -36px !important;
+  top: -14px !important;
+  bottom: -14px !important;
+  background: radial-gradient(420px 60px at 0% 50%, color-mix(in srgb, ${e.accent} 15%, transparent) 0%, color-mix(in srgb, ${e.accent} 6%, transparent) 22%, transparent 46%) !important;
+  pointer-events: none !important;
+}
+#sidebar section[class~="group/purpose-section"] > div > div[class~="h-7"]::before {
+  content: "" !important;
+  position: absolute !important;
+  left: 0 !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  width: 2px !important;
+  background: linear-gradient(to bottom, ${e.accent}, transparent) !important;
+  border-radius: 1px !important;
+  pointer-events: none !important;
+}
 #sidebar [class*="min-h-0"][class*="flex-1"] {
   background: transparent !important;
   background-image: none !important;
@@ -512,6 +542,14 @@ html:has(aside.min-w-0 nav) main :is(button, input, select):where(
   [class*="bg-"], [class*="border"], [class*="ring-"], [class*="group/switch"]
 ):hover {
   border-color: color-mix(in srgb, ${e.accent} 46%, transparent) !important;
+}
+
+/* 设置页列表行按钮（插件/技能/MCP 等列表整行）：容器已带毛玻璃，
+   行本身保持透明，避免 76% 表面色双层叠加发黑。 */
+html:has(aside.min-w-0 nav) main button.flex-1.text-left {
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
 /* 设置页内容区里的分块背景区域（卡片/区块/分段容器）同款毛玻璃材质。
@@ -848,22 +886,24 @@ main [class*="max-w-4xl"]:has(h1) input::placeholder {
 /* ---- 会话流光：accent 亮弧沿 输入框 / 助手消息盒 / 侧栏选中会话
    的边框周长巡游，颜色随主题 ----
    @property 注册角度变量使 conic-gradient 可动画；reduced-motion 时静止。
-   亮弧头部全亮 accent、带 30° 渐起与 45° 渐散的彗尾。 */
+   亮弧三层叠加：55% 宽底环 + 全亮 accent 彗头 + 提白热核，颜色随主题。 */
 @property --dream-flow { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
 :is(main) .chat-composer-region,
 :is(main, div.border-l.border-border) [class~="group/assistant-row"] > [data-conversation-selectable],
+:is(main, div.border-l.border-border) [class~="group/user-row"] > div[class*="rounded-xl"],
 #sidebar li[class*="bg-selected"] {
   position: relative !important;
 }
 :is(main) .chat-composer-region::after,
 :is(main, div.border-l.border-border) [class~="group/assistant-row"] > [data-conversation-selectable]::after,
+:is(main, div.border-l.border-border) [class~="group/user-row"] > div[class*="rounded-xl"]::after,
 #sidebar li[class*="bg-selected"]::after {
   content: "" !important;
   position: absolute !important;
   inset: -2px !important;
   border-radius: 18px !important;
   padding: 2px !important;
-  background: conic-gradient(from var(--dream-flow), color-mix(in srgb, ${e.accent} 30%, transparent) 0deg, transparent 55deg, transparent 305deg, color-mix(in srgb, ${e.accent} 30%, transparent) 360deg), conic-gradient(from var(--dream-flow), transparent 0deg, ${e.accent} 55deg, transparent 100deg) !important;
+  background: conic-gradient(from var(--dream-flow), transparent 0deg, color-mix(in srgb, ${e.accent} 55%, white) 30deg, transparent 65deg), conic-gradient(from var(--dream-flow), transparent 0deg, ${e.accent} 70deg, transparent 120deg), conic-gradient(from var(--dream-flow), color-mix(in srgb, ${e.accent} 55%, transparent) 0deg, transparent 75deg, transparent 285deg, color-mix(in srgb, ${e.accent} 55%, transparent) 360deg) !important;
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0) !important;
   -webkit-mask-composite: xor !important;
   mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0) !important;
@@ -875,17 +915,58 @@ main [class*="max-w-4xl"]:has(h1) input::placeholder {
   border-radius: 10px !important;
   inset: -1.5px !important;
 }
-#sidebar li[class*="bg-selected"] {
-  border: 1px solid color-mix(in srgb, ${e.accent} 45%, transparent) !important;
+/* 用户气泡半径 rounded-xl（12px，右上 rounded-tr-xs 更小），外扩 2px 的环取 14px。 */
+:is(main, div.border-l.border-border) [class~="group/user-row"] > div[class*="rounded-xl"]::after {
+  border-radius: 14px !important;
+}
+/* Git 工具状态面板流光：与会话盒同款彗星环（类签名 popover-border 全局唯一）。
+   面板自身 overflow-hidden + 16px 圆角，环贴边内绘（inset 0）避免裁剪。 */
+aside[class*="popover-border"] {
+  position: relative !important;
+}
+aside[class*="popover-border"]::after {
+  content: "" !important;
+  position: absolute !important;
+  inset: 0 !important;
+  border-radius: 16px !important;
+  padding: 2px !important;
+  background: conic-gradient(from var(--dream-flow), transparent 0deg, color-mix(in srgb, ${e.accent} 55%, white) 30deg, transparent 65deg), conic-gradient(from var(--dream-flow), transparent 0deg, ${e.accent} 70deg, transparent 120deg), conic-gradient(from var(--dream-flow), color-mix(in srgb, ${e.accent} 55%, transparent) 0deg, transparent 75deg, transparent 285deg, color-mix(in srgb, ${e.accent} 55%, transparent) 360deg) !important;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0) !important;
+  -webkit-mask-composite: xor !important;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0) !important;
+  mask-composite: exclude !important;
+  animation: dream-flow-orbit 8s linear infinite !important;
+  pointer-events: none !important;
 }
 #sidebar li[class*="bg-selected"] {
   border: 1px solid color-mix(in srgb, ${e.accent} 45%, transparent) !important;
 }
+#sidebar li[class*="bg-selected"] {
+  border: 1px solid color-mix(in srgb, ${e.accent} 45%, transparent) !important;
+}
+/* 会话输出框仪表角标（Tactical Corners）：左上/右下 L 形 2.5px 加粗角标
+   （20px 臂长、圆角端点、小弧拐弯），右上/左下短刻度圆点，accent 随主题；
+   角标组呼吸式流光闪烁（静态 drop-shadow 光晕 + 透明度脉动）。
+   ::before 定位绘制于底色之上、角落留白区，pointer-events 关闭不挡交互。
+   用户气泡（group/user-row 下 rounded-xl 子盒）同款。 */
+:is(main, div.border-l.border-border) [class~="group/assistant-row"] > [data-conversation-selectable]::before,
+:is(main, div.border-l.border-border) [class~="group/user-row"] > div[class*="rounded-xl"]::before {
+  content: "" !important;
+  position: absolute !important;
+  inset: -1px !important;
+  background: url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M19.5 0.5H15.5A15 15 0 0 0 0.5 15.5V19.5" stroke="${e.accent}" stroke-width="2.5" stroke-linecap="round"/></svg>`)}") 0 0 / 20px 20px no-repeat, url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M0.5 19.5H4.5A15 15 0 0 0 19.5 4.5V0.5" stroke="${e.accent}" stroke-width="2.5" stroke-linecap="round"/></svg>`)}") right 0 bottom 0 / 20px 20px no-repeat, radial-gradient(circle, ${e.accent} 0 2px, transparent 2.8px) right 8px top 3px / 6px 6px no-repeat, radial-gradient(circle, ${e.accent} 0 2px, transparent 2.8px) left 8px bottom 3px / 6px 6px no-repeat !important;
+  filter: drop-shadow(0 0 5px color-mix(in srgb, ${e.accent} 70%, transparent)) !important;
+  animation: dream-corner-blink 2.2s ease-in-out infinite !important;
+  pointer-events: none !important;
+}
+@keyframes dream-corner-blink { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
 @keyframes dream-flow-orbit { to { --dream-flow: 360deg; } }
 @media (prefers-reduced-motion: reduce) {
   :is(main) .chat-composer-region::after,
   :is(main, div.border-l.border-border) [class~="group/assistant-row"] > [data-conversation-selectable]::after,
-  #sidebar li[class*="bg-selected"]::after { animation: none !important; }
+  #sidebar li[class*="bg-selected"]::after,
+  :is(main, div.border-l.border-border) [class~="group/assistant-row"] > [data-conversation-selectable]::before,
+  aside[class*="popover-border"]::after { animation: none !important; }
 }`}function Ze(e,r,t){return`/* DREAM_THEME:${e.id} */
 :root {
   --dream-work-accent: ${t.accent};
