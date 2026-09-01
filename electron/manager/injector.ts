@@ -1569,6 +1569,44 @@ main [class*="max-w-4xl"]:has(h1) input::placeholder {
   opacity: 1 !important;
 }
 
+/* 会话流内的文件更改汇总卡（bg-card）：原生 oklch 深底完全不透明，
+   接入与设置页卡片同款毛玻璃材质；行底的 bg-background/50 深色叠底
+   改为透明，避免在玻璃上再压一层暗色。 */
+:is(main, div.border-l.border-border) [class~="group/assistant-turn"] div[class~="bg-card"] {
+  background: color-mix(in srgb, ${colors.surface} 76%, transparent) !important;
+  border: 1px solid color-mix(in srgb, ${colors.accent} 30%, transparent) !important;
+  backdrop-filter: blur(14px) saturate(108%) !important;
+  -webkit-backdrop-filter: blur(14px) saturate(108%) !important;
+  color: ${colors.text} !important;
+}
+:is(main, div.border-l.border-border) [class~="group/assistant-turn"] div[class~="bg-card"] div[class~="bg-background/50"] {
+  background: transparent !important;
+}
+
+/* 上下文叠加 HoverCard（composer 工具条图标悬停触发）：容器已由上方弹层
+   规则提供毛玻璃，但内层 bg-menu 不透明深底把玻璃盖平；改透明让玻璃透出，
+   并按用户点名接入同款边框流光。 */
+div[data-slot="hover-card-content"] {
+  position: relative !important;
+}
+div[data-slot="hover-card-content"] div[class~="bg-menu"] {
+  background: transparent !important;
+}
+div[data-slot="hover-card-content"]::after {
+  content: "" !important;
+  position: absolute !important;
+  inset: -2px !important;
+  border-radius: inherit !important;
+  padding: 2px !important;
+  background: conic-gradient(from var(--dream-flow), transparent 0deg, color-mix(in srgb, ${colors.accent} 55%, white) 30deg, transparent 65deg), conic-gradient(from var(--dream-flow), transparent 0deg, ${colors.accent} 70deg, transparent 120deg), conic-gradient(from var(--dream-flow), color-mix(in srgb, ${colors.accent} 55%, transparent) 0deg, transparent 75deg, transparent 285deg, color-mix(in srgb, ${colors.accent} 55%, transparent) 360deg) !important;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0) !important;
+  -webkit-mask-composite: xor !important;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0) !important;
+  mask-composite: exclude !important;
+  animation: dream-flow-orbit 8s linear infinite !important;
+  pointer-events: none !important;
+}
+
 /* ---- 会话流光：accent 亮弧沿 输入框 / 助手消息盒 / 侧栏选中会话
    的边框周长巡游，颜色随主题 ----
    @property 注册角度变量使 conic-gradient 可动画；reduced-motion 时静止。
@@ -1652,7 +1690,8 @@ aside[class*="popover-border"]::after {
   :is(main, div.border-l.border-border) [class~="group/assistant-row"] > [data-conversation-selectable]::after,
   #sidebar li[class*="bg-selected"]::after,
   :is(main, div.border-l.border-border) [class~="group/assistant-row"] > [data-conversation-selectable]::before,
-  aside[class*="popover-border"]::after { animation: none !important; }
+  aside[class*="popover-border"]::after,
+  div[data-slot="hover-card-content"]::after { animation: none !important; }
 }`;
 }
 
