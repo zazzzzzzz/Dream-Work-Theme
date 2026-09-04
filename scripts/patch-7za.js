@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
+const { execFileSync } = require('child_process');
 
 const targetDir = path.join(__dirname, 'node_modules', '7zip-bin', 'win', 'x64');
 const targetPath = path.join(targetDir, '7za.exe');
@@ -16,8 +16,8 @@ if (!fs.existsSync(backupPath)) {
   }
 }
 
-// Compile wrapper
+// Compile wrapper（参数数组 + shell 关闭；路径均为 __dirname 派生常量）
 const wrapperSrc = path.join(__dirname, '..', '7za-wrapper.c');
 console.log('Compiling 7za wrapper...');
-execSync(`gcc -mconsole -O2 -o "${targetPath}" "${wrapperSrc}"`, { stdio: 'inherit' });
+execFileSync('gcc', ['-mconsole', '-O2', '-o', targetPath, wrapperSrc], { stdio: 'inherit' });
 console.log('Patched 7za.exe successfully');

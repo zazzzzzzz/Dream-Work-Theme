@@ -142,10 +142,10 @@ export class PersistenceManager {
     fs.mkdirSync(path.dirname(plistPath), { recursive: true });
     fs.writeFileSync(plistPath, plistContent);
     
-    // Load the agent
-    const { exec } = require('child_process');
+    // Load the agent（参数数组 + shell 关闭，避免任何拼接进 shell 的可能）
+    const { execFile } = require('child_process');
     await new Promise<void>((resolve, reject) => {
-      exec(`launchctl load "${plistPath}"`, (error: any) => {
+      execFile('launchctl', ['load', plistPath], (error: any) => {
         if (error) reject(error);
         else resolve();
       });
@@ -155,40 +155,46 @@ export class PersistenceManager {
   private static async removeDarwinLaunchAgent(appId: string): Promise<void> {
     const plistName = `com.dreamwork.theme.${appId}`;
     const plistPath = path.join(os.homedir(), 'Library', 'LaunchAgents', `${plistName}.plist`);
-    
+
     if (fs.existsSync(plistPath)) {
-      const { exec } = require('child_process');
+      const { execFile } = require('child_process');
       await new Promise<void>((resolve) => {
-        exec(`launchctl unload "${plistPath}" 2>/dev/null; rm -f "${plistPath}"`, () => resolve());
+        execFile('launchctl', ['unload', plistPath], () => resolve());
       });
+      fs.rmSync(plistPath, { force: true });
     }
   }
 
   private static async ensureWindowsTask(appId: string, themeId: string): Promise<void> {
-    const { exec } = require('child_process');
+    const { spawnSync } = require('child_process');
+    // 自动启动标识来自 UI 输入：白名单校验后再参与任何进程调用
+    if (!/^[a-z0-9-]+$/i.test(appId) || !/^[a-z0-9-]+$/i.test(themeId)) {
+      throw new Error(`Invalid auto-launch identifiers: ${appId} / ${themeId}`);
+    }
     const taskName = `DreamWorkTheme_${appId}`;
     const exePath = process.execPath;
-    
+
     // Remove existing task
     await new Promise<void>((resolve) => {
-      exec(`schtasks /Delete /TN "${taskName}" /F 2>nul`, () => resolve());
+      spawnSync('schtasks', ['/Delete', '/TN', taskName, '/F'], { stdio: 'ignore' });
+      resolve();
     });
-    
+
     // Create new task
-    const cmd = `schtasks /Create /TN "${taskName}" /TR "${exePath} --launch=${appId}:${themeId}" /SC ONLOGON /RL HIGHEST /F`;
     await new Promise<void>((resolve, reject) => {
-      exec(cmd, (error: any) => {
-        if (error) reject(error);
-        else resolve();
-      });
+      const result = spawnSync('schtasks', ['/Create', '/TN', taskName, '/TR', `${exePath} --launch=${appId}:${themeId}`, '/SC', 'ONLOGON', '/RL', 'HIGHEST', '/F'], { stdio: 'ignore' });
+      if (result.error) reject(result.error);
+      else if (result.status !== 0) reject(new Error(`schtasks exited with ${result.status}`));
+      else resolve();
     });
   }
 
   private static async removeWindowsTask(appId: string): Promise<void> {
-    const { exec } = require('child_process');
+    const { spawnSync } = require('child_process');
     const taskName = `DreamWorkTheme_${appId}`;
     await new Promise<void>((resolve) => {
-      exec(`schtasks /Delete /TN "${taskName}" /F 2>nul`, () => resolve());
+      spawnSync('schtasks', ['/Delete', '/TN', taskName, '/F'], { stdio: 'ignore' });
+      resolve();
     });
   }
 
@@ -210,12 +216,15 @@ WantedBy=default.target
 
     fs.mkdirSync(path.dirname(servicePath), { recursive: true });
     fs.writeFileSync(servicePath, serviceContent);
-    
-    const { exec } = require('child_process');
+
+    const { execFile } = require('child_process');
     await new Promise<void>((resolve) => {
-      exec(`systemctl --user daemon-reload && systemctl --user enable --now ${serviceName}`, (error: any) => {
-        if (error) console.error('Failed to enable systemd service:', error);
-        resolve();
+      execFile('systemctl', ['--user', 'daemon-reload'], (error: any) => {
+        if (error) console.error('Failed to reload systemd:', error);
+        execFile('systemctl', ['--user', 'enable', '--now', serviceName], (enableError: any) => {
+          if (enableError) console.error('Failed to enable systemd service:', enableError);
+          resolve();
+        });
       });
     });
   }
@@ -223,10 +232,11 @@ WantedBy=default.target
   private static async removeLinuxSystemd(appId: string): Promise<void> {
     const serviceName = `dream-work-theme-${appId}`;
     const servicePath = path.join(os.homedir(), '.config', 'systemd', 'user', `${serviceName}.service`);
-    
-    const { exec } = require('child_process');
+
+    const { execFile } = require('child_process');
     await new Promise<void>((resolve) => {
-      exec(`systemctl --user disable --now ${serviceName} 2>/dev/null; rm -f "${servicePath}"`, () => resolve());
+      execFile('systemctl', ['--user', 'disable', '--now', serviceName], () => resolve());
     });
+    fs.rmSync(servicePath, { force: true });
   }
 }

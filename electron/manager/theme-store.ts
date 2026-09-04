@@ -95,7 +95,12 @@ export function getThemeAssetUrl(id: string): string {
 }
 
 export function getThemeHeroDataUrl(theme: ThemeEntry): string {
-  const heroPath = path.join(theme.path, theme.manifest.hero);
+  // hero 文件名来自 theme.json（用户可导入）：解析后必须仍落在主题目录内，防路径穿越
+  const themeDir = path.resolve(theme.path);
+  const heroPath = path.resolve(themeDir, theme.manifest.hero);
+  if (heroPath !== themeDir && !heroPath.startsWith(themeDir + path.sep)) {
+    throw new Error(`Theme hero path escapes theme directory: ${theme.manifest.hero}`);
+  }
   const heroBuffer = fs.readFileSync(heroPath);
   return `data:${getMimeType(theme.manifest.hero)};base64,${heroBuffer.toString('base64')}`;
 }

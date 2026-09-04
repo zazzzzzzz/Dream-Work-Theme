@@ -10,8 +10,23 @@ export interface ShortcutProfile {
   icon?: string;
 }
 
+// 快捷方式字段会进入文件名与 PowerShell/osascript 内容：
+// id/appId/themeId 走严格白名单，label 只保留 Unicode 字母数字与 . _ - 空格，
+// 杜绝经 shell/脚本解释器的注入面。
+function validateProfile(profile: ShortcutProfile): void {
+  if (!/^[a-z0-9._-]+$/i.test(profile.id || '')) throw new Error(`Invalid shortcut id: ${profile.id}`);
+  if (!/^[a-z0-9-]+$/i.test(profile.appId || '')) throw new Error(`Invalid appId: ${profile.appId}`);
+  if (!/^[a-z0-9._-]+$/i.test(profile.themeId || '')) throw new Error(`Invalid themeId: ${profile.themeId}`);
+}
+
+function safeFileStem(value: string): string {
+  const cleaned = value.replace(/[^\p{L}\p{N} ._-]/gu, '').trim();
+  return cleaned.length > 0 ? cleaned.slice(0, 80) : 'DreamWorkTheme';
+}
+
 export async function createShortcut(profile: ShortcutProfile): Promise<{ success: boolean; path?: string; error?: string }> {
   try {
+    validateProfile(profile);
     if (os.platform() === 'win32') {
       return createWindowsShortcut(profile);
     }
@@ -29,7 +44,7 @@ export async function createShortcut(profile: ShortcutProfile): Promise<{ succes
 
 function createWindowsShortcut(profile: ShortcutProfile): Promise<{ success: boolean; path?: string; error?: string }> {
   const desktopDir = path.join(os.homedir(), 'Desktop');
-  const shortcutPath = path.join(desktopDir, `${profile.label}.lnk`);
+  const shortcutPath = path.join(desktopDir, `${safeFileStem(profile.label)}.lnk`);
   const exePath = process.execPath;
   const workingDir = path.dirname(exePath);
 
@@ -43,7 +58,7 @@ function createWindowsShortcut(profile: ShortcutProfile): Promise<{ success: boo
   `;
 
   return new Promise((resolve) => {
-    require('child_process').exec(`powershell -Command "${script.replace(/"/g, '\\"')}"`, (error: any) => {
+    require('child_process').execFile('powershell.exe', ['-NoProfile', '-Command', script], (error: any) => {
       if (error) {
         resolve({ success: false, error: error.message });
       } else {
@@ -55,7 +70,7 @@ function createWindowsShortcut(profile: ShortcutProfile): Promise<{ success: boo
 
 function createMacShortcut(profile: ShortcutProfile): Promise<{ success: boolean; path?: string; error?: string }> {
   const desktopDir = path.join(os.homedir(), 'Desktop');
-  const shortcutPath = path.join(desktopDir, `${profile.label}.app`);
+  const shortcutPath = path.join(desktopDir, `${safeFileStem(profile.label)}.app`);
   const exePath = process.execPath;
   const scriptContent = `
     tell application "Terminal"
@@ -66,7 +81,7 @@ function createMacShortcut(profile: ShortcutProfile): Promise<{ success: boolean
   fs.writeFileSync(scriptPath, scriptContent);
 
   return new Promise((resolve) => {
-    require('child_process').exec(`osacompile -o "${shortcutPath}" "${scriptPath}"`, (error: any) => {
+    require('child_process').execFile('osacompile', ['-o', shortcutPath, scriptPath], (error: any) => {
       fs.unlinkSync(scriptPath);
       if (error) {
         resolve({ success: false, error: error.message });
@@ -87,7 +102,7 @@ async function createLinuxShortcut(profile: ShortcutProfile): Promise<{ success:
 
   const content = `[Desktop Entry]
 Type=Application
-Name=${profile.label}
+Name=${safeFileStem(profile.label)}
 Exec="${exePath}" --launch=${profile.appId}:${profile.themeId}
 Icon=${profile.icon || 'utilities-terminal'}
 Terminal=false

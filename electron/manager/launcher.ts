@@ -41,6 +41,13 @@ export async function isAppRunning(appId: string): Promise<boolean> {
 }
 
 export async function launchApp(appId: string, themeId?: string): Promise<{ success: boolean; port?: number; error?: string }> {
+  // 入口白名单：appId/themeId 来自渲染进程（IPC/快捷方式参数），先验证再参与任何进程调用
+  if (!/^[a-z0-9-]+$/i.test(appId || '')) {
+    return { success: false, error: `Invalid appId: ${appId}` };
+  }
+  if (themeId != null && !/^[a-z0-9._-]+$/i.test(themeId)) {
+    return { success: false, error: `Invalid themeId: ${themeId}` };
+  }
   const profile = getAppDefinition(appId);
   if (!profile) return { success: false, error: `Unknown app: ${appId}` };
 
@@ -58,6 +65,14 @@ export async function launchApp(appId: string, themeId?: string): Promise<{ succ
 
   try {
     const appPath = await getAppPath(appId);
+
+    // 只启动解析出的真实可执行文件：存在性 + 平台扩展名双重校验
+    if (!appPath || !fs.existsSync(appPath) || !fs.statSync(appPath).isFile()) {
+      return { success: false, error: `Executable not found: ${appPath}` };
+    }
+    if (os.platform() === 'win32' && !/\.exe$/i.test(appPath)) {
+      return { success: false, error: `Refusing to launch non-executable path: ${appPath}` };
+    }
     
     // Kill existing instances to ensure fresh launch with debug port
     console.log(`[launcher] Killing existing ${appId} instances...`);
@@ -272,30 +287,30 @@ async function killExistingInstances(appId: string): Promise<void> {
   
   try {
     if (platform === 'win32') {
-      const { execSync } = require('child_process');
+      const { spawnSync } = require('child_process');
       for (const exeName of exeNames) {
         try {
-          execSync(`taskkill /T /F /IM "${exeName}" 2>nul`, { stdio: 'ignore' });
+          spawnSync('taskkill', ['/T', '/F', '/IM', exeName], { stdio: 'ignore' });
           console.log(`[launcher] Killed existing ${exeName} process tree`);
         } catch {
           // No existing process found, which is fine
         }
       }
     } else if (platform === 'darwin') {
-      const { execSync } = require('child_process');
+      const { spawnSync } = require('child_process');
       for (const exeName of exeNames) {
         try {
-          execSync(`pkill -f "${exeName}" 2>/dev/null || true`, { stdio: 'ignore' });
+          spawnSync('pkill', ['-f', exeName], { stdio: 'ignore' });
           console.log(`[launcher] Killed existing ${exeName} processes`);
         } catch {
           // No existing process found, which is fine
         }
       }
     } else if (platform === 'linux') {
-      const { execSync } = require('child_process');
+      const { spawnSync } = require('child_process');
       for (const exeName of exeNames) {
         try {
-          execSync(`pkill -f "${exeName}" 2>/dev/null || true`, { stdio: 'ignore' });
+          spawnSync('pkill', ['-f', exeName], { stdio: 'ignore' });
           console.log(`[launcher] Killed existing ${exeName} processes`);
         } catch {
           // No existing process found, which is fine
@@ -362,8 +377,9 @@ async function getAppPath(appId: string): Promise<string> {
     // Fallback to which
     for (const exe of exeNames) {
       try {
-        const { execSync } = require('child_process');
-        const resolved = execSync(`which ${exe} 2>/dev/null || echo ''`).toString().trim();
+        const { spawnSync } = require('child_process');
+        const result = spawnSync('which', [exe], { encoding: 'utf8' });
+        const resolved = String(result.stdout || '').trim();
         if (resolved && fs.existsSync(resolved)) return resolved;
       } catch {}
     }

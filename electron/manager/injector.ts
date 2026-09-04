@@ -150,7 +150,8 @@ export async function applyTheme(
     if (!allThemes.some(theme => theme.id === themeId)) {
       return { success: false, applied: 0, error: `Theme ${themeId} is not compatible with ${appId}` };
     }
-    const quickThemeIds = selectQuickThemeIds(appId, allThemes.map(theme => theme.id), themeId);
+    // 快捷菜单上限 8：对应 Ctrl+Alt+1~8 快捷切换（buildMenuScript 行尾数字角标）
+    const quickThemeIds = selectQuickThemeIds(appId, allThemes.map(theme => theme.id), themeId, 8);
     const themesById = new Map(allThemes.map(theme => [theme.id, theme]));
     const menuThemeEntries = quickThemeIds.map(id => themesById.get(id)).filter(Boolean) as typeof allThemes;
     const themeEntries = new Map<string, { name: string; css: string; surface: string }>();
@@ -752,6 +753,59 @@ function deriveTextColors(surfaceHex: string, textHex: string, heroAverage: Rgb 
   };
 }
 
+// 壁纸色彩单一（调色板里没有与主色相差 >50° 的色相桶）时的 secondary 兜底：
+// 旧兜底 = accent 提白，与主色同色相，多彩流光环六段交替感官只剩一色。
+// 改取 accent 色相 −60° 的同源伴生色（粉→紫方向），饱和度下限 0.35、明度沿用，
+// 保证环上读得出第二种色相。仅替换兜底分支；壁纸本身有异色相时不变。
+export function companionHueFallback(rgb: Rgb): Rgb {
+  const r = rgb[0] / 255, g = rgb[1] / 255, b = rgb[2] / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  const d = max - min;
+  const s = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1));
+  const rawH = d === 0 ? 0 : max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  const h = (((rawH * 60) % 360) + 360) % 360;
+  const hc = (h - 60 + 360) % 360;
+  const c = (1 - Math.abs(2 * l - 1)) * Math.max(s, 0.35);
+  const x = c * (1 - Math.abs(((hc / 60) % 2) - 1));
+  const m = l - c / 2;
+  const seg = hc < 60 ? [c, x, 0] : hc < 120 ? [x, c, 0] : hc < 180 ? [0, c, x] : hc < 240 ? [0, x, c] : hc < 300 ? [x, 0, c] : [c, 0, x];
+  return seg.map((v) => (v + m) * 255) as Rgb;
+}
+
+function hexHueChroma(hexColor: string): { h: number; chroma: number } | null {
+  let rgb: Rgb;
+  try {
+    rgb = hexToRgb(hexColor);
+  } catch {
+    return null;
+  }
+  const r = rgb[0] / 255, g = rgb[1] / 255, b = rgb[2] / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  const d = max - min;
+  let h = 0;
+  if (d > 0) {
+    const raw = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    h = ((raw * 60) % 360 + 360) % 360;
+  }
+  return { h, chroma: d };
+}
+
+// ZCode 流光环 B 色的感知门限：清单 secondary 若与 accent 色相贴脸（<45°）
+// 或自身彩度过低（RGB 极差 <0.10，近白/近灰，如 nezuko-demon-form 的
+// #dedef3 淡薰衣草），六段交替感官上只剩一种色 —— 此时换用 accent−60°
+// 的同源伴生色（companionHueFallback）。壁纸取色与自定义图片主题路径
+// 各有旋转兜底，这里只管预设清单色。
+function zcodeRingCompanion(accentHex: string, secondaryHex: string): string {
+  const a = hexHueChroma(accentHex);
+  const s = hexHueChroma(secondaryHex);
+  if (!a || !s) return secondaryHex;
+  const dist = Math.abs(a.h - s.h) % 360;
+  const hueGap = dist > 180 ? 360 - dist : dist;
+  if (hueGap >= 45 && s.chroma >= 0.1) return secondaryHex;
+  return rgbToHex(companionHueFallback(hexToRgb(accentHex)));
+}
+
 export function buildAppCss(
   appId: string,
   manifest: any,
@@ -777,6 +831,9 @@ export function buildAppCss(
     surface,
     ...derived,
   };
+  if (appId === 'zcode' && !options.template) {
+    colors.secondary = zcodeRingCompanion(colors.accent, colors.secondary);
+  }
 
   if (appId === 'codex') {
     return buildCodexCss(manifest, heroDataUrl, colors);
@@ -1598,19 +1655,21 @@ div[data-slot="hover-card-content"]::after {
   inset: -2px !important;
   border-radius: inherit !important;
   padding: 2px !important;
-  background: conic-gradient(from var(--dream-flow), transparent 0deg, color-mix(in srgb, ${colors.accent} 55%, white) 30deg, transparent 65deg), conic-gradient(from var(--dream-flow), transparent 0deg, ${colors.accent} 70deg, transparent 120deg), conic-gradient(from var(--dream-flow), color-mix(in srgb, ${colors.accent} 55%, transparent) 0deg, transparent 75deg, transparent 285deg, color-mix(in srgb, ${colors.accent} 55%, transparent) 360deg) !important;
+  background: conic-gradient(from var(--dream-flow), color-mix(in srgb, #ffffff 14%, transparent) 0deg, color-mix(in srgb, #ffffff 7%, transparent) 15deg, transparent 30deg, transparent 150deg, color-mix(in srgb, #ffffff 7%, transparent) 165deg, color-mix(in srgb, #ffffff 14%, transparent) 180deg, color-mix(in srgb, #ffffff 7%, transparent) 195deg, transparent 210deg, transparent 330deg, color-mix(in srgb, #ffffff 7%, transparent) 345deg, color-mix(in srgb, #ffffff 14%, transparent) 360deg), conic-gradient(from var(--dream-flow), color-mix(in srgb, ${colors.accent} 82%, transparent) 15deg, color-mix(in srgb, ${colors.secondary} 82%, transparent) 45deg, color-mix(in srgb, ${colors.secondary} 82%, transparent) 75deg, color-mix(in srgb, ${colors.accent} 82%, transparent) 105deg, color-mix(in srgb, ${colors.accent} 82%, transparent) 135deg, color-mix(in srgb, ${colors.secondary} 82%, transparent) 165deg, color-mix(in srgb, ${colors.secondary} 82%, transparent) 195deg, color-mix(in srgb, ${colors.accent} 82%, transparent) 225deg, color-mix(in srgb, ${colors.accent} 82%, transparent) 255deg, color-mix(in srgb, ${colors.secondary} 82%, transparent) 285deg, color-mix(in srgb, ${colors.secondary} 82%, transparent) 315deg, color-mix(in srgb, ${colors.accent} 82%, transparent) 345deg) !important;
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0) !important;
   -webkit-mask-composite: xor !important;
   mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0) !important;
   mask-composite: exclude !important;
-  animation: dream-flow-orbit 8s linear infinite !important;
+  animation: dream-flow-orbit 6s linear infinite !important;
   pointer-events: none !important;
 }
 
-/* ---- 会话流光：accent 亮弧沿 输入框 / 助手消息盒 / 侧栏选中会话
-   的边框周长巡游，颜色随主题 ----
-   @property 注册角度变量使 conic-gradient 可动画；reduced-motion 时静止。
-   亮弧三层叠加：55% 宽底环 + 全亮 accent 彗头 + 提白热核，颜色随主题。 */
+/* ---- 会话流光（多彩流光环）：等粗恒定 82% alpha 色环包围整个框，
+   accent/secondary 以 60° 周期六段交替（30° 保持 + 30° 混色，转一圈每点
+   交替三次色相），一对半透明白纱微光 180° 对置巡游只提亮不增粗。环带
+   亮度处处相等（粗细视觉恒定），单 --dream-flow 时钟 6s/圈（彗星基线
+   24s 的 4 倍速）。颜色随主题 ----
+   @property 注册角度变量使 conic-gradient 可动画；reduced-motion 时静止。 */
 @property --dream-flow { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
 :is(main) .chat-composer-region,
 :is(main, div.border-l.border-border) [class~="group/assistant-row"] > [data-conversation-selectable],
@@ -1627,23 +1686,40 @@ div[data-slot="hover-card-content"]::after {
   inset: -2px !important;
   border-radius: 18px !important;
   padding: 2px !important;
-  background: conic-gradient(from var(--dream-flow), transparent 0deg, color-mix(in srgb, ${colors.accent} 55%, white) 30deg, transparent 65deg), conic-gradient(from var(--dream-flow), transparent 0deg, ${colors.accent} 70deg, transparent 120deg), conic-gradient(from var(--dream-flow), color-mix(in srgb, ${colors.accent} 55%, transparent) 0deg, transparent 75deg, transparent 285deg, color-mix(in srgb, ${colors.accent} 55%, transparent) 360deg) !important;
+  background: conic-gradient(from var(--dream-flow), color-mix(in srgb, #ffffff 14%, transparent) 0deg, color-mix(in srgb, #ffffff 7%, transparent) 15deg, transparent 30deg, transparent 150deg, color-mix(in srgb, #ffffff 7%, transparent) 165deg, color-mix(in srgb, #ffffff 14%, transparent) 180deg, color-mix(in srgb, #ffffff 7%, transparent) 195deg, transparent 210deg, transparent 330deg, color-mix(in srgb, #ffffff 7%, transparent) 345deg, color-mix(in srgb, #ffffff 14%, transparent) 360deg), conic-gradient(from var(--dream-flow), color-mix(in srgb, ${colors.accent} 82%, transparent) 15deg, color-mix(in srgb, ${colors.secondary} 82%, transparent) 45deg, color-mix(in srgb, ${colors.secondary} 82%, transparent) 75deg, color-mix(in srgb, ${colors.accent} 82%, transparent) 105deg, color-mix(in srgb, ${colors.accent} 82%, transparent) 135deg, color-mix(in srgb, ${colors.secondary} 82%, transparent) 165deg, color-mix(in srgb, ${colors.secondary} 82%, transparent) 195deg, color-mix(in srgb, ${colors.accent} 82%, transparent) 225deg, color-mix(in srgb, ${colors.accent} 82%, transparent) 255deg, color-mix(in srgb, ${colors.secondary} 82%, transparent) 285deg, color-mix(in srgb, ${colors.secondary} 82%, transparent) 315deg, color-mix(in srgb, ${colors.accent} 82%, transparent) 345deg) !important;
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0) !important;
   -webkit-mask-composite: xor !important;
   mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0) !important;
   mask-composite: exclude !important;
-  animation: dream-flow-orbit 8s linear infinite !important;
+  animation: dream-flow-orbit 6s linear infinite !important;
   pointer-events: none !important;
+}
+/* 输入框区域（chat-composer-region，shrink-0 钉在外层容器底边）下缘被
+   容器边界裁剪：外扩 2px 的环下缘整条不可见。底边改贴边内绘（同 Git
+   面板 inset 0 方案），上/左/右仍外扩 2px。 */
+:is(main) .chat-composer-region::after {
+  inset: -2px -2px 0 -2px !important;
 }
 #sidebar li[class*="bg-selected"]::after {
   border-radius: 10px !important;
   inset: -1.5px !important;
 }
+/* 侧栏任务树的横向滚动条拇指（内容溢出时出现在头像行上方，用户确认为
+   非原生观感）：隐藏条本体，overflow 保持 auto——内容仍可横向滚、不裁
+   选中会话环的外扩 1.5px。 */
+#sidebar div[class*="overflow-y-auto"] {
+  scrollbar-width: none !important;
+}
+#sidebar div[class*="overflow-y-auto"]::-webkit-scrollbar {
+  display: none !important;
+  height: 0 !important;
+  width: 0 !important;
+}
 /* 用户气泡半径 rounded-xl（12px，右上 rounded-tr-xs 更小），外扩 2px 的环取 14px。 */
 :is(main, div.border-l.border-border) [class~="group/user-row"] > div[class*="rounded-xl"]::after {
   border-radius: 14px !important;
 }
-/* Git 工具状态面板流光：与会话盒同款彗星环（类签名 popover-border 全局唯一）。
+/* Git 工具状态面板流光：与会话盒同款多彩流光环（类签名 popover-border 全局唯一）。
    面板自身 overflow-hidden + 16px 圆角，环贴边内绘（inset 0）避免裁剪。 */
 aside[class*="popover-border"] {
   position: relative !important;
@@ -1654,12 +1730,12 @@ aside[class*="popover-border"]::after {
   inset: 0 !important;
   border-radius: 16px !important;
   padding: 2px !important;
-  background: conic-gradient(from var(--dream-flow), transparent 0deg, color-mix(in srgb, ${colors.accent} 55%, white) 30deg, transparent 65deg), conic-gradient(from var(--dream-flow), transparent 0deg, ${colors.accent} 70deg, transparent 120deg), conic-gradient(from var(--dream-flow), color-mix(in srgb, ${colors.accent} 55%, transparent) 0deg, transparent 75deg, transparent 285deg, color-mix(in srgb, ${colors.accent} 55%, transparent) 360deg) !important;
+  background: conic-gradient(from var(--dream-flow), color-mix(in srgb, #ffffff 14%, transparent) 0deg, color-mix(in srgb, #ffffff 7%, transparent) 15deg, transparent 30deg, transparent 150deg, color-mix(in srgb, #ffffff 7%, transparent) 165deg, color-mix(in srgb, #ffffff 14%, transparent) 180deg, color-mix(in srgb, #ffffff 7%, transparent) 195deg, transparent 210deg, transparent 330deg, color-mix(in srgb, #ffffff 7%, transparent) 345deg, color-mix(in srgb, #ffffff 14%, transparent) 360deg), conic-gradient(from var(--dream-flow), color-mix(in srgb, ${colors.accent} 82%, transparent) 15deg, color-mix(in srgb, ${colors.secondary} 82%, transparent) 45deg, color-mix(in srgb, ${colors.secondary} 82%, transparent) 75deg, color-mix(in srgb, ${colors.accent} 82%, transparent) 105deg, color-mix(in srgb, ${colors.accent} 82%, transparent) 135deg, color-mix(in srgb, ${colors.secondary} 82%, transparent) 165deg, color-mix(in srgb, ${colors.secondary} 82%, transparent) 195deg, color-mix(in srgb, ${colors.accent} 82%, transparent) 225deg, color-mix(in srgb, ${colors.accent} 82%, transparent) 255deg, color-mix(in srgb, ${colors.secondary} 82%, transparent) 285deg, color-mix(in srgb, ${colors.secondary} 82%, transparent) 315deg, color-mix(in srgb, ${colors.accent} 82%, transparent) 345deg) !important;
   -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0) !important;
   -webkit-mask-composite: xor !important;
   mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0) !important;
   mask-composite: exclude !important;
-  animation: dream-flow-orbit 8s linear infinite !important;
+  animation: dream-flow-orbit 6s linear infinite !important;
   pointer-events: none !important;
 }
 #sidebar li[class*="bg-selected"] {
@@ -3068,6 +3144,37 @@ export function buildMenuScript(options: {
     item.className = 'dream-theme-row';
     item.dataset.themeId = theme.id;
   }
+
+  // 快捷键：Ctrl+Alt+1~8 直切前 8 套预设皮肤；行尾数字角标 = 键位提示。
+  // 输入控件聚焦时不劫持；重注入先摘除上一轮监听（同 __dreamWorkOutsideClick 模式）。
+  if (window.__dreamWorkHotkeys) {
+    document.removeEventListener('keydown', window.__dreamWorkHotkeys, true);
+    delete window.__dreamWorkHotkeys;
+  }
+  const hotkeyRows = Array.prototype.slice.call(panel.querySelectorAll('.dream-theme-row'), 0, 8);
+  hotkeyRows.forEach((item, index) => {
+    const chip = document.createElement('span');
+    chip.textContent = String(index + 1);
+    chip.title = 'Ctrl+Alt+' + (index + 1) + ' 快速切换';
+    chip.style.cssText = 'margin-left:auto;flex:none;min-width:16px;height:16px;padding:0 4px;border-radius:5px;border:1px solid rgba(0,0,0,.12);display:inline-flex;align-items:center;justify-content:center;font:600 10px/1 system-ui;color:rgba(23,52,79,.62)!important;-webkit-text-fill-color:rgba(23,52,79,.62)!important;background:rgba(0,0,0,.04);';
+    item.appendChild(chip);
+  });
+  window.__dreamWorkHotkeys = (event) => {
+    if (!event.ctrlKey || !event.altKey || event.shiftKey || event.metaKey) return;
+    const target = event.target;
+    if (target && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName || ''))) return;
+    const code = String(event.code || '');
+    const digitMatch = code.match(/^Digit([1-8])$/) || code.match(/^Numpad([1-8])$/);
+    const index = digitMatch ? Number(digitMatch[1]) - 1 : -1;
+    if (index < 0 || index >= Math.min(8, themes.length)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const theme = themes[index];
+    applyTheme(theme.id);
+    void recordPresetUsage(theme.id);
+    panel.style.display = 'none';
+  };
+  document.addEventListener('keydown', window.__dreamWorkHotkeys, true);
 
   /* __DREAM_PAGE_CONTRAST_START__（与 electron/manager/contrast.ts 保持同逻辑） */
   const pageHexToRgb = (value) => {
