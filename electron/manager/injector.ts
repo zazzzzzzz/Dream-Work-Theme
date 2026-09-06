@@ -3,7 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { nativeImage } from 'electron';
 import { CdpSession, fetchRendererTargets, waitForRendererTargets, isAnyPageTarget } from './cdp';
-import { getThemeHeroDataUrl, listThemes } from './theme-store';
+import { getThemeHeroDataUrl, getThemeVideoPath, listThemes } from './theme-store';
 import { getAppDefinition } from './app-registry';
 import { ensureSharedCustomThemeService, listSharedCustomThemes, mergeSharedCustomThemes, recordThemeUsage, selectQuickThemeIds } from './custom-theme-store';
 import { Rgb, hexToRgb, rgbToHex, mixRgb, ensureContrastAgainstAll } from './contrast';
@@ -45,6 +45,13 @@ const DEFAULT_SURFACE_ALPHAS = [0.70, 0.76, 0.88, 0.90];
 
 function surfaceAlphasFor(appId: string): number[] {
   return HERO_BACKED_SURFACE_ALPHAS[appId] ?? DEFAULT_SURFACE_ALPHAS;
+}
+
+// 视频文件绝对路径 → file:/// URL（ZCode 页面本身是 file:// 源，media 元素可直读；
+// encodeURI 不转义 # 与 ?，手工补齐避免被当成分隔符）
+function videoFileUrl(absPath: string | null): string | undefined {
+  if (!absPath) return undefined;
+  return 'file:///' + encodeURI(absPath.replace(/\\/g, '/')).replace(/#/g, '%23').replace(/\?/g, '%3F');
 }
 
 const heroAverageCache = new Map<string, { size: number; mtimeMs: number; rgb: Rgb | null }>();
@@ -154,12 +161,15 @@ export async function applyTheme(
     const quickThemeIds = selectQuickThemeIds(appId, allThemes.map(theme => theme.id), themeId, 8);
     const themesById = new Map(allThemes.map(theme => [theme.id, theme]));
     const menuThemeEntries = quickThemeIds.map(id => themesById.get(id)).filter(Boolean) as typeof allThemes;
-    const themeEntries = new Map<string, { name: string; css: string; surface: string }>();
+    const themeEntries = new Map<string, { name: string; css: string; surface: string; videoUrl?: string }>();
     for (const theme of menuThemeEntries) {
+      // 视频分支只在视频文件真实可解析时启用：否则壁纸透明化会没有视频层兜底
+      const themeVideoPath = appId === 'zcode' ? getThemeVideoPath(theme) : null;
       themeEntries.set(theme.id, {
         name: theme.name,
-        css: buildAppCss(appId, theme.manifest, getThemeHeroDataUrl(theme), getHeroAverageRgb(path.join(theme.path, theme.manifest.hero))),
+        css: buildAppCss(appId, theme.manifest, getThemeHeroDataUrl(theme), getHeroAverageRgb(path.join(theme.path, theme.manifest.hero)), { video: Boolean(themeVideoPath) }),
         surface: theme.manifest.colors.surface,
+        videoUrl: videoFileUrl(themeVideoPath),
       });
     }
 
@@ -170,6 +180,7 @@ export async function applyTheme(
       css: entry.css,
       surface: entry.surface,
       accent: allThemes.find(theme => theme.id === id)?.manifest.colors.accent ?? '#24c9d7',
+      videoUrl: entry.videoUrl,
     }));
     let sharedCustomThemes = listSharedCustomThemes();
     if (sharedCustomThemes.length === 0) {
@@ -721,8 +732,10 @@ export async function removeSkin(
       document.getElementById('${STYLE_ID}')?.remove();
       document.getElementById('${MENU_ID}')?.remove();
       document.getElementById('${MENU_ID}-host')?.remove();
+      document.getElementById('dream-work-video-layer')?.remove();
       clearInterval(window.__dreamWorkMenuGuard);
       delete window.__dreamWorkMenuGuard;
+      delete window.__dreamWorkVideoSrc;
       if (window.__dreamWorkOutsideClick) {
         document.removeEventListener('pointerdown', window.__dreamWorkOutsideClick, true);
         delete window.__dreamWorkOutsideClick;
@@ -811,7 +824,7 @@ export function buildAppCss(
   manifest: any,
   heroDataUrl: string,
   heroAverage: Rgb | null = null,
-  options: { template?: boolean } = {}
+  options: { template?: boolean; video?: boolean } = {}
 ): string {
   const surface = manifest.colors?.surface ?? '#f7fbff';
   const text = manifest.colors?.text ?? '#17344f';
@@ -847,7 +860,7 @@ export function buildAppCss(
     if (appId === 'hana-agent') {
       return buildHanaAgentCss(manifest, heroDataUrl, colors);
     }
-    return buildGenericWorkCss(appId, manifest, heroDataUrl, colors);
+    return buildGenericWorkCss(appId, manifest, heroDataUrl, colors, Boolean(options.video));
   }
 
   // Default: WorkBuddy
@@ -1046,7 +1059,7 @@ html[data-dream-shell="dark"] body.solo-lite #root
 `;
 }
 
-function buildGenericWorkCss(appId: string, manifest: any, heroDataUrl: string, colors: any): string {
+function buildGenericWorkCss(appId: string, manifest: any, heroDataUrl: string, colors: any, video = false): string {
   const mainSelectors: Record<string, string> = {
     'qoder-work': '#root > div, [class*="layout"], [class*="content-area"], [class*="main-content"]',
     catpaw: '.main-area, .main-content-container, .main-content, .chat-content-area',
@@ -1073,7 +1086,11 @@ function buildGenericWorkCss(appId: string, manifest: any, heroDataUrl: string, 
     : '[class*="message"], [class*="bubble"], [class*="composer"], [class*="input-container"]';
   // ZCode conversation rows carry their own translucent surfaces
   // (buildZCodeConversationCss), so its wallpaper needs no gradient mask.
-  const mainBackground = appId === 'zcode'
+  // 视频主题：壁纸画布让位给 fixed 视频层（mainBackground 透明，hero 转由
+  // 视频层自身底图承担，加载/失败时即静态回退）。
+  const mainBackground = video
+    ? 'transparent !important'
+    : appId === 'zcode'
     ? `url(${JSON.stringify(heroDataUrl)}) center / cover no-repeat fixed !important`
     : `linear-gradient(90deg, color-mix(in srgb, ${colors.surface} 82%, transparent) 0 12%, transparent 42%), url(${JSON.stringify(heroDataUrl)}) center / cover no-repeat fixed !important`;
   return `/* DREAM_THEME:${manifest.id} */
@@ -1099,7 +1116,7 @@ function buildGenericWorkCss(appId: string, manifest: any, heroDataUrl: string, 
   --color-selected: color-mix(in srgb, ${colors.accent} 16%, ${colors.surface}) !important;
   --color-hover: color-mix(in srgb, ${colors.accent} 10%, ${colors.surface}) !important;
 }
-html, body, #root { background: ${colors.surface} !important; color: ${colors.text} !important; }
+html, body, #root { background: ${video ? 'transparent' : colors.surface} !important; color: ${colors.text} !important; }
 :is(${sidebar}) {
   background: color-mix(in srgb, ${colors.surface} 90%, transparent) !important;
   color: ${colors.text} !important;
@@ -1118,7 +1135,30 @@ html, body, #root { background: ${colors.surface} !important; color: ${colors.te
 }
 :is(${main}) :where(p, span, li, h1, h2, h3, h4, strong, em) { color: ${colors.text} !important; }
 button[class*="bg-primary"], button[class*="bg-accent"] { background-color: ${colors.accent} !important; color: #fff !important; }
-${appSpecificCss}`;
+${appSpecificCss}${video ? `
+/* ZCode 动态视频背景：fixed 层 z-index:-1 落于普通流内容之下（内容无需抬升，
+   不破坏原生 sticky），层自身带 hero 底图作加载中/失败回退；玻璃 backdrop-filter 直接采样视频 */
+#dream-work-video-layer {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: -1 !important;
+  pointer-events: none !important;
+  overflow: hidden !important;
+  background: url(${JSON.stringify(heroDataUrl)}) center / cover no-repeat !important;
+}
+#dream-work-video-layer video {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  display: block !important;
+}
+/* 应用壳层根容器（bg-background-win-alt，实测 rgb(236,236,238)）不透明底会整个压住
+   z-index:-1 的视频层——视频主题必须一并放行，人物/画面才可见 */
+.bg-background-win-alt, [class*="bg-background-win"] { background: transparent !important; }
+/* 独立整页（设置/插件市场/自动化）的内容壳 div.bg-background.rounded-xl.border-border
+   同样不透明（rgb 248,248,248），视频主题一并放行；页内统计卡/侧栏自身已是玻璃 */
+.bg-background.rounded-xl.border-border { background: transparent !important; }
+#dream-work-video-layer[data-motion-error="true"] video { display: none !important; }` : ''}`;
 }
 
 function buildZCodeConversationCss(colors: any): string {
@@ -2964,7 +3004,7 @@ export function buildMenuScript(options: {
   styleId: string;
   menuId: string;
   currentThemeId: string;
-  themes: Array<{ id: string; name: string; css: string; surface: string; accent?: string }>;
+  themes: Array<{ id: string; name: string; css: string; surface: string; accent?: string; videoUrl?: string }>;
   appId: string;
   cssTemplate?: string;
   surfaceAlphas?: number[];
@@ -2994,25 +3034,49 @@ export function buildMenuScript(options: {
   const isBase64Char = (code) => (code >= 48 && code <= 57) || (code >= 65 && code <= 90) || (code >= 97 && code <= 122) || code === 43 || code === 47 || code === 61;
   // 不用正则提取 data URL：大体积 hero（10MB+ base64）会让旧版 V8 的正则
   // 回溯栈溢出（RangeError: Maximum call stack size exceeded）。
+  // CSS 可能同时含多个 data URL（如流光角饰的 URL 编码 SVG 在 hero 之前），
+  // 必须逐个按各自边界提取：head/comma/end 三段都必须落在同一个 URL 内，
+  // 否则跨 URL 拼接会让 atob 拿到乱码直接 InvalidCharacterError。
   const materializeCss = (css, cacheKey) => {
-    const head = css.indexOf('data:image/');
-    if (head < 0) return css;
-    const comma = css.indexOf(';base64,', head);
-    if (comma < 0) return css;
-    let end = comma + 8;
-    while (end < css.length && isBase64Char(css.charCodeAt(end))) end++;
-    const dataUrl = css.slice(head, end);
-    let blobUrl = themeBlobUrls.get(cacheKey);
-    if (!blobUrl) {
-      const [header, encoded] = dataUrl.split(',', 2);
-      const mime = header.slice(5, header.indexOf(';'));
-      const binary = atob(encoded);
-      const bytes = new Uint8Array(binary.length);
-      for (let index = 0; index < binary.length; index++) bytes[index] = binary.charCodeAt(index);
-      blobUrl = URL.createObjectURL(new Blob([bytes], { type: mime }));
-      themeBlobUrls.set(cacheKey, blobUrl);
+    if (css.indexOf('data:image/') < 0) return css;
+    const chunks = [];
+    let pos = 0;
+    for (;;) {
+      const head = css.indexOf('data:image/', pos);
+      if (head < 0) break;
+      const comma = css.indexOf(',', head);
+      if (comma < 0) break;
+      const header = css.slice(head, comma);
+      const isBase64Url = /;base64$/.test(header);
+      let end = comma + 1;
+      if (isBase64Url) {
+        while (end < css.length && isBase64Char(css.charCodeAt(end))) end++;
+      } else {
+        while (end < css.length) {
+          const code = css.charCodeAt(end);
+          if (code === 34 || code === 39 || code === 41 || code === 32 || code === 10) break;
+          end++;
+        }
+      }
+      const dataUrl = css.slice(head, end);
+      if (isBase64Url && dataUrl.length > 4096) {
+        let blobUrl = themeBlobUrls.get(cacheKey + ':' + head);
+        if (!blobUrl) {
+          const mime = header.slice(5, header.indexOf(';'));
+          const binary = atob(css.slice(comma + 1, end));
+          const bytes = new Uint8Array(binary.length);
+          for (let index = 0; index < binary.length; index++) bytes[index] = binary.charCodeAt(index);
+          blobUrl = URL.createObjectURL(new Blob([bytes], { type: mime }));
+          themeBlobUrls.set(cacheKey + ':' + head, blobUrl);
+        }
+        chunks.push(css.slice(pos, head), blobUrl);
+      } else {
+        chunks.push(css.slice(pos, end));
+      }
+      pos = end;
     }
-    return css.split(dataUrl).join(blobUrl);
+    chunks.push(css.slice(pos));
+    return chunks.join('');
   };
 
   const isLightSurface = (hex) => {
@@ -3036,6 +3100,54 @@ export function buildMenuScript(options: {
     });
   };
 
+  /* ZCode 动态视频背景（预设主题 video 字段）：幂等管理 fixed 视频层。
+     菜单脚本被 watcher 周期重注入，src 未变化时绝不重建/重载，避免播放反复归零；
+     视频出错回退层底图（hero），页面隐藏暂停省电，prefers-reduced-motion 不建层。 */
+  const applyVideoLayer = (videoUrl) => {
+    const layerId = 'dream-work-video-layer';
+    let layer = document.getElementById(layerId);
+    if (!videoUrl || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) {
+      if (layer) layer.remove();
+      delete window.__dreamWorkVideoSrc;
+      return;
+    }
+    if (!layer) {
+      layer = document.createElement('div');
+      layer.id = layerId;
+      const video = document.createElement('video');
+      video.muted = true;
+      video.loop = true;
+      video.autoplay = true;
+      video.setAttribute('playsinline', '');
+      video.preload = 'auto';
+      video.addEventListener('error', () => { layer.dataset.motionError = 'true'; });
+      video.addEventListener('canplay', () => { if (layer.dataset.motionError) delete layer.dataset.motionError; });
+      layer.appendChild(video);
+    }
+    if (!layer.isConnected) document.body.appendChild(layer);
+    const video = layer.querySelector('video');
+    if (window.__dreamWorkVideoSrc !== videoUrl) {
+      window.__dreamWorkVideoSrc = videoUrl;
+      if (layer.dataset.motionError) delete layer.dataset.motionError;
+      video.src = videoUrl;
+      video.load();
+      const playing = video.play();
+      if (playing && playing.catch) playing.catch(() => {});
+    } else if (video.paused && !document.hidden) {
+      const playing = video.play();
+      if (playing && playing.catch) playing.catch(() => {});
+    }
+  };
+  if (!window.__dreamWorkVideoVisibility) {
+    window.__dreamWorkVideoVisibility = true;
+    document.addEventListener('visibilitychange', () => {
+      const video = document.querySelector('#dream-work-video-layer video');
+      if (!video) return;
+      if (document.hidden) video.pause();
+      else { const playing = video.play(); if (playing && playing.catch) playing.catch(() => {}); }
+    });
+  }
+
   const style = document.getElementById('${options.styleId}');
   if (!style) {
     const s = document.createElement('style');
@@ -3052,6 +3164,7 @@ export function buildMenuScript(options: {
     window.__dreamWorkThemeStyle.textContent = materializeCss(theme.css, theme.id);
     document.documentElement.dataset.dreamTheme = themeId;
     if (appId !== 'hana-agent') applyMode(theme.surface);
+    if (appId === 'zcode') applyVideoLayer(theme.videoUrl);
     
     // Codex themes require the codex-dream-skin class on <html> for CSS selectors to match
     if (appId === 'codex') {
@@ -3087,6 +3200,7 @@ export function buildMenuScript(options: {
     window.__dreamWorkThemeStyle.textContent = '';
     delete document.documentElement.dataset.dreamTheme;
     if (appId !== 'hana-agent') applyMode('#ffffff');
+    if (appId === 'zcode') applyVideoLayer(null);
     if (appId === 'codex') {
       document.documentElement.classList.remove('codex-dream-skin');
       delete document.documentElement.dataset.dreamShell;
@@ -3431,6 +3545,7 @@ export function buildMenuScript(options: {
     window.__dreamWorkThemeStyle.textContent = materializeCss(buildCustomCss(slot.dataUrl, slot.colors, slot.id), slot.id);
     document.documentElement.dataset.dreamTheme = slot.id;
     if (appId !== 'hana-agent') applyMode(slot.colors.surface);
+    if (appId === 'zcode') applyVideoLayer(null);
     if (appId === 'codex') document.documentElement.classList.add('codex-dream-skin');
     ensureCustomRow(slot);
   };

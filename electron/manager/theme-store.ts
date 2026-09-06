@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
+import { app } from 'electron';
 import { ThemeManifest } from '../../shared/types';
 import { getThemeSearchDirs } from './theme-paths';
 
@@ -133,6 +134,16 @@ function validateThemeManifest(input: any): ThemeManifest {
   if (typeof input.hero !== 'string') {
     throw new Error('theme hero must be a string');
   }
+  // 可选动态背景视频：文件名必须落在主题目录内且为白名单格式，非法值按无视频处理
+  let video: string | undefined;
+  if (typeof input.video === 'string' && input.video.trim()) {
+    const name = input.video.trim();
+    if (path.basename(name) !== name || !/\.(mp4|webm)$/i.test(name)) {
+      console.warn(`theme ${input.id}: ignoring invalid video field ${name}`);
+    } else {
+      video = name;
+    }
+  }
   if (typeof input.colors !== 'object' || input.colors === null) {
     throw new Error('theme colors must be an object');
   }
@@ -150,6 +161,7 @@ function validateThemeManifest(input: any): ThemeManifest {
     name: input.name.trim(),
     author: input.author,
     hero: input.hero,
+    video,
     colors: {
       accent: input.colors.accent,
       secondary: input.colors.secondary,
@@ -169,6 +181,33 @@ function getMimeType(filename: string): string {
     '.jpeg': 'image/jpeg',
     '.webp': 'image/webp',
     '.gif': 'image/gif',
+    '.mp4': 'video/mp4',
+    '.webm': 'video/webm',
   };
   return map[ext] || 'image/png';
+}
+
+// 动态背景视频的磁盘路径：主题目录内解析 + 与 hero 同款防穿越；安装态主题在
+// app.asar 内而 Chromium 的 video 元素读不了 asar，映射到 electron-builder 的
+// app.asar.unpacked 真实目录；文件缺失/非法返回 null（主题退回静态壁纸）。
+export function getThemeVideoPath(theme: ThemeEntry): string | null {
+  const videoName = theme.manifest.video;
+  if (!videoName) return null;
+  const themeDir = path.resolve(theme.path);
+  let videoPath = path.resolve(themeDir, videoName);
+  if (videoPath !== themeDir && !videoPath.startsWith(themeDir + path.sep)) return null;
+  if (!/\.(mp4|webm)$/i.test(path.extname(videoPath))) return null;
+  const appPath = app.getAppPath();
+  if (appPath.endsWith('.asar') && (themeDir === appPath || themeDir.startsWith(appPath + path.sep))) {
+    // 仅当主题确在安装包内时才映射 unpacked；用户库（%APPDATA%）主题本就是真实文件。
+    // electron-builder 的解包目录是 app.asar 的同名 +.unpacked（与 asar 同级）
+    const unpackedThemeDir = path.resolve(appPath + '.unpacked', path.relative(appPath, themeDir));
+    videoPath = path.resolve(unpackedThemeDir, videoName);
+  }
+  try {
+    if (!fs.existsSync(videoPath) || !fs.statSync(videoPath).isFile()) return null;
+  } catch {
+    return null;
+  }
+  return videoPath;
 }

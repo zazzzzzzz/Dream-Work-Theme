@@ -31,6 +31,8 @@ export interface ThemeManifest {
   name: string;
   author: string;
   hero: string;
+  // 可选动态背景视频（主题目录内文件名）：经校验白名单后才保留，非法值按无视频处理
+  video?: string;
   colors: {
     accent: string;
     secondary: string;
