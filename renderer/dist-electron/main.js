@@ -1,5 +1,5 @@
-"use strict";var at=Object.defineProperty;var st=(e,r,t)=>r in e?at(e,r,{enumerable:!0,configurable:!0,writable:!0,value:t}):e[r]=t;var S=(e,r,t)=>st(e,typeof r!="symbol"?r+"":r,t);const y=require("electron"),it=require("path"),ct=require("fs"),lt=require("os"),re=require("child_process"),he=require("util"),dt=require("http"),mt=require("net"),ut=require("fs/promises"),pt=require("crypto"),ht=require("zlib");function H(e){const r=Object.create(null,{[Symbol.toStringTag]:{value:"Module"}});if(e){for(const t in e)if(t!=="default"){const n=Object.getOwnPropertyDescriptor(e,t);Object.defineProperty(r,t,n.get?n:{enumerable:!0,get:()=>e[t]})}}return r.default=e,Object.freeze(r)}const l=H(it),u=H(ct),E=H(lt),je=H(dt),Re=H(mt),ge=H(pt),_=process.env.LOCALAPPDATA||l.join(E.homedir(),"AppData","Local"),$e=process.env.APPDATA||l.join(E.homedir(),"AppData","Roaming"),R=process.env.ProgramFiles||"C:\\Program Files",se=process.env["ProgramFiles(x86)"]||"C:\\Program Files (x86)",fe=[{id:"workbuddy",name:"WorkBuddy",exeNames:["WorkBuddy.exe"],processName:"WorkBuddy.exe",defaultPort:9339,installPaths:[l.join(_,"workbuddy"),l.join(_,"Programs","workbuddy"),l.join(R,"WorkBuddy"),l.join(se,"WorkBuddy"),"D:\\Program Files\\WorkBuddy"],rendererHints:["app.asar/renderer/index.html","renderer/index.html","index.html"],kind:"workbuddy"},{id:"codex",name:"Codex",exeNames:["ChatGPT.exe","Codex.exe"],processName:"ChatGPT.exe",defaultPort:9340,installPaths:[l.join(_,"Programs","Codex"),l.join(_,"Programs","OpenAI","Codex"),l.join(R,"Codex"),l.join(se,"Codex"),"D:\\Program Files\\Codex"],rendererHints:["index.html","renderer/index.html"],kind:"codex"},{id:"trae-work",name:"TRAE Work",exeNames:["TRAE SOLO CN.exe","TRAE Work CN.exe"],processName:"TRAE SOLO CN.exe",defaultPort:9341,installPaths:["D:\\Program Files\\TRAE SOLO CN",l.join(_,"Programs","TRAE SOLO CN"),l.join(R,"TRAE SOLO CN")],rendererHints:["solo/solo-lite.html","solo-lite.html"],kind:"vscode-work"},{id:"qoder-work",name:"QoderWork",exeNames:["QoderWork CN.exe","QoderWork.exe"],processName:"QoderWork CN.exe",defaultPort:9342,installPaths:["D:\\Program Files\\QoderWork CN",l.join(_,"Programs","QoderWork CN"),l.join(R,"QoderWork CN")],rendererHints:["out/renderer/index.html","renderer/index.html"],kind:"generic-work",devToolsActivePort:l.join($e,"QoderWork CN","DevToolsActivePort")},{id:"catpaw",name:"CatPaw",exeNames:["CatPaw.exe"],processName:"CatPaw.exe",defaultPort:9343,installPaths:[l.join(_,"CatPaw"),l.join(_,"Programs","CatPaw"),l.join(R,"CatPaw")],rendererHints:["app.asar/dist/index.html","dist/index.html"],kind:"generic-work"},{id:"zcode",name:"ZCode",exeNames:["ZCode.exe"],processName:"ZCode.exe",defaultPort:9344,installPaths:["D:\\Program Files\\ZCode",l.join(_,"Programs","ZCode"),l.join(R,"ZCode")],rendererHints:["out/renderer/index.html","renderer/index.html"],kind:"generic-work"},{id:"qwen-office",name:"千问办公",exeNames:["QwenWorkCN.exe"],processName:"QwenWorkCN.exe",defaultPort:9345,installPaths:["D:\\Program Files\\QwenWorkCN",l.join(_,"Programs","QwenWorkCN"),l.join(R,"QwenWorkCN")],rendererHints:["out/renderer/index.html","renderer/index.html"],kind:"generic-work",devToolsActivePort:l.join($e,"QwenWorkCN","DevToolsActivePort")},{id:"hana-agent",name:"HanaAgent",exeNames:["HanaAgent.exe"],processName:"HanaAgent.exe",defaultPort:9346,installPaths:[l.join(_,"Programs","HanaAgent"),l.join(R,"HanaAgent"),l.join(se,"HanaAgent")],rendererHints:[".hanako/artifacts/renderer/","artifacts/renderer/","/index.html"],kind:"generic-work"}];function P(e){return fe.find(r=>r.id===e)}const Q=1;function gt(){const e=ne().paths;return fe.map(r=>{const t=e[r.id];return{appId:r.id,name:r.name,exeNames:[...r.exeNames],customPath:t,customPathStatus:t?be(r.id,t)?"valid":"invalid":"none"}})}function ft(e){const r=ne().paths[e];return r&&be(e,r)?r:void 0}function bt(e,r){const t=P(e);if(!t)throw new Error(`Unknown app: ${e}`);if(!be(e,r))throw new Error(`请选择 ${t.name} 的可执行文件（${t.exeNames.join(" 或 ")}）`);const n=ne();return n.paths[e]=l.resolve(r),Ue(n),n.paths[e]}function xt(e){if(!P(e))throw new Error(`Unknown app: ${e}`);const r=ne();delete r.paths[e],Ue(r)}function be(e,r){const t=P(e);if(!t||!r||typeof r!="string")return!1;try{if(!u.statSync(r).isFile())return!1}catch{return!1}const n=l.basename(r).toLowerCase();return t.exeNames.some(o=>o.toLowerCase()===n)}function Oe(){return l.join(y.app.getPath("userData"),"app-paths.json")}function ne(){try{const e=JSON.parse(u.readFileSync(Oe(),"utf8"));if(!e||typeof e!="object"||Array.isArray(e))return ie();const r=e;if(r.version!==Q||!r.paths||typeof r.paths!="object"||Array.isArray(r.paths))return ie();const t={};for(const[n,o]of Object.entries(r.paths))P(n)&&typeof o=="string"&&o.trim()&&(t[n]=o);return{version:Q,paths:t}}catch{return ie()}}function ie(){return{version:Q,paths:{}}}function Ue(e){const r=Oe();u.mkdirSync(l.dirname(r),{recursive:!0}),u.writeFileSync(r,`${JSON.stringify({version:Q,paths:e.paths},null,2)}
-`,"utf8")}const wt=he.promisify(re.execFile);async function Le(e){const r=P(e);if(!r)return null;const t=ft(e);if(t)return t;const n=yt(r.exeNames,r.installPaths);if(n)return n;const o=kt(r);if(o)return o;if(e==="codex"){const a=vt();return a||Ct()}return null}function yt(e,r){for(const t of r)if(!(!t||!u.existsSync(t)))try{if(u.statSync(t).isFile()&&$t(t,e))return t;for(const o of e){const a=l.join(t,o);if(K(a))return a}const n=u.readdirSync(t,{withFileTypes:!0}).filter(o=>o.isDirectory()).sort((o,a)=>a.name.localeCompare(o.name,void 0,{numeric:!0}));for(const o of n)for(const a of e){const s=l.join(t,o.name,a);if(K(s))return s}}catch{}return null}function kt(e){const r=[process.env.ProgramFiles,process.env["ProgramFiles(x86)"]].filter(t=>!!t);for(const t of r)if(u.existsSync(t))try{const n=u.readdirSync(t).find(o=>o.toLowerCase().includes(e.id.replace("-",""))||o.toLowerCase().includes(e.name.toLowerCase()));if(!n)continue;for(const o of e.exeNames){const a=l.join(t,n,o);if(K(a))return a}}catch{}return null}function vt(){const e=l.join(process.env.ProgramFiles||"C:\\Program Files","WindowsApps");if(!u.existsSync(e))return null;try{for(const r of u.readdirSync(e)){if(!/^OpenAI\.Codex_\d+/i.test(r))continue;const t=l.join(e,r,"app","ChatGPT.exe");if(K(t))return t}}catch{}return null}async function Ct(){const e=`
+"use strict";var qt=Object.defineProperty;var Jt=(e,r,t)=>r in e?qt(e,r,{enumerable:!0,configurable:!0,writable:!0,value:t}):e[r]=t;var U=(e,r,t)=>Jt(e,typeof r!="symbol"?r+"":r,t);const P=require("electron"),Kt=require("path"),Vt=require("fs"),Gt=require("os"),Me=require("child_process"),qe=require("util"),Zt=require("http"),Xt=require("net"),Yt=require("fs/promises"),Qt=require("crypto"),er=require("zlib");function oe(e){const r=Object.create(null,{[Symbol.toStringTag]:{value:"Module"}});if(e){for(const t in e)if(t!=="default"){const n=Object.getOwnPropertyDescriptor(e,t);Object.defineProperty(r,t,n.get?n:{enumerable:!0,get:()=>e[t]})}}return r.default=e,Object.freeze(r)}const m=oe(Kt),f=oe(Vt),B=oe(Gt),xt=oe(Zt),wt=oe(Xt),Je=oe(Qt),K=process.env.LOCALAPPDATA||m.join(B.homedir(),"AppData","Local"),at=process.env.APPDATA||m.join(B.homedir(),"AppData","Roaming"),Z=process.env.ProgramFiles||"C:\\Program Files",De=process.env["ProgramFiles(x86)"]||"C:\\Program Files (x86)",Ie=[{id:"workbuddy",name:"WorkBuddy",exeNames:["WorkBuddy.exe"],processName:"WorkBuddy.exe",defaultPort:9339,installPaths:[m.join(K,"workbuddy"),m.join(K,"Programs","workbuddy"),m.join(Z,"WorkBuddy"),m.join(De,"WorkBuddy"),"D:\\Program Files\\WorkBuddy"],rendererHints:["app.asar/renderer/index.html","renderer/index.html","index.html"],kind:"workbuddy"},{id:"codex",name:"Codex",exeNames:["ChatGPT.exe","Codex.exe"],processName:"ChatGPT.exe",defaultPort:9340,installPaths:[m.join(K,"Programs","Codex"),m.join(K,"Programs","OpenAI","Codex"),m.join(Z,"Codex"),m.join(De,"Codex"),"D:\\Program Files\\Codex"],rendererHints:["index.html","renderer/index.html"],kind:"codex"},{id:"trae-work",name:"TRAE Work",exeNames:["TRAE SOLO CN.exe","TRAE Work CN.exe"],processName:"TRAE SOLO CN.exe",defaultPort:9341,installPaths:["D:\\Program Files\\TRAE SOLO CN",m.join(K,"Programs","TRAE SOLO CN"),m.join(Z,"TRAE SOLO CN")],rendererHints:["solo/solo-lite.html","solo-lite.html"],kind:"vscode-work"},{id:"qoder-work",name:"QoderWork",exeNames:["QoderWork CN.exe","QoderWork.exe"],processName:"QoderWork CN.exe",defaultPort:9342,installPaths:["D:\\Program Files\\QoderWork CN",m.join(K,"Programs","QoderWork CN"),m.join(Z,"QoderWork CN")],rendererHints:["out/renderer/index.html","renderer/index.html"],kind:"generic-work",devToolsActivePort:m.join(at,"QoderWork CN","DevToolsActivePort")},{id:"catpaw",name:"CatPaw",exeNames:["CatPaw.exe"],processName:"CatPaw.exe",defaultPort:9343,installPaths:[m.join(K,"CatPaw"),m.join(K,"Programs","CatPaw"),m.join(Z,"CatPaw")],rendererHints:["app.asar/dist/index.html","dist/index.html"],kind:"generic-work"},{id:"zcode",name:"ZCode",exeNames:["ZCode.exe"],processName:"ZCode.exe",defaultPort:9344,installPaths:["D:\\Program Files\\ZCode",m.join(K,"Programs","ZCode"),m.join(Z,"ZCode")],rendererHints:["out/renderer/index.html","renderer/index.html"],kind:"generic-work"},{id:"qwen-office",name:"千问办公",exeNames:["QwenWorkCN.exe"],processName:"QwenWorkCN.exe",defaultPort:9345,installPaths:["D:\\Program Files\\QwenWorkCN",m.join(K,"Programs","QwenWorkCN"),m.join(Z,"QwenWorkCN")],rendererHints:["out/renderer/index.html","renderer/index.html"],kind:"generic-work",devToolsActivePort:m.join(at,"QwenWorkCN","DevToolsActivePort")},{id:"hana-agent",name:"HanaAgent",exeNames:["HanaAgent.exe"],processName:"HanaAgent.exe",defaultPort:9346,installPaths:[m.join(K,"Programs","HanaAgent"),m.join(Z,"HanaAgent"),m.join(De,"HanaAgent")],rendererHints:[".hanako/artifacts/renderer/","artifacts/renderer/","/index.html"],kind:"generic-work"}];function L(e){return Ie.find(r=>r.id===e)}const ve=1;function tr(){const e=Ae().paths;return Ie.map(r=>{const t=e[r.id];return{appId:r.id,name:r.name,exeNames:[...r.exeNames],customPath:t,customPathStatus:t?Ke(r.id,t)?"valid":"invalid":"none"}})}function rr(e){const r=Ae().paths[e];return r&&Ke(e,r)?r:void 0}function nr(e,r){const t=L(e);if(!t)throw new Error(`Unknown app: ${e}`);if(!Ke(e,r))throw new Error(`请选择 ${t.name} 的可执行文件（${t.exeNames.join(" 或 ")}）`);const n=Ae();return n.paths[e]=m.resolve(r),vt(n),n.paths[e]}function ar(e){if(!L(e))throw new Error(`Unknown app: ${e}`);const r=Ae();delete r.paths[e],vt(r)}function Ke(e,r){const t=L(e);if(!t||!r||typeof r!="string")return!1;try{if(!f.statSync(r).isFile())return!1}catch{return!1}const n=m.basename(r).toLowerCase();return t.exeNames.some(a=>a.toLowerCase()===n)}function yt(){return m.join(P.app.getPath("userData"),"app-paths.json")}function Ae(){try{const e=JSON.parse(f.readFileSync(yt(),"utf8"));if(!e||typeof e!="object"||Array.isArray(e))return Ue();const r=e;if(r.version!==ve||!r.paths||typeof r.paths!="object"||Array.isArray(r.paths))return Ue();const t={};for(const[n,a]of Object.entries(r.paths))L(n)&&typeof a=="string"&&a.trim()&&(t[n]=a);return{version:ve,paths:t}}catch{return Ue()}}function Ue(){return{version:ve,paths:{}}}function vt(e){const r=yt();f.mkdirSync(m.dirname(r),{recursive:!0}),f.writeFileSync(r,`${JSON.stringify({version:ve,paths:e.paths},null,2)}
+`,"utf8")}const or=qe.promisify(Me.execFile);async function kt(e){const r=L(e);if(!r)return null;const t=rr(e);if(t)return t;const n=sr(r.exeNames,r.installPaths);if(n)return n;const a=ir(r);if(a)return a;if(e==="codex"){const o=cr();return o||lr()}return null}function sr(e,r){for(const t of r)if(!(!t||!f.existsSync(t)))try{if(f.statSync(t).isFile()&&dr(t,e))return t;for(const a of e){const o=m.join(t,a);if(he(o))return o}const n=f.readdirSync(t,{withFileTypes:!0}).filter(a=>a.isDirectory()).sort((a,o)=>o.name.localeCompare(a.name,void 0,{numeric:!0}));for(const a of n)for(const o of e){const s=m.join(t,a.name,o);if(he(s))return s}}catch{}return null}function ir(e){const r=[process.env.ProgramFiles,process.env["ProgramFiles(x86)"]].filter(t=>!!t);for(const t of r)if(f.existsSync(t))try{const n=f.readdirSync(t).find(a=>a.toLowerCase().includes(e.id.replace("-",""))||a.toLowerCase().includes(e.name.toLowerCase()));if(!n)continue;for(const a of e.exeNames){const o=m.join(t,n,a);if(he(o))return o}}catch{}return null}function cr(){const e=m.join(process.env.ProgramFiles||"C:\\Program Files","WindowsApps");if(!f.existsSync(e))return null;try{for(const r of f.readdirSync(e)){if(!/^OpenAI\.Codex_\d+/i.test(r))continue;const t=m.join(e,r,"app","ChatGPT.exe");if(he(t))return t}}catch{}return null}async function lr(){const e=`
 $ErrorActionPreference = 'SilentlyContinue'
 $package = Get-AppxPackage -Name 'OpenAI.Codex' -ErrorAction SilentlyContinue
 if (-not $package) { exit 1 }
@@ -8,35 +8,601 @@ $rel = [string]$manifest.Package.Applications.Application.Executable
 if (-not $rel) { exit 1 }
 $full = Join-Path $package.InstallLocation $rel
 if (Test-Path -LiteralPath $full -PathType Leaf) { Write-Output $full } else { exit 1 }
-`;try{const{stdout:r}=await wt("powershell.exe",["-NoLogo","-NoProfile","-NonInteractive","-ExecutionPolicy","Bypass","-Command",e],{encoding:"utf8",maxBuffer:4194304}),t=r.trim();return K(t)?t:null}catch{return null}}function $t(e,r){const t=l.basename(e).toLowerCase();return r.some(n=>n.toLowerCase()===t)}function K(e){try{return u.statSync(e).isFile()}catch{return!1}}async function St(){if(E.platform()!=="win32")return[];const e=[];for(const r of fe){const t=await Le(r.id);t&&e.push({appId:r.id,name:r.name,path:t})}return e}const Se=he.promisify(re.execFile);async function Tt(e){const r=P(e);if(!r)return!1;const t=[...new Set([r.processName,...r.exeNames].filter(Boolean))];if(E.platform()==="win32"){for(const n of t)try{const{stdout:o}=await Se("tasklist.exe",["/FI",`IMAGENAME eq ${n}`,"/FO","CSV","/NH"],{encoding:"utf8",windowsHide:!0});if(o.split(/\r?\n/).some(a=>a.trim().toLowerCase().startsWith(`"${n.toLowerCase()}"`)))return!0}catch{}return!1}for(const n of t)try{return await Se("pgrep",["-f",n],{encoding:"utf8"}),!0}catch{}return!1}async function Ne(e,r){if(!/^[a-z0-9-]+$/i.test(e||""))return{success:!1,error:`Invalid appId: ${e}`};if(r!=null&&!/^[a-z0-9._-]+$/i.test(r))return{success:!1,error:`Invalid themeId: ${r}`};const t=P(e);if(!t)return{success:!1,error:`Unknown app: ${e}`};const n=t.defaultPort,o=[`--remote-debugging-port=${n}`];e==="codex"&&o.push("--disable-extensions"),r&&o.push(`--dream-theme=${r}`);try{const a=await Rt(e);if(!a||!u.existsSync(a)||!u.statSync(a).isFile())return{success:!1,error:`Executable not found: ${a}`};if(E.platform()==="win32"&&!/\.exe$/i.test(a))return{success:!1,error:`Refusing to launch non-executable path: ${a}`};if(console.log(`[launcher] Killing existing ${e} instances...`),await Dt(e),await jt(n,15e3),t.devToolsActivePort)try{u.unlinkSync(t.devToolsActivePort)}catch{}console.log(`[launcher] Launching ${a} with args: ${o.join(" ")}`);const s=re.spawn(a,o,{detached:!0,stdio:"ignore",env:Et()});s.unref(),console.log(`[launcher] Spawned process with PID: ${s.pid}`),console.log(`[launcher] Waiting for CDP port ${n} to be ready...`);let c=n;return t.devToolsActivePort?c=await It(t.devToolsActivePort,t.rendererHints,3e4):await At(n,3e4),console.log(`[launcher] CDP port ${c} is ready`),e==="hana-agent"&&await Mt(c,t.rendererHints,3e4),{success:!0,port:c}}catch(a){return console.error("[launcher] Launch failed:",a),{success:!1,error:a.message}}}function Et(){const e={...process.env};for(const r of["VITE_DEV_SERVER_URL","ELECTRON_RENDERER_URL","MAIN_VITE_DEV_SERVER_URL","ELECTRON_RUN_AS_NODE"])delete e[r];return e}async function It(e,r,t){const n=Date.now();let o=0;for(;Date.now()-n<t;){try{const a=u.readFileSync(e,"utf8").split(/\r?\n/,1)[0],s=Number(a);if(Number.isInteger(s)&&s>0)return o=s,await Pt(s,r,3e3),s}catch{}await new Promise(a=>setTimeout(a,500))}throw new Error(`DevToolsActivePort did not expose a live renderer${o?` on port ${o}`:""}: ${e}`)}async function Pt(e,r,t){const n=Date.now();for(;Date.now()-n<t;){try{const o=await fetch(`http://127.0.0.1:${e}/json/list`,{signal:AbortSignal.timeout(1e3)});if(o.ok){const a=await o.json();if(Array.isArray(a)&&a.some(s=>(s==null?void 0:s.type)==="page"&&r.some(c=>String(s.url).includes(c))))return}}catch{}await new Promise(o=>setTimeout(o,250))}throw new Error(`CDP renderer endpoint is not ready on port ${e}`)}async function Mt(e,r,t){const n=Date.now();let o="",a=0;for(;Date.now()-n<t;){try{const i=(await(await fetch(`http://127.0.0.1:${e}/json/list`,{signal:AbortSignal.timeout(1e3)})).json()).find(d=>(d==null?void 0:d.type)==="page"&&r.some(p=>String(d.url).includes(p)));if(i!=null&&i.id){if(i.id!==o)o=i.id,a=Date.now();else if(Date.now()-a>=3e3){console.log(`[launcher] Stable HanaAgent renderer ${o} confirmed`);return}}}catch{}await new Promise(s=>setTimeout(s,250))}throw new Error(`HanaAgent renderer did not stabilize on port ${e}`)}async function At(e,r){const t=Date.now();let n="unknown";for(;Date.now()-t<r;)try{await new Promise((o,a)=>{const s=Re.createConnection(e,"127.0.0.1",()=>{s.end(),o()});s.once("error",c=>{n=c.message,a(c)}),setTimeout(()=>{s.destroy(),a(new Error("timeout"))},1e3)}),console.log(`[launcher] Port ${e} is open, verifying CDP endpoint...`),await _t(e,15e3),console.log(`[launcher] CDP endpoint verified on port ${e}`);return}catch(o){n=o.message,console.log(`[launcher] Port check failed: ${o.message}, retrying...`),await new Promise(a=>setTimeout(a,1e3))}throw new Error(`CDP port ${e} did not become ready within ${r}ms (last error: ${n})`)}async function _t(e,r){const t=Date.now();for(;Date.now()-t<r;)try{await new Promise((n,o)=>{const a=je.request({hostname:"127.0.0.1",port:e,path:"/json/version",method:"GET",timeout:2e3},s=>{let c="";s.on("data",i=>{c+=i}),s.on("end",()=>{s.statusCode===200?(console.log(`[launcher] CDP version response: ${c.substring(0,200)}`),n()):o(new Error(`HTTP ${s.statusCode}`))})});a.on("error",o),a.on("timeout",()=>{a.destroy(),o(new Error("timeout"))}),a.end()});return}catch(n){if(Date.now()-t>=r)throw n;await new Promise(o=>setTimeout(o,1e3))}}async function Dt(e){const r=E.platform(),t=P(e);if(!t)return;const n=[...new Set([t.processName,...t.exeNames].filter(Boolean))];try{if(r==="win32"){const{spawnSync:o}=require("child_process");for(const a of n)try{o("taskkill",["/T","/F","/IM",a],{stdio:"ignore"}),console.log(`[launcher] Killed existing ${a} process tree`)}catch{}}else if(r==="darwin"){const{spawnSync:o}=require("child_process");for(const a of n)try{o("pkill",["-f",a],{stdio:"ignore"}),console.log(`[launcher] Killed existing ${a} processes`)}catch{}}else if(r==="linux"){const{spawnSync:o}=require("child_process");for(const a of n)try{o("pkill",["-f",a],{stdio:"ignore"}),console.log(`[launcher] Killed existing ${a} processes`)}catch{}}}catch(o){console.warn("[launcher] Failed to kill existing instances:",o)}}async function jt(e,r){const t=Date.now();for(;Date.now()-t<r;){if(!await new Promise(o=>{const a=Re.createConnection(e,"127.0.0.1");a.once("connect",()=>{a.destroy(),o(!0)}),a.once("error",()=>o(!1)),a.setTimeout(500,()=>{a.destroy(),o(!1)})})){console.log(`[launcher] Previous CDP port ${e} is closed`);return}await new Promise(o=>setTimeout(o,250))}throw new Error(`Existing ${e} CDP service did not stop; refusing to inject into the old application instance`)}async function Rt(e){if(!P(e))throw new Error(`Unknown app: ${e}`);const t=E.platform();if(t==="win32"){const n=await Le(e);if(n)return n}else if(t==="darwin"){const n=["/Applications/WorkBuddy.app","/Applications/ChatGPT.app"];for(const o of n)if(u.existsSync(o))return o}else if(t==="linux"){const n=e==="workbuddy"?["workbuddy","WorkBuddy"]:["codex","Codex"],o=["/usr/bin","/usr/local/bin","/opt",l.join(E.homedir(),".local","bin"),"/snap/bin"];for(const a of o)if(u.existsSync(a))for(const s of n){const c=l.join(a,s);if(u.existsSync(c))return c}for(const a of n)try{const{spawnSync:s}=require("child_process"),c=s("which",[a],{encoding:"utf8"}),i=String(c.stdout||"").trim();if(i&&u.existsSync(i))return i}catch{}}throw new Error(`Could not find ${e} executable`)}const Ot=5e3,Ut=100,Lt=15e3,Nt=1e4,Bt=5e3;function Wt(e){if(!Number.isInteger(e)||e<1024||e>65535)throw new TypeError("port must be an integer from 1024 through 65535");return e}function B(e,r,t={}){const n=t.allowZero?0:Number.EPSILON;if(!Number.isFinite(e)||e<n){const o=t.allowZero?"non-negative":"positive";throw new TypeError(`${r} must be a finite ${o} number`)}return e}function Be(e){if(typeof e!="string"||e.length===0||e!==e.trim())throw new TypeError("webSocketDebuggerUrl must be a non-empty URL string");let r;try{r=new URL(e)}catch(t){throw new TypeError(`webSocketDebuggerUrl is invalid: ${t.message}`)}if(r.protocol!=="ws:"||r.hostname!=="127.0.0.1"||r.username||r.password||r.hash||!r.port)throw new TypeError("webSocketDebuggerUrl must use ws://127.0.0.1 with an explicit port");return Wt(Number(r.port)),r}function Ht(e,r){if(e===null||typeof e!="object"||Array.isArray(e)||e.type!=="page"||typeof e.url!="string"||typeof e.webSocketDebuggerUrl!="string")return!1;try{Be(e.webSocketDebuggerUrl)}catch{return!1}return e.url.includes(r)}function xe(e){if(e===null||typeof e!="object"||Array.isArray(e)||e.type!=="page"||typeof e.url!="string"||typeof e.webSocketDebuggerUrl!="string")return!1;try{return Be(e.webSocketDebuggerUrl),!0}catch{return!1}}function Ft(e){return new Promise(r=>setTimeout(r,e))}async function Te(e,r){const t=Math.max(0,r.deadline-Date.now());let n=null;try{return await Promise.race([e,new Promise((o,a)=>{n=setTimeout(()=>{var s;(s=r.onTimeout)==null||s.call(r),a(new Error(`${r.label} timed out after ${r.timeoutMs}ms`))},t)})])}finally{n&&clearTimeout(n)}}async function V(e,r,t={}){const n=B(t.timeoutMs??Bt,"timeoutMs",{allowZero:!1}),o=t.fetchImpl??globalThis.fetch;if(typeof o!="function")throw new TypeError("fetchImpl must be a function");const a=`http://127.0.0.1:${e}/json/list`,s=new AbortController,c=Date.now()+n,i=t.quiet===!0;i||console.log(`[cdp] fetchRendererTargets: port=${e}, timeoutMs=${n}, endpoint=${a}`);let d;try{d=await Te(Promise.resolve(o(a,{redirect:"error",signal:s.signal})),{deadline:c,timeoutMs:n,label:"renderer target discovery",onTimeout:()=>s.abort()})}catch(m){throw i||console.log("[cdp] fetchRendererTargets error:",m),new Error(`failed to fetch renderer targets from ${a}: ${m.message}`)}if(d===null||typeof d!="object"||!d.ok)throw new Error(`renderer target discovery failed with HTTP ${(d==null?void 0:d.status)??"unknown"}`);let p;try{p=await Te(Promise.resolve(d.json()),{deadline:c,timeoutMs:n,label:"renderer target discovery JSON",onTimeout:()=>s.abort()})}catch(m){throw new Error(`malformed renderer target JSON from ${a}: ${m.message}`)}if(!Array.isArray(p))throw new Error("malformed renderer target JSON: expected an array");return p.filter(m=>Ht(m,r)).sort(qt)}async function zt(e,r,t={}){const n=B(t.timeoutMs??Ot,"timeoutMs",{allowZero:!0}),o=B(t.pollMs??Ut,"pollMs",{allowZero:!1}),a=t.fetchImpl??globalThis.fetch;let s=0;const c=Date.now()+n;let i=new Error("no renderer discovery attempt completed");for(console.log(`[cdp] waitForRendererTargets: port=${e}, hint=${r}, timeoutMs=${n}`);;){try{const p=Math.max(1,Math.min(n-s,c-Date.now()));console.log(`[cdp] Attempting fetch: elapsed=${s}ms, remainingBudget=${p}ms, deadline=${c}`);const m=await V(e,r,{fetchImpl:a,timeoutMs:p});if(m.length>0)return m;i=new Error("no matching renderer/index.html page targets")}catch(p){i=p instanceof Error?p:new Error(String(p)),console.log("[cdp] Fetch error:",i.message)}if(s>=n||Date.now()>=c)throw new Error(`timed out after ${n}ms waiting for renderer targets on 127.0.0.1:${e}: ${i.message}`);const d=Math.min(o,n-s);await Ft(d),s+=d}}class U{constructor(r,t={}){S(this,"webSocketDebuggerUrl");S(this,"WebSocketImpl");S(this,"commandTimeoutMs");S(this,"connectTimeoutMs");S(this,"socket",null);S(this,"nextRequestId",1);S(this,"pending",new Map);S(this,"socketOpen",!1);S(this,"opened",!1);S(this,"closed",!1);S(this,"closeStarted",!1);S(this,"terminalError",null);S(this,"openPromise",null);S(this,"resolveOpen",null);S(this,"rejectOpen",null);S(this,"connectTimer",null);this.webSocketDebuggerUrl=r;let n=null,o=null;try{n=require("ws")??null,n||(o="ws loaded but WebSocket is undefined")}catch(a){o=`ws require failed: ${(a==null?void 0:a.message)??a}`}if(!n)try{const a=require("undici");n=(a==null?void 0:a.WebSocket)??null,n||(o="undici loaded but WebSocket is undefined")}catch(a){o=`undici require failed: ${(a==null?void 0:a.message)??a}`}if(!n&&typeof globalThis.WebSocket=="function"&&(n=globalThis.WebSocket,o=null),!n){const a=o?` (${o})`:"";throw new Error(`No WebSocket implementation available for CDP${a}`)}this.WebSocketImpl=t.WebSocketImpl??n,this.commandTimeoutMs=B(t.commandTimeoutMs??Lt,"commandTimeoutMs"),this.connectTimeoutMs=B(t.connectTimeoutMs??Nt,"connectTimeoutMs")}open(){if(this.closed)return Promise.reject(this.terminalError??new Error("CDP session is closed"));if(this.opened)return Promise.resolve(this);if(this.openPromise)return this.openPromise;this.openPromise=new Promise((t,n)=>{this.resolveOpen=t,this.rejectOpen=n}),this.connectTimer=setTimeout(()=>{this.terminate(new Error(`CDP WebSocket connect timed out after ${this.connectTimeoutMs}ms`)),this.closeSocket()},this.connectTimeoutMs);try{this.socket=new this.WebSocketImpl(this.webSocketDebuggerUrl)}catch(t){return this.terminate(new Error(`failed to open CDP WebSocket: ${t.message}`)),this.openPromise}const r=this.socket;return r.onopen=()=>{this.closed||this.socketOpen||(this.clearConnectTimer(),this.socketOpen=!0,Promise.all([this.send("Runtime.enable"),this.send("Page.enable")]).then(()=>{if(this.closed)return;this.opened=!0;const t=this.resolveOpen;this.resolveOpen=null,this.rejectOpen=null,t==null||t(this)}).catch(t=>{this.terminate(t),this.closeSocket()}))},r.onmessage=t=>this.handleMessage(t),r.onerror=t=>{const n=t.error,o=n instanceof Error?n.message:typeof t.message=="string"&&t.message.length>0?t.message:"unknown socket error";this.terminate(new Error(`CDP WebSocket error: ${o}`)),this.closeSocket()},r.onclose=()=>{this.closeStarted=!0,this.terminate(new Error("CDP WebSocket closed"))},this.openPromise}send(r,t={},n={}){if(this.closed)return Promise.reject(this.terminalError??new Error("CDP session is closed"));if(!this.socketOpen||!this.socket)return Promise.reject(new Error("CDP session is not open"));if(typeof r!="string"||r.length===0)return Promise.reject(new TypeError("CDP method must be a non-empty string"));const o=B(n.timeoutMs??this.commandTimeoutMs,"timeoutMs"),a=this.nextRequestId++;return new Promise((s,c)=>{const i=setTimeout(()=>{this.pending.delete(a),c(new Error(`CDP ${r} timed out after ${o}ms`))},o);this.pending.set(a,{resolve:s,reject:c,timer:i});try{this.socket.send(JSON.stringify({id:a,method:r,params:t}))}catch(d){clearTimeout(i),this.pending.delete(a),c(new Error(`failed to send CDP ${r}: ${d.message}`))}})}async evaluate(r,t={}){var o,a,s;if(typeof r!="string")throw new TypeError("Runtime.evaluate expression must be a string");const n=await this.send("Runtime.evaluate",{expression:r,awaitPromise:!0,returnByValue:!0},t);if(n!=null&&n.exceptionDetails)throw new Error(`Runtime.evaluate failed: ${((o=n.exceptionDetails.exception)==null?void 0:o.description)??n.exceptionDetails.text??"unknown JavaScript exception"}`);if(((a=n==null?void 0:n.result)==null?void 0:a.type)!=="undefined")return(s=n==null?void 0:n.result)==null?void 0:s.value}async addScriptToEvaluateOnNewDocument(r){const t=await this.send("Page.addScriptToEvaluateOnNewDocument",{source:r});return t==null?void 0:t.identifier}async removeScriptToEvaluateOnNewDocument(r){await this.send("Page.removeScriptToEvaluateOnNewDocument",{identifier:r})}close(){this.closeStarted||(this.terminate(new Error("CDP session closed by client")),this.closeSocket())}handleMessage(r){if(typeof r.data!="string"){this.terminate(new Error("received a non-text CDP WebSocket message")),this.closeSocket();return}let t;try{t=JSON.parse(r.data)}catch(o){this.terminate(new Error(`received malformed CDP JSON: ${o.message}`)),this.closeSocket();return}if(!Number.isInteger(t==null?void 0:t.id))return;const n=this.pending.get(t.id);if(n){if(this.pending.delete(t.id),clearTimeout(n.timer),t.error){n.reject(new Error(`CDP error: ${t.error.message}`));return}n.resolve(t.result)}}terminate(r){if(this.terminalError)return;this.clearConnectTimer(),this.terminalError=r,this.closed=!0,this.socketOpen=!1;const t=this.rejectOpen;this.resolveOpen=null,this.rejectOpen=null,t==null||t(r);for(const{reject:n,timer:o}of this.pending.values())clearTimeout(o),n(r);this.pending.clear()}clearConnectTimer(){this.connectTimer!==null&&(clearTimeout(this.connectTimer),this.connectTimer=null)}closeSocket(){if(this.closeStarted||(this.closeStarted=!0,!this.socket||typeof this.socket.close!="function"))return;const r=this.WebSocketImpl.CLOSING??2,t=this.WebSocketImpl.CLOSED??3;this.socket.readyState===r||this.socket.readyState===t||this.socket.close()}}function qt(e,r){const t=[String(e.id??""),e.url,e.webSocketDebuggerUrl],n=[String(r.id??""),r.url,r.webSocketDebuggerUrl];for(let o=0;o<t.length;o++){if(t[o]<n[o])return-1;if(t[o]>n[o])return 1}return 0}function Jt(){return l.join(y.app.getAppPath(),"themes")}function We(){const e=l.join(y.app.getPath("userData"),"themes");return u.mkdirSync(e,{recursive:!0}),e}function Kt(){return[We(),Jt()]}const Ee=new Map;function oe(e){var o;const r=[],t=new Set;for(const a of Kt()){if(!u.existsSync(a))continue;const s=u.readdirSync(a,{withFileTypes:!0});for(const c of s){if(!c.isDirectory())continue;const i=l.join(a,c.name),d=l.join(i,"theme.json");if(u.existsSync(d))try{const p=JSON.parse(u.readFileSync(d,"utf-8")),m=Yt(p);if(t.has(m.id))continue;const h=l.join(i,m.hero);if(!u.existsSync(h)||!u.statSync(h).isFile())throw new Error(`theme hero is missing: ${m.hero}`);if(e&&((o=m.apps[e])==null?void 0:o.compat)!==!0&&e!=="hana-agent")continue;t.add(m.id),r.push({id:m.id,name:m.name,author:m.author,path:i,manifest:m})}catch(p){console.error(`Failed to load theme ${c.name}:`,p)}}}const n=new Map;for(const a of r){const s=l.join(a.path,a.manifest.hero),c=me(s),i=`${a.name.trim().toLocaleLowerCase()}\0${a.author.trim().toLocaleLowerCase()}\0${c}`,d=n.get(i);(!d||Vt(a.id,d.id))&&n.set(i,a)}return[...n.values()].sort((a,s)=>a.name.localeCompare(s.name))}function me(e){const r=u.statSync(e),t=Ee.get(e);if(t&&t.size===r.size&&t.mtimeMs===r.mtimeMs)return t.hash;const n=ge.createHash("sha256").update(u.readFileSync(e)).digest("hex");return Ee.set(e,{size:r.size,mtimeMs:r.mtimeMs,hash:n}),n}function Vt(e,r){const t=e.startsWith("custom-"),n=r.startsWith("custom-");return t!==n?!t:e.length<r.length||e.length===r.length&&e.localeCompare(r)<0}function He(e,r){return oe(r).find(t=>t.id===e)}function Gt(e){const r=He(e);if(!r)return;const t=l.resolve(r.path,r.manifest.hero);if(t.startsWith(`${l.resolve(r.path)}${l.sep}`))return t}function Xt(e){return`theme-asset://local/${encodeURIComponent(e)}`}function Zt(e){const r=l.resolve(e.path),t=l.resolve(r,e.manifest.hero);if(t!==r&&!t.startsWith(r+l.sep))throw new Error(`Theme hero path escapes theme directory: ${e.manifest.hero}`);const n=u.readFileSync(t);return`data:${er(e.manifest.hero)};base64,${n.toString("base64")}`}function Qt(e,r,t){const n=me(t);return oe().some(o=>o.name.trim().toLowerCase()!==e.trim().toLowerCase()||o.author.trim().toLowerCase()!==r.trim().toLowerCase()?!1:me(l.join(o.path,o.manifest.hero))===n)}function Yt(e){if(typeof e!="object"||e===null||Array.isArray(e))throw new Error("theme manifest must be an object");if(e.schemaVersion!==1)throw new Error(`unsupported theme schema ${e.schemaVersion}`);if(typeof e.id!="string"||!/^[a-z0-9-]+$/.test(e.id))throw new Error("theme id must use lowercase letters, numbers, and hyphens");if(typeof e.name!="string"||!e.name.trim())throw new Error("theme name must be a non-empty string");if(typeof e.author!="string")throw new Error("theme author must be a string");if(typeof e.hero!="string")throw new Error("theme hero must be a string");let r;if(typeof e.video=="string"&&e.video.trim()){const n=e.video.trim();l.basename(n)!==n||!/\.(mp4|webm)$/i.test(n)?console.warn(`theme ${e.id}: ignoring invalid video field ${n}`):r=n}if(typeof e.colors!="object"||e.colors===null)throw new Error("theme colors must be an object");const t=["accent","secondary","surface","text"];for(const n of t)if(typeof e.colors[n]!="string"||!/^#[0-9a-fA-F]{6}$/.test(e.colors[n]))throw new Error(`theme color ${n} must be a hex color`);return{schemaVersion:1,id:e.id,name:e.name.trim(),author:e.author,hero:e.hero,video:r,colors:{accent:e.colors.accent,secondary:e.colors.secondary,surface:e.colors.surface,text:e.colors.text},copy:e.copy??void 0,apps:e.apps??{}}}function er(e){const r=l.extname(e).toLowerCase();return{".png":"image/png",".jpg":"image/jpeg",".jpeg":"image/jpeg",".webp":"image/webp",".gif":"image/gif",".mp4":"video/mp4",".webm":"video/webm"}[r]||"image/png"}function tr(e){const r=e.manifest.video;if(!r)return null;const t=l.resolve(e.path);let n=l.resolve(t,r);if(n!==t&&!n.startsWith(t+l.sep)||!/\.(mp4|webm)$/i.test(l.extname(n)))return null;const o=y.app.getAppPath();if(o.endsWith(".asar")&&(t===o||t.startsWith(o+l.sep))){const a=l.resolve(o+".unpacked",l.relative(o,t));n=l.resolve(a,r)}try{if(!u.existsSync(n)||!u.statSync(n).isFile())return null}catch{return null}return n}const Fe=5,rr=32*1024*1024;let G=null;function we(){try{const e=JSON.parse(u.readFileSync(ze(),"utf8"));return ye(e)}catch{return[]}}function nr(e){const r=ye(e),t=[...we()];for(const o of r){const a=t.findIndex(s=>s.id===o.id);a>=0?t[a]=o:t.push(o)}const n=t.slice(0,Fe);return Je(n),n}function or(e,r,t,n=4){const o=Ke()[e]??{};return[...r].sort((a,s)=>{if(a===t)return-1;if(s===t)return 1;const c=o[a]??{count:0,lastUsedAt:0},i=o[s]??{count:0,lastUsedAt:0};return i.lastUsedAt-c.lastUsedAt||i.count-c.count}).slice(0,n)}function ue(e,r){if(!/^[a-z0-9-]+$/i.test(e)||!/^[a-z0-9-]+$/i.test(r))return;const t=Ke(),n=t[e]??{},o=n[r]??{count:0};n[r]={count:o.count+1,lastUsedAt:Date.now()},t[e]=n,Ve(qe(),t)}function ar(){return G||(G=new Promise((e,r)=>{const t=ge.randomBytes(24).toString("hex"),n=je.createServer((o,a)=>{if(a.setHeader("Access-Control-Allow-Origin","*"),a.setHeader("Access-Control-Allow-Headers","Authorization, Content-Type"),a.setHeader("Access-Control-Allow-Methods","GET, PUT, POST, OPTIONS"),a.setHeader("Access-Control-Allow-Private-Network","true"),o.method==="OPTIONS"){a.writeHead(204).end();return}if(o.headers.authorization!==`Bearer ${t}`){a.writeHead(401).end("Unauthorized");return}if(o.url==="/theme-usage"&&o.method==="POST"){Ie(o,a,s=>{if(typeof(s==null?void 0:s.appId)!="string"||typeof(s==null?void 0:s.themeId)!="string")throw new Error("Invalid theme usage payload");ue(s.appId,s.themeId),ce(a,200,{success:!0})});return}if(o.url!=="/custom-themes"){a.writeHead(404).end("Not found");return}if(o.method==="GET"){ce(a,200,we());return}if(o.method!=="PUT"){a.writeHead(405).end("Method not allowed");return}Ie(o,a,s=>{const c=ye(s);Je(c),ce(a,200,c)})});n.once("error",r),n.listen(0,"127.0.0.1",()=>{const o=n.address();if(!o||typeof o=="string"){n.close(),r(new Error("Shared custom theme service did not expose a TCP port"));return}const a=`http://127.0.0.1:${o.port}`;e({endpoint:`${a}/custom-themes`,usageEndpoint:`${a}/theme-usage`,token:t})})}),G)}function ze(){return l.join(y.app.getPath("userData"),"custom-themes.json")}function qe(){return l.join(y.app.getPath("userData"),"theme-usage.json")}function Je(e){Ve(ze(),e)}function Ke(){try{const e=JSON.parse(u.readFileSync(qe(),"utf8"));return e&&typeof e=="object"&&!Array.isArray(e)?e:{}}catch{return{}}}function Ve(e,r){u.mkdirSync(l.dirname(e),{recursive:!0}),u.writeFileSync(e,`${JSON.stringify(r,null,2)}
-`)}function Ie(e,r,t){let n=0;const o=[];e.on("data",a=>{if(n+=a.length,n>rr){r.writeHead(413).end("Payload too large"),e.destroy();return}o.push(a)}),e.on("end",()=>{if(!r.headersSent)try{t(JSON.parse(Buffer.concat(o).toString("utf8")))}catch(a){r.writeHead(400).end(a.message)}})}function ye(e){if(!Array.isArray(e))throw new Error("Custom themes must be an array");return e.slice(0,Fe).map((r,t)=>{var a,s;if(!r||typeof r!="object")throw new Error(`Invalid custom theme at index ${t}`);const n=r;if(typeof n.id!="string"||!/^custom-[a-z0-9-]+$/i.test(n.id))throw new Error(`Invalid custom theme id at index ${t}`);if(typeof n.name!="string"||!n.name.trim())throw new Error(`Invalid custom theme name at index ${t}`);if(typeof n.dataUrl!="string"||!/^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(n.dataUrl))throw new Error(`Invalid custom theme image at index ${t}`);for(const c of["accent","secondary","surface","text"])if(typeof((a=n.colors)==null?void 0:a[c])!="string"||!/^#[0-9a-fA-F]{6}$/.test(n.colors[c]))throw new Error(`Invalid custom theme color ${c} at index ${t}`);const o=typeof((s=n.colors)==null?void 0:s.average)=="string"&&/^#[0-9a-fA-F]{6}$/.test(n.colors.average)?n.colors.average:void 0;return{id:n.id,name:n.name.trim(),dataUrl:n.dataUrl,colors:{accent:n.colors.accent,secondary:n.colors.secondary,surface:n.colors.surface,text:n.colors.text,...o?{average:o}:{}}}})}function ce(e,r,t){e.writeHead(r,{"Content-Type":"application/json; charset=utf-8"}),e.end(JSON.stringify(t))}function Y(e){const r=/^#([0-9a-f]{6})$/i.exec(e);if(!r)return[255,255,255];const t=parseInt(r[1],16);return[t>>16&255,t>>8&255,t&255]}function F(e){return"#"+e.map(r=>Math.max(0,Math.min(255,Math.round(r))).toString(16).padStart(2,"0")).join("")}function le(e){const r=e/255;return r<=.04045?r/12.92:Math.pow((r+.055)/1.055,2.4)}function ee(e){return .2126*le(e[0])+.7152*le(e[1])+.0722*le(e[2])}function L(e,r){const t=ee(e),n=ee(r);return(Math.max(t,n)+.05)/(Math.min(t,n)+.05)}function N(e,r,t){return[0,1,2].map(n=>e[n]+(r[n]-e[n])*t)}function Ge(e){const r=e[0]/255,t=e[1]/255,n=e[2]/255,o=Math.max(r,t,n),a=Math.min(r,t,n),s=(o+a)/2;if(o===a)return[0,0,s];const c=o-a,i=s>.5?c/(2-o-a):c/(o+a);let d;return o===r?d=(t-n)/c+(t<n?6:0):o===t?d=(n-r)/c+2:d=(r-t)/c+4,[d/6,i,s]}function pe(e,r,t){if(r<=0){const s=t*255;return[s,s,s]}const n=(s,c,i)=>(i<0&&(i+=1),i>1&&(i-=1),i<1/6?s+(c-s)*6*i:i<1/2?c:i<2/3?s+(c-s)*(2/3-i)*6:s),o=t<.5?t*(1+r):t+r-t*r,a=2*t-o;return[n(a,o,e+1/3)*255,n(a,o,e)*255,n(a,o,e-1/3)*255]}function sr(e,r,t){if(L(e,r)>=t)return e;const n=t+Math.max(.02,t*.02),o=ee(e),a=ee(r),s=o<a||o===a&&a>.475,[c,i,d]=Ge(e);if(i>=.02){let f=s?0:d,b=s?d:1;for(let C=0;C<14;C++){const A=(f+b)/2;L(pe(c,i,A),r)>=n?s?f=A:b=A:s?b=A:f=A}const v=pe(c,i,s?f:b);if(L(v,r)>=t)return v}const p=s?[0,0,0]:[255,255,255];let m=0,h=1;for(let f=0;f<12;f++){const b=(m+h)/2;L(N(e,p,b),r)>=n?h=b:m=b}return N(e,p,h)}function X(e,r,t){if(r.length===0)return e;const n=p=>Math.min(...r.map(m=>L(p,m)));let o=e;for(let p=0;p<4;p++){if(n(o)>=t)return o;const m=n(o);let h=r[0],f=1/0;for(const v of r){const C=L(o,v);C<f&&(f=C,h=v)}const b=sr(o,h,t);if(n(b)<=m+1e-9)break;o=b}if(n(o)>=t)return o;const[a,s]=Ge(e),c=[e,o];for(const p of[.02,.06,.12,.22,.78,.88,.95,.99])c.push(pe(a,s,p));let i=o,d=n(o);for(const p of c){const m=n(p);m>d+1e-9&&(d=m,i=p)}return i}function ir(e){if(e.length<16||e.readUInt32BE(0)!==2303741511)return null;let r=8,t=-1;const n=[];for(;r+12<=e.length;){const a=e.readUInt32BE(r),s=e.toString("ascii",r+4,r+8),c=e.subarray(r+8,r+8+a);if(s==="IHDR"){const i=c.readUInt32BE(0),d=c.readUInt32BE(4),p=c[8],m=c[12];if(i!==1||d!==1||p!==8||m!==0)return null;t=c[9]}else if(s==="IDAT")n.push(c);else if(s==="IEND")break;r+=12+a}if(t<0||n.length===0)return null;let o;try{o=ht.inflateSync(Buffer.concat(n))}catch{return null}if(o.length<2||o[0]>4)return null;switch(t){case 6:return o.length>=5?[o[1],o[2],o[3]]:null;case 2:return o.length>=4?[o[1],o[2],o[3]]:null;case 4:return o.length>=3?[o[1],o[1],o[1]]:null;case 0:return o.length>=2?[o[1],o[1],o[1]]:null;default:return null}}const D="dream-work-style",I="dream-work-menu",W=new Map,q=new Map,O=new Map,x={id:"wb-dream-sentinel-id",hero:"data:image/png;base64,WBDREAMHEROSENTINEL",accent:"#010203",secondary:"#040506",surface:"#070809",text:"#0a0b0c",textSubtle:"#0d0e0f",textSubtlest:"#101112",textSecondary:"#131415"},cr={zcode:[.7,.76,.88,.9],codex:[.76,.82,.86,.9,.92],catpaw:[.78,.82],"qoder-work":[.7,.82,.86,.9],"qwen-office":[.86,.9],workbuddy:[.58,.62,.92],"hana-agent":[.62,.66,.78]},Xe=[.7,.76,.88,.9];function Ze(e){return cr[e]??Xe}function lr(e){if(e)return"file:///"+encodeURI(e.replace(/\\/g,"/")).replace(/#/g,"%23").replace(/\?/g,"%3F")}const Pe=new Map;function dr(e){let r;try{r=u.statSync(e)}catch{return null}const t=Pe.get(e);if(t&&t.size===r.size&&t.mtimeMs===r.mtimeMs)return t.rgb;let n=null;try{const o=y.nativeImage.createFromPath(e);if(!o.isEmpty()){const a=o.resize({width:1,height:1}).toDataURL();n=ir(Buffer.from(a.slice(a.indexOf(",")+1),"base64"))}}catch(o){console.warn("[injector] Hero average sampling failed:",o.message)}return Pe.set(e,{size:r.size,mtimeMs:r.mtimeMs,rgb:n}),n}let Z=null;async function mr(){if(!Z)try{const e=l.resolve(__dirname,"manager","codex-dream-skin.css");Z=await ut.readFile(e,"utf-8")}catch(e){console.warn("[injector] Failed to load Codex base CSS:",e.message),Z=""}return Z}async function Qe(e,r,t,n={}){const o=P(e),a=n.rendererUrlHint?[n.rendererUrlHint]:(o==null?void 0:o.rendererHints)??["renderer/index.html","index.html"];let s=[],c="No renderer targets found";for(const i of a)try{if(console.log(`[injector] Trying hint "${i}" on port ${t}`),s=await zt(t,i,{timeoutMs:2e4,pollMs:500}),s.length>0){console.log(`[injector] Found ${s.length} targets with hint "${i}"`);break}}catch(d){c=d.message,console.log(`[injector] Hint "${i}" failed: ${d.message}`)}if(s.length===0)try{console.log(`[injector] Strict hints failed, trying relaxed page-target fallback on port ${t}`);const d=await(await fetch(`http://127.0.0.1:${t}/json/list`,{signal:AbortSignal.timeout(5e3)})).json(),p=(Array.isArray(d)?d:[]).filter(xe).sort((m,h)=>{const f=[String(m.id??""),m.url,m.webSocketDebuggerUrl],b=[String(h.id??""),h.url,h.webSocketDebuggerUrl];for(let v=0;v<f.length;v++){if(f[v]<b[v])return-1;if(f[v]>b[v])return 1}return 0});p.length>0&&(console.log(`[injector] Relaxed fallback found ${p.length} page targets`),s=p)}catch(i){console.log(`[injector] Relaxed fallback failed: ${i.message}`)}if(s.length===0)return{success:!1,applied:0,error:c};try{const i=oe(e);if(console.log(`[injector] Loaded ${i.length} themes`),!i.some(g=>g.id===r))return{success:!1,applied:0,error:`Theme ${r} is not compatible with ${e}`};const d=or(e,i.map(g=>g.id),r,8),p=new Map(i.map(g=>[g.id,g])),m=d.map(g=>p.get(g)).filter(Boolean),h=new Map;for(const g of m){const k=e==="zcode"?tr(g):null;h.set(g.id,{name:g.name,css:Ae(e,g.manifest,Zt(g),dr(l.join(g.path,g.manifest.hero)),{video:!!k}),surface:g.manifest.colors.surface,videoUrl:lr(k)})}const f=Array.from(h.entries()).map(([g,k])=>{var M;return{id:g,name:k.name,css:k.css,surface:k.surface,accent:((M=i.find(w=>w.id===g))==null?void 0:M.manifest.colors.accent)??"#24c9d7",videoUrl:k.videoUrl}});let b=we();if(b.length===0){const g=e==="workbuddy"?"dreamCustomThemes":"dreamCodexCustomThemes";for(const k of s){const M=new U(k.webSocketDebuggerUrl);try{await M.open();const w=await M.evaluate(`(() => localStorage.getItem(${JSON.stringify(g)}) || '[]')()`),$=JSON.parse(w);if(Array.isArray($)&&$.length>0){b=nr($);break}}catch(w){console.warn(`[injector] Failed to import existing custom themes from ${e} target ${k.id}:`,w)}finally{M.close()}}}const v=await ar(),C=e==="workbuddy"?Ir({styleId:D,menuId:I,currentThemeId:r,themes:f,sharedCustomThemes:b,sharedCustomThemeService:v,cssTemplate:et({id:x.id,colors:{accent:x.accent,secondary:x.secondary,surface:x.surface,text:x.text},copy:null},x.hero,{accent:x.accent,secondary:x.secondary,surface:x.surface,text:x.text})}):e==="hana-agent"?Cr({styleId:D,menuId:I,currentThemeId:r,themes:f,sharedCustomThemes:b,sharedCustomThemeService:v,cssTemplate:Ye({id:x.id,colors:{accent:x.accent,secondary:x.secondary,surface:x.surface,text:x.text}},x.hero,{accent:x.accent,secondary:x.secondary,surface:x.surface,text:x.text})}):Pr({styleId:D,menuId:I,currentThemeId:r,appId:e,themes:f,sharedCustomThemes:b,sharedCustomThemeService:v,cssTemplate:Ae(e,{id:x.id,colors:{accent:x.accent,secondary:x.secondary,surface:x.surface,text:x.text}},x.hero,null,{template:!0}),surfaceAlphas:Ze(e)});let A=0;for(const g of s)try{console.log(`[injector] Injecting to target ${g.id}: ${g.url}`);const k=new U(g.webSocketDebuggerUrl);if(await k.open(),e==="workbuddy"&&!await k.evaluate(`(() => {
+`;try{const{stdout:r}=await or("powershell.exe",["-NoLogo","-NoProfile","-NonInteractive","-ExecutionPolicy","Bypass","-Command",e],{encoding:"utf8",maxBuffer:4194304}),t=r.trim();return he(t)?t:null}catch{return null}}function dr(e,r){const t=m.basename(e).toLowerCase();return r.some(n=>n.toLowerCase()===t)}function he(e){try{return f.statSync(e).isFile()}catch{return!1}}async function mr(){if(B.platform()!=="win32")return[];const e=[];for(const r of Ie){const t=await kt(r.id);t&&e.push({appId:r.id,name:r.name,path:t})}return e}const ot=qe.promisify(Me.execFile);async function ur(e){const r=L(e);if(!r)return!1;const t=[...new Set([r.processName,...r.exeNames].filter(Boolean))];if(B.platform()==="win32"){for(const n of t)try{const{stdout:a}=await ot("tasklist.exe",["/FI",`IMAGENAME eq ${n}`,"/FO","CSV","/NH"],{encoding:"utf8",windowsHide:!0});if(a.split(/\r?\n/).some(o=>o.trim().toLowerCase().startsWith(`"${n.toLowerCase()}"`)))return!0}catch{}return!1}for(const n of t)try{return await ot("pgrep",["-f",n],{encoding:"utf8"}),!0}catch{}return!1}async function Ct(e,r){if(!/^[a-z0-9-]+$/i.test(e||""))return{success:!1,error:`Invalid appId: ${e}`};if(r!=null&&!/^[a-z0-9._-]+$/i.test(r))return{success:!1,error:`Invalid themeId: ${r}`};const t=L(e);if(!t)return{success:!1,error:`Unknown app: ${e}`};const n=t.defaultPort,a=[`--remote-debugging-port=${n}`];e==="codex"&&a.push("--disable-extensions"),r&&a.push(`--dream-theme=${r}`);try{const o=await vr(e);if(!o||!f.existsSync(o)||!f.statSync(o).isFile())return{success:!1,error:`Executable not found: ${o}`};if(B.platform()==="win32"&&!/\.exe$/i.test(o))return{success:!1,error:`Refusing to launch non-executable path: ${o}`};if(console.log(`[launcher] Killing existing ${e} instances...`),await wr(e),await yr(n,15e3),t.devToolsActivePort)try{f.unlinkSync(t.devToolsActivePort)}catch{}console.log(`[launcher] Launching ${o} with args: ${a.join(" ")}`);const s=Me.spawn(o,a,{detached:!0,stdio:"ignore",env:pr()});s.unref(),console.log(`[launcher] Spawned process with PID: ${s.pid}`),console.log(`[launcher] Waiting for CDP port ${n} to be ready...`);let c=n;return t.devToolsActivePort?c=await hr(t.devToolsActivePort,t.rendererHints,3e4):await br(n,3e4),console.log(`[launcher] CDP port ${c} is ready`),e==="hana-agent"&&await fr(c,t.rendererHints,3e4),{success:!0,port:c}}catch(o){return console.error("[launcher] Launch failed:",o),{success:!1,error:o.message}}}function pr(){const e={...process.env};for(const r of["VITE_DEV_SERVER_URL","ELECTRON_RENDERER_URL","MAIN_VITE_DEV_SERVER_URL","ELECTRON_RUN_AS_NODE"])delete e[r];return e}async function hr(e,r,t){const n=Date.now();let a=0;for(;Date.now()-n<t;){try{const o=f.readFileSync(e,"utf8").split(/\r?\n/,1)[0],s=Number(o);if(Number.isInteger(s)&&s>0)return a=s,await gr(s,r,3e3),s}catch{}await new Promise(o=>setTimeout(o,500))}throw new Error(`DevToolsActivePort did not expose a live renderer${a?` on port ${a}`:""}: ${e}`)}async function gr(e,r,t){const n=Date.now();for(;Date.now()-n<t;){try{const a=await fetch(`http://127.0.0.1:${e}/json/list`,{signal:AbortSignal.timeout(1e3)});if(a.ok){const o=await a.json();if(Array.isArray(o)&&o.some(s=>(s==null?void 0:s.type)==="page"&&r.some(c=>String(s.url).includes(c))))return}}catch{}await new Promise(a=>setTimeout(a,250))}throw new Error(`CDP renderer endpoint is not ready on port ${e}`)}async function fr(e,r,t){const n=Date.now();let a="",o=0;for(;Date.now()-n<t;){try{const i=(await(await fetch(`http://127.0.0.1:${e}/json/list`,{signal:AbortSignal.timeout(1e3)})).json()).find(l=>(l==null?void 0:l.type)==="page"&&r.some(u=>String(l.url).includes(u)));if(i!=null&&i.id){if(i.id!==a)a=i.id,o=Date.now();else if(Date.now()-o>=3e3){console.log(`[launcher] Stable HanaAgent renderer ${a} confirmed`);return}}}catch{}await new Promise(s=>setTimeout(s,250))}throw new Error(`HanaAgent renderer did not stabilize on port ${e}`)}async function br(e,r){const t=Date.now();let n="unknown";for(;Date.now()-t<r;)try{await new Promise((a,o)=>{const s=wt.createConnection(e,"127.0.0.1",()=>{s.end(),a()});s.once("error",c=>{n=c.message,o(c)}),setTimeout(()=>{s.destroy(),o(new Error("timeout"))},1e3)}),console.log(`[launcher] Port ${e} is open, verifying CDP endpoint...`),await xr(e,15e3),console.log(`[launcher] CDP endpoint verified on port ${e}`);return}catch(a){n=a.message,console.log(`[launcher] Port check failed: ${a.message}, retrying...`),await new Promise(o=>setTimeout(o,1e3))}throw new Error(`CDP port ${e} did not become ready within ${r}ms (last error: ${n})`)}async function xr(e,r){const t=Date.now();for(;Date.now()-t<r;)try{await new Promise((n,a)=>{const o=xt.request({hostname:"127.0.0.1",port:e,path:"/json/version",method:"GET",timeout:2e3},s=>{let c="";s.on("data",i=>{c+=i}),s.on("end",()=>{s.statusCode===200?(console.log(`[launcher] CDP version response: ${c.substring(0,200)}`),n()):a(new Error(`HTTP ${s.statusCode}`))})});o.on("error",a),o.on("timeout",()=>{o.destroy(),a(new Error("timeout"))}),o.end()});return}catch(n){if(Date.now()-t>=r)throw n;await new Promise(a=>setTimeout(a,1e3))}}async function wr(e){const r=B.platform(),t=L(e);if(!t)return;const n=[...new Set([t.processName,...t.exeNames].filter(Boolean))];try{if(r==="win32"){const{spawnSync:a}=require("child_process");for(const o of n)try{a("taskkill",["/T","/F","/IM",o],{stdio:"ignore"}),console.log(`[launcher] Killed existing ${o} process tree`)}catch{}}else if(r==="darwin"){const{spawnSync:a}=require("child_process");for(const o of n)try{a("pkill",["-f",o],{stdio:"ignore"}),console.log(`[launcher] Killed existing ${o} processes`)}catch{}}else if(r==="linux"){const{spawnSync:a}=require("child_process");for(const o of n)try{a("pkill",["-f",o],{stdio:"ignore"}),console.log(`[launcher] Killed existing ${o} processes`)}catch{}}}catch(a){console.warn("[launcher] Failed to kill existing instances:",a)}}async function yr(e,r){const t=Date.now();for(;Date.now()-t<r;){if(!await new Promise(a=>{const o=wt.createConnection(e,"127.0.0.1");o.once("connect",()=>{o.destroy(),a(!0)}),o.once("error",()=>a(!1)),o.setTimeout(500,()=>{o.destroy(),a(!1)})})){console.log(`[launcher] Previous CDP port ${e} is closed`);return}await new Promise(a=>setTimeout(a,250))}throw new Error(`Existing ${e} CDP service did not stop; refusing to inject into the old application instance`)}async function vr(e){if(!L(e))throw new Error(`Unknown app: ${e}`);const t=B.platform();if(t==="win32"){const n=await kt(e);if(n)return n}else if(t==="darwin"){const n=["/Applications/WorkBuddy.app","/Applications/ChatGPT.app"];for(const a of n)if(f.existsSync(a))return a}else if(t==="linux"){const n=e==="workbuddy"?["workbuddy","WorkBuddy"]:["codex","Codex"],a=["/usr/bin","/usr/local/bin","/opt",m.join(B.homedir(),".local","bin"),"/snap/bin"];for(const o of a)if(f.existsSync(o))for(const s of n){const c=m.join(o,s);if(f.existsSync(c))return c}for(const o of n)try{const{spawnSync:s}=require("child_process"),c=s("which",[o],{encoding:"utf8"}),i=String(c.stdout||"").trim();if(i&&f.existsSync(i))return i}catch{}}throw new Error(`Could not find ${e} executable`)}const kr=5e3,Cr=100,Sr=15e3,Tr=1e4,$r=5e3;function Er(e){if(!Number.isInteger(e)||e<1024||e>65535)throw new TypeError("port must be an integer from 1024 through 65535");return e}function re(e,r,t={}){const n=t.allowZero?0:Number.EPSILON;if(!Number.isFinite(e)||e<n){const a=t.allowZero?"non-negative":"positive";throw new TypeError(`${r} must be a finite ${a} number`)}return e}function St(e){if(typeof e!="string"||e.length===0||e!==e.trim())throw new TypeError("webSocketDebuggerUrl must be a non-empty URL string");let r;try{r=new URL(e)}catch(t){throw new TypeError(`webSocketDebuggerUrl is invalid: ${t.message}`)}if(r.protocol!=="ws:"||r.hostname!=="127.0.0.1"||r.username||r.password||r.hash||!r.port)throw new TypeError("webSocketDebuggerUrl must use ws://127.0.0.1 with an explicit port");return Er(Number(r.port)),r}function _r(e,r){if(e===null||typeof e!="object"||Array.isArray(e)||e.type!=="page"||typeof e.url!="string"||typeof e.webSocketDebuggerUrl!="string")return!1;try{St(e.webSocketDebuggerUrl)}catch{return!1}return e.url.includes(r)}function Pe(e){if(e===null||typeof e!="object"||Array.isArray(e)||e.type!=="page"||typeof e.url!="string"||typeof e.webSocketDebuggerUrl!="string")return!1;try{return St(e.webSocketDebuggerUrl),!0}catch{return!1}}function Mr(e){return new Promise(r=>setTimeout(r,e))}async function st(e,r){const t=Math.max(0,r.deadline-Date.now());let n=null;try{return await Promise.race([e,new Promise((a,o)=>{n=setTimeout(()=>{var s;(s=r.onTimeout)==null||s.call(r),o(new Error(`${r.label} timed out after ${r.timeoutMs}ms`))},t)})])}finally{n&&clearTimeout(n)}}async function se(e,r,t={}){const n=re(t.timeoutMs??$r,"timeoutMs",{allowZero:!1}),a=t.fetchImpl??globalThis.fetch;if(typeof a!="function")throw new TypeError("fetchImpl must be a function");const o=`http://127.0.0.1:${e}/json/list`,s=new AbortController,c=Date.now()+n,i=t.quiet===!0;i||console.log(`[cdp] fetchRendererTargets: port=${e}, timeoutMs=${n}, endpoint=${o}`);let l;try{l=await st(Promise.resolve(a(o,{redirect:"error",signal:s.signal})),{deadline:c,timeoutMs:n,label:"renderer target discovery",onTimeout:()=>s.abort()})}catch(h){throw i||console.log("[cdp] fetchRendererTargets error:",h),new Error(`failed to fetch renderer targets from ${o}: ${h.message}`)}if(l===null||typeof l!="object"||!l.ok)throw new Error(`renderer target discovery failed with HTTP ${(l==null?void 0:l.status)??"unknown"}`);let u;try{u=await st(Promise.resolve(l.json()),{deadline:c,timeoutMs:n,label:"renderer target discovery JSON",onTimeout:()=>s.abort()})}catch(h){throw new Error(`malformed renderer target JSON from ${o}: ${h.message}`)}if(!Array.isArray(u))throw new Error("malformed renderer target JSON: expected an array");return u.filter(h=>_r(h,r)).sort(Ar)}async function Ir(e,r,t={}){const n=re(t.timeoutMs??kr,"timeoutMs",{allowZero:!0}),a=re(t.pollMs??Cr,"pollMs",{allowZero:!1}),o=t.fetchImpl??globalThis.fetch;let s=0;const c=Date.now()+n;let i=new Error("no renderer discovery attempt completed");for(console.log(`[cdp] waitForRendererTargets: port=${e}, hint=${r}, timeoutMs=${n}`);;){try{const u=Math.max(1,Math.min(n-s,c-Date.now()));console.log(`[cdp] Attempting fetch: elapsed=${s}ms, remainingBudget=${u}ms, deadline=${c}`);const h=await se(e,r,{fetchImpl:o,timeoutMs:u});if(h.length>0)return h;i=new Error("no matching renderer/index.html page targets")}catch(u){i=u instanceof Error?u:new Error(String(u)),console.log("[cdp] Fetch error:",i.message)}if(s>=n||Date.now()>=c)throw new Error(`timed out after ${n}ms waiting for renderer targets on 127.0.0.1:${e}: ${i.message}`);const l=Math.min(a,n-s);await Mr(l),s+=l}}class G{constructor(r,t={}){U(this,"webSocketDebuggerUrl");U(this,"WebSocketImpl");U(this,"commandTimeoutMs");U(this,"connectTimeoutMs");U(this,"socket",null);U(this,"nextRequestId",1);U(this,"pending",new Map);U(this,"socketOpen",!1);U(this,"opened",!1);U(this,"closed",!1);U(this,"closeStarted",!1);U(this,"terminalError",null);U(this,"openPromise",null);U(this,"resolveOpen",null);U(this,"rejectOpen",null);U(this,"connectTimer",null);this.webSocketDebuggerUrl=r;let n=null,a=null;try{n=require("ws")??null,n||(a="ws loaded but WebSocket is undefined")}catch(o){a=`ws require failed: ${(o==null?void 0:o.message)??o}`}if(!n)try{const o=require("undici");n=(o==null?void 0:o.WebSocket)??null,n||(a="undici loaded but WebSocket is undefined")}catch(o){a=`undici require failed: ${(o==null?void 0:o.message)??o}`}if(!n&&typeof globalThis.WebSocket=="function"&&(n=globalThis.WebSocket,a=null),!n){const o=a?` (${a})`:"";throw new Error(`No WebSocket implementation available for CDP${o}`)}this.WebSocketImpl=t.WebSocketImpl??n,this.commandTimeoutMs=re(t.commandTimeoutMs??Sr,"commandTimeoutMs"),this.connectTimeoutMs=re(t.connectTimeoutMs??Tr,"connectTimeoutMs")}open(){if(this.closed)return Promise.reject(this.terminalError??new Error("CDP session is closed"));if(this.opened)return Promise.resolve(this);if(this.openPromise)return this.openPromise;this.openPromise=new Promise((t,n)=>{this.resolveOpen=t,this.rejectOpen=n}),this.connectTimer=setTimeout(()=>{this.terminate(new Error(`CDP WebSocket connect timed out after ${this.connectTimeoutMs}ms`)),this.closeSocket()},this.connectTimeoutMs);try{this.socket=new this.WebSocketImpl(this.webSocketDebuggerUrl)}catch(t){return this.terminate(new Error(`failed to open CDP WebSocket: ${t.message}`)),this.openPromise}const r=this.socket;return r.onopen=()=>{this.closed||this.socketOpen||(this.clearConnectTimer(),this.socketOpen=!0,Promise.all([this.send("Runtime.enable"),this.send("Page.enable")]).then(()=>{if(this.closed)return;this.opened=!0;const t=this.resolveOpen;this.resolveOpen=null,this.rejectOpen=null,t==null||t(this)}).catch(t=>{this.terminate(t),this.closeSocket()}))},r.onmessage=t=>this.handleMessage(t),r.onerror=t=>{const n=t.error,a=n instanceof Error?n.message:typeof t.message=="string"&&t.message.length>0?t.message:"unknown socket error";this.terminate(new Error(`CDP WebSocket error: ${a}`)),this.closeSocket()},r.onclose=()=>{this.closeStarted=!0,this.terminate(new Error("CDP WebSocket closed"))},this.openPromise}send(r,t={},n={}){if(this.closed)return Promise.reject(this.terminalError??new Error("CDP session is closed"));if(!this.socketOpen||!this.socket)return Promise.reject(new Error("CDP session is not open"));if(typeof r!="string"||r.length===0)return Promise.reject(new TypeError("CDP method must be a non-empty string"));const a=re(n.timeoutMs??this.commandTimeoutMs,"timeoutMs"),o=this.nextRequestId++;return new Promise((s,c)=>{const i=setTimeout(()=>{this.pending.delete(o),c(new Error(`CDP ${r} timed out after ${a}ms`))},a);this.pending.set(o,{resolve:s,reject:c,timer:i});try{this.socket.send(JSON.stringify({id:o,method:r,params:t}))}catch(l){clearTimeout(i),this.pending.delete(o),c(new Error(`failed to send CDP ${r}: ${l.message}`))}})}async evaluate(r,t={}){var a,o,s;if(typeof r!="string")throw new TypeError("Runtime.evaluate expression must be a string");const n=await this.send("Runtime.evaluate",{expression:r,awaitPromise:!0,returnByValue:!0},t);if(n!=null&&n.exceptionDetails)throw new Error(`Runtime.evaluate failed: ${((a=n.exceptionDetails.exception)==null?void 0:a.description)??n.exceptionDetails.text??"unknown JavaScript exception"}`);if(((o=n==null?void 0:n.result)==null?void 0:o.type)!=="undefined")return(s=n==null?void 0:n.result)==null?void 0:s.value}async addScriptToEvaluateOnNewDocument(r){const t=await this.send("Page.addScriptToEvaluateOnNewDocument",{source:r});return t==null?void 0:t.identifier}async removeScriptToEvaluateOnNewDocument(r){await this.send("Page.removeScriptToEvaluateOnNewDocument",{identifier:r})}close(){this.closeStarted||(this.terminate(new Error("CDP session closed by client")),this.closeSocket())}handleMessage(r){if(typeof r.data!="string"){this.terminate(new Error("received a non-text CDP WebSocket message")),this.closeSocket();return}let t;try{t=JSON.parse(r.data)}catch(a){this.terminate(new Error(`received malformed CDP JSON: ${a.message}`)),this.closeSocket();return}if(!Number.isInteger(t==null?void 0:t.id))return;const n=this.pending.get(t.id);if(n){if(this.pending.delete(t.id),clearTimeout(n.timer),t.error){n.reject(new Error(`CDP error: ${t.error.message}`));return}n.resolve(t.result)}}terminate(r){if(this.terminalError)return;this.clearConnectTimer(),this.terminalError=r,this.closed=!0,this.socketOpen=!1;const t=this.rejectOpen;this.resolveOpen=null,this.rejectOpen=null,t==null||t(r);for(const{reject:n,timer:a}of this.pending.values())clearTimeout(a),n(r);this.pending.clear()}clearConnectTimer(){this.connectTimer!==null&&(clearTimeout(this.connectTimer),this.connectTimer=null)}closeSocket(){if(this.closeStarted||(this.closeStarted=!0,!this.socket||typeof this.socket.close!="function"))return;const r=this.WebSocketImpl.CLOSING??2,t=this.WebSocketImpl.CLOSED??3;this.socket.readyState===r||this.socket.readyState===t||this.socket.close()}}function Ar(e,r){const t=[String(e.id??""),e.url,e.webSocketDebuggerUrl],n=[String(r.id??""),r.url,r.webSocketDebuggerUrl];for(let a=0;a<t.length;a++){if(t[a]<n[a])return-1;if(t[a]>n[a])return 1}return 0}function Pr(){return m.join(P.app.getAppPath(),"themes")}function Tt(){const e=m.join(P.app.getPath("userData"),"themes");return f.mkdirSync(e,{recursive:!0}),e}function Rr(){return[Tt(),Pr()]}const it=new Map;function Re(e){var a;const r=[],t=new Set;for(const o of Rr()){if(!f.existsSync(o))continue;const s=f.readdirSync(o,{withFileTypes:!0});for(const c of s){if(!c.isDirectory())continue;const i=m.join(o,c.name),l=m.join(i,"theme.json");if(f.existsSync(l))try{const u=JSON.parse(f.readFileSync(l,"utf-8")),h=Nr(u);if(t.has(h.id))continue;const p=m.join(i,h.hero);if(!f.existsSync(p)||!f.statSync(p).isFile())throw new Error(`theme hero is missing: ${h.hero}`);if(e&&((a=h.apps[e])==null?void 0:a.compat)!==!0&&e!=="hana-agent")continue;t.add(h.id),r.push({id:h.id,name:h.name,author:h.author,path:i,manifest:h})}catch(u){console.error(`Failed to load theme ${c.name}:`,u)}}}const n=new Map;for(const o of r){const s=m.join(o.path,o.manifest.hero),c=He(s),i=`${o.name.trim().toLocaleLowerCase()}\0${o.author.trim().toLocaleLowerCase()}\0${c}`,l=n.get(i);(!l||Dr(o.id,l.id))&&n.set(i,o)}return[...n.values()].sort((o,s)=>o.name.localeCompare(s.name))}function He(e){const r=f.statSync(e),t=it.get(e);if(t&&t.size===r.size&&t.mtimeMs===r.mtimeMs)return t.hash;const n=Je.createHash("sha256").update(f.readFileSync(e)).digest("hex");return it.set(e,{size:r.size,mtimeMs:r.mtimeMs,hash:n}),n}function Dr(e,r){const t=e.startsWith("custom-"),n=r.startsWith("custom-");return t!==n?!t:e.length<r.length||e.length===r.length&&e.localeCompare(r)<0}function $t(e,r){return Re(r).find(t=>t.id===e)}function Ur(e){const r=$t(e);if(!r)return;const t=m.resolve(r.path,r.manifest.hero);if(t.startsWith(`${m.resolve(r.path)}${m.sep}`))return t}function Or(e){return`theme-asset://local/${encodeURIComponent(e)}`}function jr(e){const r=m.resolve(e.path),t=m.resolve(r,e.manifest.hero);if(t!==r&&!t.startsWith(r+m.sep))throw new Error(`Theme hero path escapes theme directory: ${e.manifest.hero}`);const n=f.readFileSync(t);return`data:${Lr(e.manifest.hero)};base64,${n.toString("base64")}`}function Br(e,r,t){const n=He(t);return Re().some(a=>a.name.trim().toLowerCase()!==e.trim().toLowerCase()||a.author.trim().toLowerCase()!==r.trim().toLowerCase()?!1:He(m.join(a.path,a.manifest.hero))===n)}function Nr(e){if(typeof e!="object"||e===null||Array.isArray(e))throw new Error("theme manifest must be an object");if(e.schemaVersion!==1)throw new Error(`unsupported theme schema ${e.schemaVersion}`);if(typeof e.id!="string"||!/^[a-z0-9-]+$/.test(e.id))throw new Error("theme id must use lowercase letters, numbers, and hyphens");if(typeof e.name!="string"||!e.name.trim())throw new Error("theme name must be a non-empty string");if(typeof e.author!="string")throw new Error("theme author must be a string");if(typeof e.hero!="string")throw new Error("theme hero must be a string");let r;if(typeof e.video=="string"&&e.video.trim()){const n=e.video.trim();m.basename(n)!==n||!/\.(mp4|webm)$/i.test(n)?console.warn(`theme ${e.id}: ignoring invalid video field ${n}`):r=n}if(typeof e.colors!="object"||e.colors===null)throw new Error("theme colors must be an object");const t=["accent","secondary","surface","text"];for(const n of t)if(typeof e.colors[n]!="string"||!/^#[0-9a-fA-F]{6}$/.test(e.colors[n]))throw new Error(`theme color ${n} must be a hex color`);return{schemaVersion:1,id:e.id,name:e.name.trim(),author:e.author,hero:e.hero,video:r,colors:{accent:e.colors.accent,secondary:e.colors.secondary,surface:e.colors.surface,text:e.colors.text},copy:e.copy??void 0,apps:e.apps??{}}}function Lr(e){const r=m.extname(e).toLowerCase();return{".png":"image/png",".jpg":"image/jpeg",".jpeg":"image/jpeg",".webp":"image/webp",".gif":"image/gif",".mp4":"video/mp4",".webm":"video/webm"}[r]||"image/png"}function Wr(e){const r=e.manifest.video;if(!r)return null;const t=m.resolve(e.path);let n=m.resolve(t,r);if(n!==t&&!n.startsWith(t+m.sep)||!/\.(mp4|webm)$/i.test(m.extname(n)))return null;const a=P.app.getAppPath();if(a.endsWith(".asar")&&(t===a||t.startsWith(a+m.sep))){const o=m.resolve(a+".unpacked",m.relative(a,t));n=m.resolve(o,r)}try{if(!f.existsSync(n)||!f.statSync(n).isFile())return null}catch{return null}return n}const Et=5,Hr=32*1024*1024;let fe=null;function Ve(){try{const e=JSON.parse(f.readFileSync(_t(),"utf8"));return Ge(e)}catch{return[]}}function Fr(e){const r=Ge(e),t=[...Ve()];for(const a of r){const o=t.findIndex(s=>s.id===a.id);o>=0?t[o]=a:t.push(a)}const n=t.slice(0,Et);return It(n),n}function zr(e,r,t,n=4){const a=At()[e]??{};return[...r].sort((o,s)=>{if(o===t)return-1;if(s===t)return 1;const c=a[o]??{count:0,lastUsedAt:0},i=a[s]??{count:0,lastUsedAt:0};return i.lastUsedAt-c.lastUsedAt||i.count-c.count}).slice(0,n)}function Fe(e,r){if(!/^[a-z0-9-]+$/i.test(e)||!/^[a-z0-9-]+$/i.test(r))return;const t=At(),n=t[e]??{},a=n[r]??{count:0};n[r]={count:a.count+1,lastUsedAt:Date.now()},t[e]=n,Pt(Mt(),t)}function qr(){return fe||(fe=new Promise((e,r)=>{const t=Je.randomBytes(24).toString("hex"),n=xt.createServer((a,o)=>{if(o.setHeader("Access-Control-Allow-Origin","*"),o.setHeader("Access-Control-Allow-Headers","Authorization, Content-Type"),o.setHeader("Access-Control-Allow-Methods","GET, PUT, POST, OPTIONS"),o.setHeader("Access-Control-Allow-Private-Network","true"),a.method==="OPTIONS"){o.writeHead(204).end();return}if(a.headers.authorization!==`Bearer ${t}`){o.writeHead(401).end("Unauthorized");return}if(a.url==="/theme-usage"&&a.method==="POST"){ct(a,o,s=>{if(typeof(s==null?void 0:s.appId)!="string"||typeof(s==null?void 0:s.themeId)!="string")throw new Error("Invalid theme usage payload");Fe(s.appId,s.themeId),Oe(o,200,{success:!0})});return}if(a.url!=="/custom-themes"){o.writeHead(404).end("Not found");return}if(a.method==="GET"){Oe(o,200,Ve());return}if(a.method!=="PUT"){o.writeHead(405).end("Method not allowed");return}ct(a,o,s=>{const c=Ge(s);It(c),Oe(o,200,c)})});n.once("error",r),n.listen(0,"127.0.0.1",()=>{const a=n.address();if(!a||typeof a=="string"){n.close(),r(new Error("Shared custom theme service did not expose a TCP port"));return}const o=`http://127.0.0.1:${a.port}`;e({endpoint:`${o}/custom-themes`,usageEndpoint:`${o}/theme-usage`,token:t})})}),fe)}function _t(){return m.join(P.app.getPath("userData"),"custom-themes.json")}function Mt(){return m.join(P.app.getPath("userData"),"theme-usage.json")}function It(e){Pt(_t(),e)}function At(){try{const e=JSON.parse(f.readFileSync(Mt(),"utf8"));return e&&typeof e=="object"&&!Array.isArray(e)?e:{}}catch{return{}}}function Pt(e,r){f.mkdirSync(m.dirname(e),{recursive:!0}),f.writeFileSync(e,`${JSON.stringify(r,null,2)}
+`)}function ct(e,r,t){let n=0;const a=[];e.on("data",o=>{if(n+=o.length,n>Hr){r.writeHead(413).end("Payload too large"),e.destroy();return}a.push(o)}),e.on("end",()=>{if(!r.headersSent)try{t(JSON.parse(Buffer.concat(a).toString("utf8")))}catch(o){r.writeHead(400).end(o.message)}})}function Ge(e){if(!Array.isArray(e))throw new Error("Custom themes must be an array");return e.slice(0,Et).map((r,t)=>{var o,s;if(!r||typeof r!="object")throw new Error(`Invalid custom theme at index ${t}`);const n=r;if(typeof n.id!="string"||!/^custom-[a-z0-9-]+$/i.test(n.id))throw new Error(`Invalid custom theme id at index ${t}`);if(typeof n.name!="string"||!n.name.trim())throw new Error(`Invalid custom theme name at index ${t}`);if(typeof n.dataUrl!="string"||!/^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(n.dataUrl))throw new Error(`Invalid custom theme image at index ${t}`);for(const c of["accent","secondary","surface","text"])if(typeof((o=n.colors)==null?void 0:o[c])!="string"||!/^#[0-9a-fA-F]{6}$/.test(n.colors[c]))throw new Error(`Invalid custom theme color ${c} at index ${t}`);const a=typeof((s=n.colors)==null?void 0:s.average)=="string"&&/^#[0-9a-fA-F]{6}$/.test(n.colors.average)?n.colors.average:void 0;return{id:n.id,name:n.name.trim(),dataUrl:n.dataUrl,colors:{accent:n.colors.accent,secondary:n.colors.secondary,surface:n.colors.surface,text:n.colors.text,...a?{average:a}:{}}}})}function Oe(e,r,t){e.writeHead(r,{"Content-Type":"application/json; charset=utf-8"}),e.end(JSON.stringify(t))}function ke(e){const r=/^#([0-9a-f]{6})$/i.exec(e);if(!r)return[255,255,255];const t=parseInt(r[1],16);return[t>>16&255,t>>8&255,t&255]}function le(e){return"#"+e.map(r=>Math.max(0,Math.min(255,Math.round(r))).toString(16).padStart(2,"0")).join("")}function je(e){const r=e/255;return r<=.04045?r/12.92:Math.pow((r+.055)/1.055,2.4)}function Ce(e){return .2126*je(e[0])+.7152*je(e[1])+.0722*je(e[2])}function ee(e,r){const t=Ce(e),n=Ce(r);return(Math.max(t,n)+.05)/(Math.min(t,n)+.05)}function te(e,r,t){return[0,1,2].map(n=>e[n]+(r[n]-e[n])*t)}function Rt(e){const r=e[0]/255,t=e[1]/255,n=e[2]/255,a=Math.max(r,t,n),o=Math.min(r,t,n),s=(a+o)/2;if(a===o)return[0,0,s];const c=a-o,i=s>.5?c/(2-a-o):c/(a+o);let l;return a===r?l=(t-n)/c+(t<n?6:0):a===t?l=(n-r)/c+2:l=(r-t)/c+4,[l/6,i,s]}function ze(e,r,t){if(r<=0){const s=t*255;return[s,s,s]}const n=(s,c,i)=>(i<0&&(i+=1),i>1&&(i-=1),i<1/6?s+(c-s)*6*i:i<1/2?c:i<2/3?s+(c-s)*(2/3-i)*6:s),a=t<.5?t*(1+r):t+r-t*r,o=2*t-a;return[n(o,a,e+1/3)*255,n(o,a,e)*255,n(o,a,e-1/3)*255]}function Jr(e,r,t){if(ee(e,r)>=t)return e;const n=t+Math.max(.02,t*.02),a=Ce(e),o=Ce(r),s=a<o||a===o&&o>.475,[c,i,l]=Rt(e);if(i>=.02){let g=s?0:l,b=s?l:1;for(let _=0;_<14;_++){const O=(g+b)/2;ee(ze(c,i,O),r)>=n?s?g=O:b=O:s?b=O:g=O}const y=ze(c,i,s?g:b);if(ee(y,r)>=t)return y}const u=s?[0,0,0]:[255,255,255];let h=0,p=1;for(let g=0;g<12;g++){const b=(h+p)/2;ee(te(e,u,b),r)>=n?p=b:h=b}return te(e,u,p)}function be(e,r,t){if(r.length===0)return e;const n=u=>Math.min(...r.map(h=>ee(u,h)));let a=e;for(let u=0;u<4;u++){if(n(a)>=t)return a;const h=n(a);let p=r[0],g=1/0;for(const y of r){const _=ee(a,y);_<g&&(g=_,p=y)}const b=Jr(a,p,t);if(n(b)<=h+1e-9)break;a=b}if(n(a)>=t)return a;const[o,s]=Rt(e),c=[e,a];for(const u of[.02,.06,.12,.22,.78,.88,.95,.99])c.push(ze(o,s,u));let i=a,l=n(a);for(const u of c){const h=n(u);h>l+1e-9&&(l=h,i=u)}return i}function Kr(e){if(e.length<16||e.readUInt32BE(0)!==2303741511)return null;let r=8,t=-1;const n=[];for(;r+12<=e.length;){const o=e.readUInt32BE(r),s=e.toString("ascii",r+4,r+8),c=e.subarray(r+8,r+8+o);if(s==="IHDR"){const i=c.readUInt32BE(0),l=c.readUInt32BE(4),u=c[8],h=c[12];if(i!==1||l!==1||u!==8||h!==0)return null;t=c[9]}else if(s==="IDAT")n.push(c);else if(s==="IEND")break;r+=12+o}if(t<0||n.length===0)return null;let a;try{a=er.inflateSync(Buffer.concat(n))}catch{return null}if(a.length<2||a[0]>4)return null;switch(t){case 6:return a.length>=5?[a[1],a[2],a[3]]:null;case 2:return a.length>=4?[a[1],a[2],a[3]]:null;case 4:return a.length>=3?[a[1],a[1],a[1]]:null;case 0:return a.length>=2?[a[1],a[1],a[1]]:null;default:return null}}function Vr(){return String.raw`(function () {
+  if (window.top && window.top !== window) return;   // 只在主框架挂条，iframe 内不重复
+  if (window.__dreamWorkUsageBar && document.getElementById('dream-usage-bar')) return;
+  window.__dreamWorkUsageBar = true;
+  var MY_GEN = (window.__dreamWorkUsageGen = (window.__dreamWorkUsageGen || 0) + 1);
+  function stale() { return MY_GEN !== window.__dreamWorkUsageGen; }
+  function ls(k, d) { try { return localStorage.getItem(k) ?? d; } catch (e) { return d; } }
+  function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) { } }
+
+  var LS_SHOW = 'dreamUsage.show';
+  var state = {
+    show: { ctx: 1, turn: 1, win: 1, tools: 1, today: 1, sub: 1 },
+    data: null, nativeCtx: 0, excActive: false, excGone: false, pickedSid: ''
+  };
+  try {
+    var saved = JSON.parse(ls(LS_SHOW, 'null'));
+    if (saved && typeof saved === 'object') for (var sk in state.show) if (sk in saved) state.show[sk] = saved[sk] ? 1 : 0;
+  } catch (e) { }
+
+  var style = document.createElement('style');
+  style.textContent =
+    '#dream-usage-bar{position:fixed;display:none;font:13px/1.3 Consolas,\'Cascadia Mono\',Menlo,\'Microsoft YaHei UI\',\'Microsoft YaHei\',monospace;' +
+    'font-variant-numeric:tabular-nums;color:var(--dream-work-text,#e9edf4);' +
+    'background:color-mix(in srgb,var(--dream-work-surface,#10141c) 78%,transparent);' +
+    'backdrop-filter:blur(14px) saturate(108%);-webkit-backdrop-filter:blur(14px) saturate(108%);' +
+    'border:1px solid color-mix(in srgb,var(--dream-work-accent,#24c9d7) 30%,transparent);' +
+    'border-radius:12px;padding:2px 6px;user-select:none;white-space:nowrap;z-index:50;' +
+    'box-shadow:0 12px 30px color-mix(in srgb,var(--dream-work-surface,#10141c) 30%,transparent),inset 0 1px color-mix(in srgb,white 12%,transparent);' +
+    'align-items:center;gap:2px}' +
+    '#du-main{overflow:hidden;min-width:0;flex:1 1 auto;display:flex;align-items:center;gap:1px}' +
+    '.dit{display:flex;align-items:center;gap:4px;padding:2px 6px;border-radius:8px;' +
+    'transition:background-color .12s ease-out}' +
+    '.dit:hover{background:color-mix(in srgb,var(--dream-work-accent,#24c9d7) 14%,transparent)}' +
+    '.dsep{width:1px;height:15px;background:color-mix(in srgb,var(--dream-work-text,#e9edf4) 16%,transparent);flex:0 0 auto;margin:0 1px}' +
+    '.dk{color:color-mix(in srgb,var(--dream-work-text,#e9edf4) 62%,transparent)}' +
+    '.dv{color:var(--dream-work-text,#e9edf4);font-weight:600}' +
+    '.dpct{font-weight:700}' +
+    '.dok{color:color-mix(in srgb,#3ecf8e 84%,var(--dream-work-text,#e9edf4))}' +
+    '.dwarm{color:color-mix(in srgb,#f5b944 84%,var(--dream-work-text,#e9edf4))}' +
+    '.dhot{color:color-mix(in srgb,#ff6b57 84%,var(--dream-work-text,#e9edf4))}' +
+    '@keyframes duexc{0%,100%{opacity:1}50%{opacity:.35}}' +
+    '.dexc{color:color-mix(in srgb,#ff2d55 88%,var(--dream-work-text,#e9edf4));text-shadow:0 0 8px rgba(255,45,85,.5);animation:duexc 1.1s ease-in-out infinite}' +
+    '.dbtn{cursor:pointer;padding:2px 6px;border-radius:8px;color:var(--dream-work-text,#e9edf4);' +
+    'transition:background-color .12s ease-out;opacity:.8}' +
+    '.dbtn:hover{opacity:1;background:color-mix(in srgb,var(--dream-work-accent,#24c9d7) 14%,transparent)}' +
+    '.dico{width:12px;height:12px;flex:0 0 auto;color:var(--dream-work-text,#e9edf4);opacity:.75}' +
+    '.deb{background:color-mix(in srgb,#ff6b57 16%,transparent);color:color-mix(in srgb,#ff8a73 88%,var(--dream-work-text,#e9edf4));' +
+    'border-radius:999px;padding:0 6px;line-height:16px;font-weight:600;display:inline-flex;align-items:center;gap:2px}' +
+    '.deb .dico{color:inherit}' +
+    '.dcbar{display:inline-block;width:46px;height:5px;border-radius:999px;' +
+    'background:color-mix(in srgb,var(--dream-work-text,#e9edf4) 14%,transparent);overflow:hidden;flex:0 0 auto}' +
+    '.dcbar>i{display:block;height:100%;border-radius:999px;background:currentColor}' +
+    '@keyframes dupulse{0%,100%{opacity:1}50%{opacity:.2}}' +
+    '.ddot{animation:dupulse 1.6s ease-in-out infinite;font-size:13px;line-height:1;color:var(--dream-work-secondary,#ef8fd3)}' +
+    '.dpanel{position:absolute;bottom:calc(100% + 10px);left:0;display:none;flex-direction:column;gap:3px;' +
+    'background:color-mix(in srgb,var(--dream-work-surface,#10141c) 92%,transparent);' +
+    'backdrop-filter:blur(18px) saturate(108%);-webkit-backdrop-filter:blur(18px) saturate(108%);' +
+    'border:1px solid color-mix(in srgb,var(--dream-work-accent,#24c9d7) 30%,transparent);border-radius:12px;' +
+    'padding:10px 12px;min-width:260px;max-width:480px;max-height:72vh;overflow:auto;white-space:normal;' +
+    'color:var(--dream-work-text,#e9edf4);font:13px/1.6 Consolas,Menlo,\'Microsoft YaHei UI\',monospace;' +
+    'box-shadow:0 12px 32px color-mix(in srgb,var(--dream-work-surface,#10141c) 45%,transparent),inset 0 1px color-mix(in srgb,white 12%,transparent);z-index:2147483647}' +
+    '.dpanel.open{display:flex}' +
+    '.dpanel .dph{font-weight:700;font-size:14px;margin-bottom:4px}' +
+    '.dpanel label{display:flex;align-items:flex-start;gap:8px;cursor:pointer;padding:4px 8px;margin:0 -8px;border-radius:8px}' +
+    '.dpanel label:hover{background:color-mix(in srgb,var(--dream-work-accent,#24c9d7) 12%,transparent)}' +
+    '.dpanel label em{font-style:normal;display:block;color:color-mix(in srgb,var(--dream-work-text,#e9edf4) 60%,transparent);font-size:12px}' +
+    '.dpanel input[type=checkbox]{accent-color:var(--dream-work-accent,#24c9d7);margin-top:3px}' +
+    '.dpanel .dnote{color:color-mix(in srgb,var(--dream-work-text,#e9edf4) 60%,transparent);margin-top:5px;line-height:1.6}' +
+    '.dpanel .dhr{border-top:1px solid color-mix(in srgb,var(--dream-work-text,#e9edf4) 12%,transparent);margin:4px 0}' +
+    '#dream-usage-tip{position:fixed;display:none;background:color-mix(in srgb,var(--dream-work-surface,#10141c) 94%,transparent);' +
+    'backdrop-filter:blur(16px) saturate(108%);-webkit-backdrop-filter:blur(16px) saturate(108%);' +
+    'border:1px solid color-mix(in srgb,var(--dream-work-accent,#24c9d7) 30%,transparent);border-radius:10px;padding:8px 12px;' +
+    'font:13px/1.6 Consolas,\'Microsoft YaHei UI\',monospace;color:var(--dream-work-text,#e9edf4);' +
+    'box-shadow:0 10px 28px color-mix(in srgb,var(--dream-work-surface,#10141c) 45%,transparent),inset 0 1px color-mix(in srgb,white 12%,transparent);' +
+    'white-space:pre-line;z-index:2147483646;max-width:560px}' +
+    '#dream-usage-exc{position:fixed;display:none;max-width:470px;z-index:2147483647;white-space:normal;user-select:text;' +
+    'background:color-mix(in srgb,#ff2d55 10%,var(--dream-work-surface,#10141c));' +
+    'border:1px solid color-mix(in srgb,#ff2d55 40%,transparent);border-radius:12px;padding:12px 15px;' +
+    'font:13px/1.7 Consolas,\'Microsoft YaHei UI\',monospace;color:var(--dream-work-text,#e9edf4);' +
+    'box-shadow:0 12px 32px rgba(0,0,0,.35)}' +
+    '#dream-usage-exc .du-xb-title{font-weight:700;color:color-mix(in srgb,#ff5c77 90%,var(--dream-work-text,#e9edf4));margin-bottom:6px}' +
+    '#dream-usage-exc .du-xb-step{color:color-mix(in srgb,var(--dream-work-text,#e9edf4) 80%,transparent)}' +
+    '@media (prefers-reduced-motion:reduce){.dexc,.ddot{animation:none}.dit,.dbtn{transition:none}}';
+
+  var bar = document.createElement('div');
+  bar.id = 'dream-usage-bar';
+  bar.innerHTML = '<span id="du-main"></span><span class="dbtn" id="du-gear" title="状态条显示项">⚙</span>';
+  var panel = document.createElement('div');
+  panel.className = 'dpanel';
+  bar.appendChild(panel);
+  bar.appendChild(style);
+  bar.style.position = 'fixed';
+  bar.style.zIndex = '50';
+  bar.style.display = 'none';
+  document.body.appendChild(bar);
+
+  var tip = document.createElement('div');
+  tip.id = 'dream-usage-tip';
+  tip.style.display = 'none';
+  document.body.appendChild(tip);
+
+  var excBubble = document.createElement('div');
+  excBubble.id = 'dream-usage-exc';
+  excBubble.innerHTML = '<div class="du-xb-title">⚠ 上下文超限</div>' +
+    '<div class="du-xb-step">最近一次请求因超出上下文窗口容量被拒绝，本轮对话暂时无法继续。建议依次尝试：</div>' +
+    '<div class="du-xb-step">① 回滚上一轮对话，去掉超限的那次请求后继续；</div>' +
+    '<div class="du-xb-step">② 换用上下文窗口更大的模型继续，或压缩 / 精简本会话；</div>' +
+    '<div class="du-xb-step">③ 仍无法解决时，新开一个对话继续。</div>' +
+    '<div class="du-xb-step" style="margin-top:6px">会话 ID：<span id="du-exc-sid"></span></div>';
+  document.body.appendChild(excBubble);
+
+  var main = bar.querySelector('#du-main');
+  var gear = bar.querySelector('#du-gear');
+  var lastHtml = '';
+
+  function fmt(n) {
+    n = n || 0;
+    if (n >= 1e6) return (n / 1e6).toFixed(2) + 'M';
+    if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+    return String(n);
+  }
+  function sec(ms) { return ms ? (ms / 1000).toFixed(1) + 's' : '–'; }
+  function excActive(s) {
+    return !!(s && s.ctxExc > 0 && s.ctxExc >= (s.lastAt || 0));
+  }
+  function cachePct(cache, input) {
+    return input > 0 ? '<span class="dk">' + Math.round(cache / input * 100) + '%</span>' : '';
+  }
+  function ioc(inp, out, cache, rea, cw) {
+    return '输入 ' + fmt(inp) + ' / 输出 ' + fmt(out) + ' / 缓存命中 ' + fmt(cache) +
+      (cw > 0 ? ' / 缓存写入 ' + fmt(cw) : '') +
+      (rea > 0 ? ' / 思考 ' + fmt(rea) : '');
+  }
+  function ico(paths) {
+    return '<svg class="dico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + paths + '</svg>';
+  }
+  var ICON_TPS = '<path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/>';
+  var ICON_TURN = '<path d="M23 4v6h-6"/><path d="M20.49 15A9 9 0 1 1 18.36 5.64L23 10"/>';
+  var ICON_WIN = '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>';
+  var ICON_TOOLS = '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>';
+  var ICON_TODAY = '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>';
+  var ICON_SUB = '<path d="M6 3v12"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/>';
+  var ICON_ERR = '<circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/>';
+
+  function stubFor(sid) {
+    return {
+      sid: String(sid || ''), title: '', active: false, turns: 0, requests: 0,
+      input: 0, output: 0, reasoning: 0, cacheRead: 0, cacheWrite: 0, total: 0,
+      toolCalls: 0, retries: 0, ctx: 0, updated: '', lastAt: 0, ctxExc: 0,
+      lastTurn: { requests: 0, retries: 0, toolCalls: 0, toolErrors: 0, input: 0, output: 0, reasoning: 0, cacheRead: 0, cacheWrite: 0, total: 0, durationMs: 0, ttftMs: 0 },
+      last: { durationMs: 0, ttftMs: 0, model: '', tps: 0 },
+      code: { add: null, del: null, files: null },
+      tools: { total: 0, errors: 0, list: [] },
+      sub: { requests: 0, total: 0, input: 0, output: 0, cacheRead: 0, reasoning: 0, cacheWrite: 0, active: false, list: [] },
+      contextWindow: 0, contextAuto: false
+    };
+  }
+
+  /* 当前会话识别：ZCode 在 localStorage 的 zcode-v4-last-session:v1:<工作区路径>
+   * 键里保存各工作区当前打开的会话 id；与快照池求交集，切换优先，多候选取最近活跃。 */
+  var wsPrev = null;
+  function pickCurrent(d) {
+    var recent = d.recent || [];
+    if (!recent.length) return null;
+    var bySid = {}, kv = {};
+    for (var i = 0; i < recent.length; i++) bySid[recent[i].sid] = recent[i];
+    try {
+      Object.keys(localStorage).forEach(function (k) {
+        if (/^zcode-v4-last-session:/.test(k)) {
+          var v = localStorage.getItem(k);
+          if (v && /^[A-Za-z0-9_-]+$/.test(v)) kv[k] = v;
+        }
+      });
+    } catch (e) { return null; }
+    if (!Object.keys(kv).length) return null;
+    var hit = {}, firstKeyVal = '';
+    for (var k in kv) {
+      if (bySid[kv[k]]) hit[k] = kv[k];
+      if (!firstKeyVal) firstKeyVal = kv[k];
+    }
+    var switched = null;
+    if (wsPrev) {
+      for (var k2 in kv) {
+        if (wsPrev[k2] && wsPrev[k2] !== kv[k2]) switched = kv[k2];
+      }
+    }
+    wsPrev = kv;
+    var want = switched || firstKeyVal;
+    if (switched && bySid[switched]) return { sess: bySid[switched], want: want };
+    var cands = [];
+    for (var k3 in hit) cands.push(bySid[hit[k3]]);
+    if (cands.length === 1) return { sess: cands[0], want: want };
+    if (!cands.length) return { sess: null, want: want };
+    var best = cands[0];
+    for (var n = 1; n < cands.length; n++) {
+      if ((cands[n].lastAt || 0) > (best.lastAt || 0)) best = cands[n];
+    }
+    return { sess: best, want: want };
+  }
+
+  function html(d) {
+    var sess = d.session || stubFor('');
+    var lt = sess.lastTurn || {};
+    var today = d.today || {};
+    var last = sess.last || {};
+    var tls = sess.tools || { total: 0, errors: 0, list: [] };
+    var subs = sess.sub || { requests: 0, total: 0, input: 0, output: 0, cacheRead: 0, reasoning: 0, cacheWrite: 0, active: false, list: [] };
+    var items = [], tips = [];
+    function it(inner, tipText) { items.push('<span class="dit">' + inner + '</span>'); tips.push(tipText || null); }
+    if (last.tps) {
+      var tpsCls = last.tps >= 70 ? 'dok' : last.tps >= 40 ? 'dwarm' : 'dhot';
+      it(ico(ICON_TPS) + '<span class="' + tpsCls + '">' + last.tps + '</span><span class="dk">t/s</span>',
+        '生成速度：最近完成请求的输出 tokens ÷ 生成耗时（首 token → 完成）\n≥70 t/s 绿色 · 40–70 黄色 · <40 红色\n模型 ' + (last.model || '?'));
+    }
+    if (state.show.ctx) {
+      var cw = state.nativeCtx || sess.contextWindow || 0;
+      var pct = cw ? sess.ctx / cw * 100 : 0;
+      var exc = excActive(sess);
+      var big = cw >= 1000000;
+      var cls = exc ? 'dexc' : pct >= (big ? 60 : 85) ? 'dhot' : pct >= (big ? 40 : 70) ? 'dwarm' : 'dok';
+      var inner = cw
+        ? '<span class="dcbar"><i class="' + cls + '" style="width:' + Math.min(100, pct).toFixed(1) + '%"></i></span>' +
+          '<span class="dpct ' + cls + '">' + pct.toFixed(1) + '%</span>'
+        : '<span class="dv' + (exc ? ' dexc' : '') + '">' + fmt(sess.ctx) + '</span>';
+      it(inner, '上下文：当前会话上下文大小（最近一次请求的总输入）÷ 窗口容量\n已用 ' + fmt(sess.ctx) + ' / 窗口 ' + fmt(cw) +
+        '\n颜色随占比：' + (big ? '≤40% 绿 · 40–60% 黄 · ≥60% 红（窗口 ≥100 万）' : '<70% 绿 · 70–85% 黄 · ≥85% 红') +
+        ' · 超限被拒=亮红闪烁' + (exc ? '\n⚠ 上下文超限：最近一次请求超出窗口容量被拒绝（' + sess.updated + '），需要压缩会话或新开会话' : ''));
+    }
+    if (state.show.turn) {
+      it(ico(ICON_TURN) +
+        '<span class="dv">' + fmt(lt.total) + '</span>' + cachePct(lt.cacheRead, lt.input) +
+        '<span class="dk">' + (lt.requests || 0) + '次</span>' +
+        ico('<path d="M6 3h12M6 21h12M8 3v3.5L12 11l4-4.5V3M8 21v-3.5L12 13l4 4.5V21"/>') + '<span class="dk">' + sec(last.durationMs) + '</span>' +
+        ico('<path d="M5 20v-5M12 20v-9M19 20V5"/>') + '<span class="dk">' + sec(last.ttftMs) + '</span>',
+        '本轮：最近一轮的 token 消耗（该轮共 ' + (lt.requests || 0) + ' 次模型请求）\n' +
+        ioc(lt.input, lt.output, lt.cacheRead, lt.reasoning, lt.cacheWrite) +
+        '\n单次耗时 ' + sec(last.durationMs) + ' · 首字 ' + sec(last.ttftMs) + ' · 轮总耗时 ' + sec(lt.durationMs) +
+        (lt.toolCalls ? ' · 工具调用 ' + lt.toolCalls : '') +
+        ((lt.retries || lt.toolErrors) ? ' · 重试 ' + (lt.retries || 0) + ' · 工具错误 ' + (lt.toolErrors || 0) : ''));
+    }
+    if (state.show.win) {
+      it(ico(ICON_WIN) +
+        '<span class="dv">' + fmt(sess.total) + '</span>' + cachePct(sess.cacheRead, sess.input) +
+        '<span class="dk">' + (sess.turns || 0) + '轮 · ' + (sess.requests || 0) + '次</span>',
+        '会话累计：当前会话全部请求的 token 消耗\n' + ioc(sess.input, sess.output, sess.cacheRead, sess.reasoning, sess.cacheWrite) +
+        '\n' + (sess.turns || 0) + ' 轮 · ' + (sess.requests || 0) + ' 次请求' +
+        (sess.toolCalls ? ' · 工具调用 ' + sess.toolCalls : '') +
+        (sess.retries ? ' · 重试 ' + sess.retries : '') +
+        (sess.code && (sess.code.add || sess.code.del) ? '\n代码变更 +' + (sess.code.add || 0) + ' / −' + (sess.code.del || 0) + (sess.code.files ? '（' + sess.code.files + ' 文件）' : '') : ''));
+    }
+    if (state.show.tools) {
+      var toolLines = [];
+      (tls.list || []).forEach(function (t1) {
+        toolLines.push(t1.name + ' ' + t1.count + '次 · ' + sec(t1.durationMs) + (t1.errors ? ' · ' + t1.errors + ' 个错误' : ''));
+      });
+      it(ico(ICON_TOOLS) + '<span class="dv">' + (tls.total || 0) + '</span>' +
+        (tls.errors ? '<span class="deb">' + ico(ICON_ERR) + tls.errors + '</span>' : ''),
+        '工具调用：当前会话的工具使用统计（按调用次数排序）\n' +
+        (toolLines.length ? toolLines.join('\n') : '无工具调用记录'));
+    }
+    if (state.show.today) {
+      it(ico(ICON_TODAY) +
+        '<span class="dv">' + fmt(today.total) + '</span>' + cachePct(today.cacheRead, today.input) +
+        '<span class="dk">' + (today.requests || 0) + '次</span>',
+        '今日合计：今天所有会话的 token 总消耗（跨会话汇总）\n' +
+        ioc(today.input, today.output, today.cacheRead, today.reasoning, today.cacheWrite) +
+        '\n' + (today.requests || 0) + ' 次请求');
+    }
+    if (state.show.sub) {
+      var subLines = [];
+      (subs.list || []).forEach(function (s1) {
+        subLines.push((s1.title || s1.sid.slice(0, 16)) + ' · ' + fmt(s1.total) + '（输入 ' + fmt(s1.input) + ' / 输出 ' + fmt(s1.output) + '）' + (s1.active ? ' · 运行中' : ''));
+      });
+      it(ico(ICON_SUB) + '<span class="dv">' + fmt(subs.total) + '</span>' + (subs.active ? '<span class="ddot">●</span>' : ''),
+        '子代理：当前会话的后台子代理消耗（独立统计，不计入会话累计）\n' +
+        ioc(subs.input, subs.output, subs.cacheRead, subs.reasoning, subs.cacheWrite) +
+        '，共 ' + (subs.requests || 0) + ' 次' + (subs.active ? ' · 运行中' : '') +
+        (subLines.length ? '\n' + subLines.join('\n') : ''));
+    }
+    return { s: items.join('<span class="dsep"></span>') || '<span class="dk">等待数据…</span>', tips: tips };
+  }
+
+  /* ---------- tooltip：向上弹出，只读文本 ---------- */
+  var hoverEl = null;
+  function hideTip(force, cause) {
+    if (!force && hoverEl) return;
+    if (tip.style.display !== 'none') tip.style.display = 'none';
+    hoverEl = null;
+  }
+  function drawTip(el, keepTop) {
+    var t = el && el.__tip;
+    if (!t) { tip.style.display = 'none'; hoverEl = null; return; }
+    tip.textContent = t;
+    tip.style.display = 'block';
+    var tr = tip.getBoundingClientRect(), ar = el.getBoundingClientRect();
+    var left = ar.left + ar.width / 2 - tr.width / 2;
+    left = Math.max(8, Math.min(left, Math.max(8, innerWidth - tr.width - 8)));
+    var top = Math.max(8, ar.top - tr.height - 8);
+    tip.style.left = Math.round(left) + 'px';
+    tip.style.top = Math.round(top) + 'px';
+  }
+  document.addEventListener('mousemove', function (e) {
+    if (stale()) return;
+    var t = e.target;
+    if (!t || !t.closest) return;
+    if (t.closest('#dream-usage-tip')) return;
+    if (t.closest('.dpanel')) { if (hoverEl) hideTip(true, 'panel'); return; }
+    var el = t.closest('#dream-usage-bar') ? t.closest('.dit') : null;
+    if (el) {
+      if (el !== hoverEl) {
+        hoverEl = el;
+        var els = main.querySelectorAll('.dit');
+        el.__idx = Array.prototype.indexOf.call(els, el);
+        el.__n = els.length;
+        drawTip(el, false);
+      }
+    } else if (hoverEl) {
+      hideTip(true, 'left');
+    }
+  }, true);
+
+  /* ---------- 显示项开关面板 ---------- */
+  function buildPanel() {
+    panel.innerHTML =
+      '<div class="dph">⚙ 状态条显示项</div>' +
+      '<label><input type="checkbox" data-k="ctx"><span>上下文<em>进度条 + 百分比，颜色随占比变化</em></span></label>' +
+      '<label><input type="checkbox" data-k="turn"><span>本轮<em>tokens / 次数 / 单次耗时 / 首字</em></span></label>' +
+      '<label><input type="checkbox" data-k="win"><span>会话累计<em>当前会话 tokens / 轮数 / 次数</em></span></label>' +
+      '<label><input type="checkbox" data-k="tools"><span>工具调用<em>当前会话，悬停看各工具明细与错误</em></span></label>' +
+      '<label><input type="checkbox" data-k="today"><span>今日合计<em>今天所有会话的消耗</em></span></label>' +
+      '<label><input type="checkbox" data-k="sub"><span>子代理<em>后台子代理消耗，悬停看明细</em></span></label>' +
+      '<div class="dhr"></div>' +
+      '<div class="dnote">数据源 ~/.zcode/cli/db/db.sqlite（只读）。悬停条面各项看明细；请求完成后数值才落库刷新。</div>';
+    panel.querySelectorAll('input[type=checkbox]').forEach(function (cb) {
+      cb.checked = !!state.show[cb.dataset.k];
+      cb.addEventListener('change', function () {
+        if (stale()) return;
+        state.show[cb.dataset.k] = cb.checked ? 1 : 0;
+        lsSet(LS_SHOW, JSON.stringify(state.show));
+        if (state.data) render(state.data);
+      });
+    });
+  }
+  buildPanel();
+  gear.addEventListener('click', function () {
+    if (stale()) return;
+    panel.classList.toggle('open');
+    if (panel.classList.contains('open') && hoverEl) hideTip(true, 'panel');
+  });
+
+  /* ---------- 渲染 ---------- */
+  function render(d) {
+    state.data = d;
+    var pc = pickCurrent(d);
+    var p = pc ? pc.sess : (d.session || null);
+    state.pickedSid = p ? p.sid : '';
+    window.__dreamWorkUsageWant = (pc && pc.want) || '';
+    if (!p) p = stubFor((pc && pc.want) || '');
+    state.excActive = excActive(p);
+    var h = html({ session: p, today: d.today || {} });
+    if (h.s !== lastHtml) {
+      lastHtml = h.s;
+      main.innerHTML = h.s;
+      var els = main.querySelectorAll('.dit');
+      for (var i = 0; i < els.length; i++) els[i].__tip = h.tips[i] || null;
+      if (hoverEl) {
+        var nu = null;
+        if (hoverEl === main) nu = main;
+        else if (hoverEl.__n === els.length) nu = els[hoverEl.__idx];
+        if (nu && nu.__tip) { hoverEl = nu; drawTip(nu, true); } else hideTip(true, 'orphan');
+      }
+    }
+  }
+  window.__dreamWorkUsageUpdate = function (d) {
+    if (stale()) return;
+    try { render(d); } catch (e) { }
+  };
+
+  /* ---------- 超限告警气泡 ---------- */
+  function syncExcBubble() {
+    var show = state.excActive && !state.excGone && curDisplay === 'flex';
+    if (!show) {
+      if (!state.excActive) state.excGone = false;
+      if (excBubble.style.display !== 'none') excBubble.style.display = 'none';
+      return;
+    }
+    var sidEl = excBubble.querySelector('#du-exc-sid');
+    var sidStr = state.pickedSid || '（未知）';
+    if (sidEl.textContent !== sidStr) sidEl.textContent = sidStr;
+    if (excBubble.style.display !== 'block') excBubble.style.display = 'block';
+    var br = bar.getBoundingClientRect();
+    var r = excBubble.getBoundingClientRect();
+    var left = Math.max(8, Math.round(Math.min(br.left, innerWidth - r.width - 8)));
+    var top = Math.max(8, Math.round(br.top - r.height - 8));
+    if (excBubble.style.left !== left + 'px') excBubble.style.left = left + 'px';
+    if (excBubble.style.top !== top + 'px') excBubble.style.top = top + 'px';
+  }
+
+  /* ---------- 定位：输入框玻璃外壳正下方（留分离带，不与框体贴合成一体）。
+   * 关键：ZCode 输入框的可见边界是 .chat-composer-region（玻璃壳 + 渐变描边，
+   * 比内部圆角输入卡低 ~34px），让位 margin 必须加在玻璃壳上——加在内层卡上
+   * 只是扩大壳内空隙，壳不动，条会落进壳里（实测翻车）。sticky bottom-0 容器
+   * 内内容增高即整体上移，壳被抬离窗底，条落在壳与窗底之间的壁纸上。 ---------- */
+  var composer = null, cardCache = null, hideSince = 0, lastPos = [-1, -1], curDisplay = 'none';
+  var CARD_MARGIN = '44px';
+  var BAR_GAP = 10;
+
+  function isVisualBox(el) {
+    try {
+      var cs = getComputedStyle(el);
+      return cs.borderTopWidth !== '0px' || cs.backgroundColor !== 'rgba(0, 0, 0, 0)';
+    } catch (e) { return false; }
+  }
+  function cardOf(el) {
+    /* 首选：应用自己的玻璃外壳类（稳定钩子，皮肤 CSS 同款选择器） */
+    try {
+      var region = el.closest('.chat-composer-region');
+      if (region && region !== document.body) return region;
+    } catch (e) { }
+    /* 兜底：类名变更时退回启发式（向上找第一个有边框/背景的视觉盒） */
+    var cr = el.getBoundingClientRect();
+    var p = el.parentElement, last = el, i = 0;
+    for (; p && p !== document.body && i < 8; p = p.parentElement, i++) {
+      var r = p.getBoundingClientRect();
+      if (r.height > cr.height * 8 + 80) break;
+      if (isVisualBox(p)) return p;
+      last = p;
+    }
+    return last;
+  }
+  function findComposer() {
+    var cands = document.querySelectorAll('textarea, [contenteditable="true"]');
+    for (var i = 0; i < cands.length; i++) {
+      try {
+        var r = cands[i].getBoundingClientRect();
+        if (r.width > 40 && r.height > 10 && r.top > innerHeight * 0.45 && r.bottom <= innerHeight + 40) return cands[i];
+      } catch (e) { }
+    }
+    return null;
+  }
+  function releasePads() {
+    try {
+      document.querySelectorAll('[data-du-pad]').forEach(function (el) {
+        el.style.marginBottom = el.dataset.duPad || '';
+        delete el.dataset.duPad;
+      });
+    } catch (e) { }
+  }
+  function ensureCardPad() {
+    if (!cardCache) return;
+    try {
+      if (cardCache.dataset.duPad === undefined) cardCache.dataset.duPad = cardCache.style.marginBottom || '';
+      if (cardCache.style.marginBottom !== CARD_MARGIN) cardCache.style.marginBottom = CARD_MARGIN;
+    } catch (e) { }
+  }
+  function setComposer(el) {
+    releasePads();
+    composer = el;
+    cardCache = null;
+    if (composer) {
+      var c = cardOf(composer);
+      if (c && c !== document.body) cardCache = c;
+    }
+    if (cardCache) ensureCardPad();
+  }
+  /* 原生上下文总量：输入框工具行按钮文本/aria-label "…总量 1,000,000"（服务端下发，跟随模型） */
+  var nativeCtx = { val: 0, at: 0 };
+  function readNativeCtx(card) {
+    if (Date.now() - nativeCtx.at < 5000) return nativeCtx.val;
+    nativeCtx.at = Date.now();
+    try {
+      var els = card.querySelectorAll('button, [aria-label], [title]');
+      for (var i = 0; i < els.length; i++) {
+        var el = els[i];
+        var t = el.getAttribute('aria-label') || el.getAttribute('title') || el.textContent || '';
+        var m = t.match(/总量\s*([\d,，]+)/);
+        if (m) {
+          nativeCtx.val = parseInt(m[1].replace(/[,]/g, '').replace(/\uFF0C/g, ''), 10);
+          return nativeCtx.val;
+        }
+      }
+    } catch (e) { }
+    return nativeCtx.val;
+  }
+  function themeOn() {
+    var st = document.getElementById('dream-work-style');
+    return !!(st && st.textContent && st.textContent.length > 0);
+  }
+  function hideBar() {
+    if (curDisplay !== 'none') { bar.style.display = 'none'; curDisplay = 'none'; }
+    hideTip(true, 'bar-hidden');
+  }
+  function heavy() {
+    if (stale()) return;
+    if (!bar.isConnected) document.body.appendChild(bar);
+    if (!tip.isConnected) document.body.appendChild(tip);
+    if (!excBubble.isConnected) document.body.appendChild(excBubble);
+    if (!themeOn()) { hideBar(); return; }
+    var el = findComposer();
+    if (el && el !== composer) setComposer(el);
+    else if (!el && composer && !composer.isConnected) setComposer(null);
+    if (composer) {
+      if (!cardCache || !cardCache.isConnected) {
+        var c = cardOf(composer);
+        cardCache = c && c !== document.body ? c : null;
+      }
+      if (cardCache) {
+        ensureCardPad();
+        state.nativeCtx = readNativeCtx(cardCache);
+      }
+    }
+    if (state.data) {
+      var pc = pickCurrent(state.data);
+      var pSid = pc ? (pc.sess ? pc.sess.sid : pc.want) : '';
+      window.__dreamWorkUsageWant = (pc && pc.want) || '';
+      if (pSid !== state.pickedSid) render(state.data);
+    }
+  }
+  function coverOK(el) {
+    try {
+      var r = el.getBoundingClientRect();
+      var hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+      if (!hit) return false;
+      if (hit === el || hit.contains(el) || el.contains(hit)) return true;
+      if (cardCache && cardCache.contains(el) && cardCache.contains(hit)) return true;
+      if (hit.closest && hit.closest('#dream-usage-bar,#dream-usage-tip,.dpanel,#dream-usage-exc')) return true;
+      return false;
+    } catch (e) { return true; }
+  }
+  function track() {
+    if (stale()) return;
+    try {
+      syncExcBubble();
+      if (!composer || !composer.isConnected) { hideSince = 0; hideBar(); return; }
+      if (cardCache && cardCache.style.marginBottom !== CARD_MARGIN) ensureCardPad();
+      var r = composer.getBoundingClientRect();
+      var on = r.width > 60 && r.height > 14 && r.bottom > 0 && r.top < innerHeight &&
+        (composer.offsetParent !== null || coverOK(composer));
+      if (!on) {
+        if (!hideSince) hideSince = Date.now();
+        if (Date.now() - hideSince > 400) hideBar();
+        return;
+      }
+      hideSince = 0;
+      if (curDisplay !== 'flex') { bar.style.display = 'flex'; curDisplay = 'flex'; }
+      var anchor = cardCache || composer;
+      var ar = anchor.getBoundingClientRect();
+      var left = Math.round(ar.left);
+      var top = Math.max(8, Math.min(Math.round(ar.bottom + BAR_GAP), innerHeight - bar.offsetHeight - 4));
+      if (left !== lastPos[0] || top !== lastPos[1]) {
+        bar.style.left = left + 'px';
+        bar.style.top = top + 'px';
+        lastPos = [left, top];
+      }
+      /* 条宽 = 输入卡片同宽：左右缘与卡片对齐；条目左对齐、⚙ 推到右缘 */
+      var w = Math.max(60, Math.round(ar.width));
+      if (bar.style.width !== w + 'px') bar.style.width = w + 'px';
+    } catch (e) { } finally {
+      requestAnimationFrame(track);
+    }
+  }
+
+  setInterval(heavy, 600);
+  heavy();
+  requestAnimationFrame(track);
+})();
+`}const Gr=30*60*1e3,Zr=30*1e3,Xr=128e3,xe=96;function Se(){return m.join(B.homedir(),".zcode","cli","db")}function Yr(){const e=Se();let r=0;for(const t of["db.sqlite","db.sqlite-wal","db.sqlite-shm"])try{r=Math.max(r,f.statSync(m.join(e,t)).mtimeMs)}catch{}return r}function Te(e,r){let t=0;for(let a=0;a<8;a++){const o=e[r+a];if(o===void 0)throw new Error("varint out of range");if(t=t*128+(o&127),!(o&128))return{value:t,next:r+a+1}}const n=e[r+8];if(n===void 0)throw new Error("varint out of range");return t=t*256+n,{value:t,next:r+9}}function Qr(e,r,t){let n=0;for(let a=0;a<t;a++)n=n*256+e[r+a];return t<8&&n>=Math.pow(2,t*8-1)&&(n-=Math.pow(2,t*8)),n}function lt(e){try{const r=Te(e,0),t=r.value;if(t>e.length)return null;let n=r.next,a=t;const o=[];for(;n<t;){const s=Te(e,n);n=s.next;const c=s.value;if(c===0){o.push(null);continue}if(c>=1&&c<=6){const i=[0,1,2,3,4,6,8][c];o.push(Qr(e,a,i)),a+=i;continue}if(c===7){o.push(e.readDoubleBE(a)),a+=8;continue}if(c===8){o.push(0);continue}if(c===9){o.push(1);continue}if(c>=12&&c%2===0){const i=(c-12)/2;o.push(null),a+=i;continue}if(c>=13){const i=(c-13)/2;o.push(e.toString("utf8",a,a+i)),a+=i;continue}return null}return o}catch{return null}}function en(e){const r=e.indexOf("(");if(r<0)return[];const t=p=>p==='"'||p==="'"||p.charCodeAt(0)===xe,n=(p,g)=>{const b=p[g];if(t(b)){for(g++;g<p.length&&p[g]!==b;)g++;return g}if(b==="["){const y=p.indexOf("]",g);return y<0?p.length:y}return g};let a=0,o=-1;for(let p=r;p<e.length;p++){const g=n(e,p);if(g!==p){p=g;continue}if(e[p]==="(")a++;else if(e[p]===")"&&(a--,a===0)){o=p;break}}if(o<0)return[];const s=e.slice(r+1,o),c=[];let i="",l=0;for(let p=0;p<s.length;p++){const g=n(s,p);if(g!==p){i+=s.slice(p,g+1),p=g;continue}if(s[p]==="("?l++:s[p]===")"&&l--,s[p]===","&&l===0){c.push(i),i="";continue}i+=s[p]}i.trim()&&c.push(i);const u=new Set(["PRIMARY","UNIQUE","CHECK","FOREIGN","CONSTRAINT"]),h=[];for(const p of c){const g=p.trim();if(!g)continue;let b="";if(g.startsWith('"')){const y=g.indexOf('"',1);b=g.slice(1,y>0?y:1)}else if(g.startsWith("[")){const y=g.indexOf("]",1);b=g.slice(1,y>0?y:1)}else if(g.charCodeAt(0)===xe){const y=String.fromCharCode(xe),_=g.indexOf(y,1);b=g.slice(1,_>0?_:1)}else{const y=g.match(/^([A-Za-z_][A-Za-z0-9_]*)/);y&&(b=y[1])}b&&(!g.startsWith('"')&&!g.startsWith("[")&&g.charCodeAt(0)!==xe&&u.has(b.toUpperCase())||h.push(b))}return h}function Be(e,r,t,n,a,o){for(let s=r;s+8<=r+t;s+=8){const c=n?e.readUInt32BE(s):e.readUInt32LE(s),i=n?e.readUInt32BE(s+4):e.readUInt32LE(s+4);a=a+c+o>>>0,o=o+i+a>>>0}return[a,o]}class Ze{constructor(r,t,n){U(this,"fd");U(this,"pageSize");U(this,"reserved");U(this,"wal",new Map);U(this,"cache",new Map);this.fd=r,this.pageSize=t,this.reserved=n}static open(r){const t=f.openSync(r,"r");try{const n=Buffer.alloc(100);let a=0;for(;a<100;){const i=f.readSync(t,n,a,100-a,a);if(i<=0)throw new Error("short header read");a+=i}if(n.toString("latin1",0,16)!=="SQLite format 3\0")throw new Error("not a sqlite database");let o=n.readUInt16BE(16);if(o===1&&(o=65536),o<512||o&o-1)throw new Error("invalid page size");const s=n[20];if(n.readUInt32BE(56)!==1)throw new Error("unsupported text encoding");const c=new Ze(t,o,s);return c.loadWal(r+"-wal"),c}catch(n){try{f.closeSync(t)}catch{}throw n}}close(){try{f.closeSync(this.fd)}catch{}}loadWal(r){let t;try{t=f.readFileSync(r)}catch{return}if(t.length<32)return;const n=t.readUInt32BE(0);if(n!==931071618&&n!==931071619)return;const a=n===931071619;if(t.readUInt32BE(8)!==this.pageSize)return;const o=t.readUInt32BE(16),s=t.readUInt32BE(20);let c=0,i=0;if([c,i]=Be(t,0,24,a,c,i),c!==t.readUInt32BE(24)||i!==t.readUInt32BE(28))return;const l=24+this.pageSize;let u=32;for(;u+l<=t.length;){const h=t.readUInt32BE(u);if(t.readUInt32BE(u+8)!==o||t.readUInt32BE(u+12)!==s||([c,i]=Be(t,u,8,a,c,i),[c,i]=Be(t,u+24,this.pageSize,a,c,i),c!==t.readUInt32BE(u+16)||i!==t.readUInt32BE(u+20)))break;h>=1&&this.wal.set(h,t.subarray(u+24,u+24+this.pageSize)),u+=l}}page(r){const t=this.cache.get(r);if(t)return t;const n=this.wal.get(r);if(n)return this.cache.set(r,n),n;if(r>2147483647)return null;const a=Buffer.alloc(this.pageSize);let o=0;try{for(;o<this.pageSize;){const s=f.readSync(this.fd,a,o,this.pageSize-o,(r-1)*this.pageSize+o);if(s<=0)break;o+=s}}catch{return null}return o===0?null:(this.cache.set(r,a),a)}walkTable(r,t,n){if(n>30)return;const a=this.page(r);if(!a)return;const o=r===1?100:0,s=a[o];let c=0;try{c=a.readUInt16BE(o+3)}catch{return}if(s===13){const i=this.pageSize-this.reserved,l=i-35,u=Math.floor((i-12)*32/255)-23;for(let h=0;h<c;h++)try{const p=a.readUInt16BE(o+8+h*2),g=Te(a,p),b=Te(a,g.next),y=g.value;let _=y,O=0;if(y>l&&(_=u+(y-u)%(i-4),_>l&&(_=u),O=a.readUInt32BE(b.next+_)),O===0){if(b.next+y>a.length)continue;t(b.value,a.subarray(b.next,b.next+y));continue}const w=Buffer.alloc(y);a.copy(w,0,b.next,b.next+_);let k=_,D=O,C=!1;for(;D&&k<y;){const A=this.page(D);if(!A){C=!0;break}const R=A.readUInt32BE(0),J=Math.min(y-k,i-4);A.copy(w,k,4,4+J),k+=J,D=R}if(C||k!==y)continue;t(b.value,w)}catch{continue}}else if(s===5)try{for(let i=0;i<c;i++){const l=a.readUInt16BE(o+12+i*2);this.walkTable(a.readUInt32BE(l),t,n+1)}this.walkTable(a.readUInt32BE(o+8),t,n+1)}catch{return}}tableRoots(){const r=new Map;return this.walkTable(1,(t,n)=>{const a=lt(n);a&&a[0]==="table"&&typeof a[1]=="string"&&typeof a[3]=="number"&&typeof a[4]=="string"&&r.set(a[1],{root:a[3],sql:a[4]})},0),r}scanTable(r,t,n,a){const o=en(t);if(!o.length)return;const s=[];for(const c of n){const i=o.indexOf(c);i>=0&&s.push([c,i])}this.walkTable(r,(c,i)=>{const l=lt(i);if(!l)return;const u={};for(const[h,p]of s)u[h]=l[p]??null;a(u)},0)}}const dt={requests:0,retries:0,toolCalls:0,toolErrors:0,input:0,output:0,reasoning:0,cacheRead:0,cacheWrite:0,total:0,durationMs:0,ttftMs:0};function v(e){return typeof e=="number"&&Number.isFinite(e)?e:0}function j(e){return typeof e=="string"?e:""}function tn(e){if(!e)return"";const r=new Date(e),t=n=>(n<10?"0":"")+n;return t(r.getHours())+":"+t(r.getMinutes())+":"+t(r.getSeconds())}let we=null;function rn(){if(we&&Date.now()-we.at<6e5)return we.map;const e=new Map;try{const r=Ie.find(n=>n.id==="zcode"),t=new Set([...((r==null?void 0:r.installPaths)??[]).map(n=>m.join(n,"resources","model-providers")),"D:\\ZCode\\resources\\model-providers"]);for(const n of t){let a=[];try{a=f.readdirSync(n).filter(o=>o.toLowerCase().endsWith(".json"))}catch{continue}for(const o of a)try{const s=JSON.parse(f.readFileSync(m.join(n,o),"utf8"));for(const c of Array.isArray(s==null?void 0:s.providers)?s.providers:[])for(const i of Array.isArray(c==null?void 0:c.models)?c.models:[]){const l=String((i==null?void 0:i.id)??"").trim().toLowerCase(),u=Number(i==null?void 0:i.contextWindow);l&&Number.isFinite(u)&&u>0&&e.set(l,u)}}catch{}}}catch{}return we={at:Date.now(),map:e},e}function nn(e,r){const t=e.get(r);if(t!==void 0)return t;let n="",a;for(const[o,s]of e)o.length>n.length&&r.startsWith(o+"-")&&(n=o,a=s);return a}function Ne(){return{requests:0,input:0,output:0,reasoning:0,cacheRead:0,cacheWrite:0,total:0,toolCalls:0,retries:0,lastAt:0,lastIn:0,last:null,ctxExc:0}}function an(e=[]){var n,a;const r=m.join(Se(),"db.sqlite");let t;try{t=Ze.open(r)}catch(o){return console.warn("[usage-db] open failed:",o.message),null}try{const o=t.tableRoots(),s=["model_usage","turn_usage","tool_usage","session"];for(const d of s)if(!o.has(d))return console.warn("[usage-db] table missing:",d),null;const c=new Date;c.setHours(0,0,0,0);const i=c.getTime(),l=i+864e5,u=Date.now(),h=new Map,p=new Map,g=new Map,b={requests:0,input:0,output:0,cacheRead:0,cacheWrite:0,reasoning:0,total:0,retries:0},y=o.get("model_usage");t.scanTable(y.root,y.sql,["session_id","turn_id","status","started_at","completed_at","duration_ms","time_to_first_token_ms","first_token_at","output_tokens","input_tokens","reasoning_tokens","cache_read_input_tokens","cache_creation_input_tokens","computed_total_tokens","tool_call_count","retry_count","model_id","query_source","context_exceeded"],d=>{const x=j(d.session_id);if(!x)return;const S=j(d.status),T=v(d.completed_at);if(S==="completed"){const N=j(d.query_source)==="subagent";let $=N?p.get(x):h.get(x);$||($=Ne(),(N?p:h).set(x,$));const ce=v(d.input_tokens);$.requests++;const q=j(d.turn_id);if(q){let H=g.get(x);H||(H=new Set,g.set(x,H)),H.add(q)}$.input+=ce,$.output+=v(d.output_tokens),$.reasoning+=v(d.reasoning_tokens),$.cacheRead+=v(d.cache_read_input_tokens),$.cacheWrite+=v(d.cache_creation_input_tokens),$.total+=v(d.computed_total_tokens),$.toolCalls+=v(d.tool_call_count),$.retries+=v(d.retry_count),T>$.lastAt&&($.lastAt=T);const ge=$.last;(!ge||T>=ge.completedAt)&&($.last={durationMs:v(d.duration_ms),ttftMs:v(d.time_to_first_token_ms),model:j(d.model_id),output:v(d.output_tokens),firstTokenAt:v(d.first_token_at),completedAt:T,turnId:j(d.turn_id)},$.lastIn=ce),T>=i&&T<l&&(b.requests++,b.input+=ce,b.output+=v(d.output_tokens),b.cacheRead+=v(d.cache_read_input_tokens),b.cacheWrite+=v(d.cache_creation_input_tokens),b.reasoning+=v(d.reasoning_tokens),b.total+=v(d.computed_total_tokens),b.retries+=v(d.retry_count))}if(v(d.context_exceeded)===1){const N=T||v(d.started_at);let $=h.get(x);$||($=Ne(),h.set(x,$)),N>$.ctxExc&&($.ctxExc=N)}});const _=new Map,O=o.get("turn_usage");t.scanTable(O.root,O.sql,["session_id","turn_id","status","model_request_count","model_retry_count","tool_call_count","tool_error_count","input_tokens","output_tokens","reasoning_tokens","cache_read_input_tokens","cache_creation_input_tokens","computed_total_tokens","duration_ms","time_to_first_token_ms"],d=>{const x=j(d.session_id),S=j(d.turn_id);!x||!S||j(d.status)!=="completed"||_.set(x+"|"+S,{requests:v(d.model_request_count),retries:v(d.model_retry_count),toolCalls:v(d.tool_call_count),toolErrors:v(d.tool_error_count),input:v(d.input_tokens),output:v(d.output_tokens),reasoning:v(d.reasoning_tokens),cacheRead:v(d.cache_read_input_tokens),cacheWrite:v(d.cache_creation_input_tokens),total:v(d.computed_total_tokens),durationMs:v(d.duration_ms),ttftMs:v(d.time_to_first_token_ms)})});const w=new Map,k=o.get("tool_usage");t.scanTable(k.root,k.sql,["session_id","tool_name","status","duration_ms"],d=>{const x=j(d.session_id),S=j(d.status);if(!x||S!=="completed"&&S!=="error")return;const T=j(d.tool_name)||"(unknown)";let N=w.get(x);N||(N={total:0,errors:0,list:new Map},w.set(x,N));let $=N.list.get(T);$||($={count:0,durationMs:0,errors:0},N.list.set(T,$)),N.total++,$.count++,$.durationMs+=v(d.duration_ms),S==="error"&&(N.errors++,$.errors++)});const D=new Map,C=o.get("session");t.scanTable(C.root,C.sql,["id","title","parent_id","summary_additions","summary_deletions","summary_files"],d=>{const x=j(d.id);x&&D.set(x,{title:j(d.title),parent:typeof d.parent_id=="string"&&d.parent_id?d.parent_id:null,add:typeof d.summary_additions=="number"?d.summary_additions:null,del:typeof d.summary_deletions=="number"?d.summary_deletions:null,files:typeof d.summary_files=="number"?d.summary_files:null})});let A="",R=0;for(const[d,x]of h)x.lastAt>R&&(R=x.lastAt,A=d);const J=d=>[...h.entries()].filter(([x])=>x.startsWith("sess_subagent")===d).sort((x,S)=>S[1].lastAt-x[1].lastAt).slice(0,6).map(([x])=>x),Y=[],F=d=>{d&&/^[A-Za-z0-9_-]{1,255}$/.test(d)&&!Y.includes(d)&&Y.push(d)};for(const d of e)F(d);F(A),J(!1).forEach(F),J(!0).forEach(F);const ie=new Set;for(const d of Y){const x=((a=(n=h.get(d))==null?void 0:n.last)==null?void 0:a.turnId)??"";x&&!_.has(d+"|"+x)&&ie.add(d+"|"+x)}const Q=new Map;ie.size&&t.scanTable(y.root,y.sql,["session_id","turn_id","status","input_tokens","output_tokens","computed_total_tokens","duration_ms","cache_read_input_tokens","reasoning_tokens","cache_creation_input_tokens"],d=>{if(j(d.status)!=="completed")return;const x=j(d.session_id)+"|"+j(d.turn_id);if(!ie.has(x))return;let S=Q.get(x);S||(S={...dt},Q.set(x,S)),S.requests++,S.input+=v(d.input_tokens),S.output+=v(d.output_tokens),S.total+=v(d.computed_total_tokens),S.durationMs+=v(d.duration_ms),S.cacheRead+=v(d.cache_read_input_tokens),S.reasoning+=v(d.reasoning_tokens),S.cacheWrite+=v(d.cache_creation_input_tokens)});const Ht=rn(),Ye=d=>{var rt;const x=h.get(d)??Ne(),S=D.get(d),T=x.last;let N=0;if(T&&T.output>0){let M=0;T.firstTokenAt&&T.completedAt>T.firstTokenAt?M=T.completedAt-T.firstTokenAt:M=T.durationMs,M>0&&(N=Math.round(T.output/(M/1e3)*10)/10)}const $=(T==null?void 0:T.turnId)??"",ce=$&&_.get(d+"|"+$)||$&&Q.get(d+"|"+$)||{...dt},q=w.get(d),ge={total:(q==null?void 0:q.total)??0,errors:(q==null?void 0:q.errors)??0,list:[...(q==null?void 0:q.list.entries())??[]].map(([M,E])=>({name:M,count:E.count,durationMs:E.durationMs,errors:E.errors})).sort((M,E)=>E.count-M.count||(M.name<E.name?-1:1))},H=[...p.entries()].filter(([M])=>{var E;return((E=D.get(M))==null?void 0:E.parent)===d}).sort((M,E)=>E[1].lastAt-M[1].lastAt).map(([M,E])=>{var nt;return{sid:M,title:((nt=D.get(M))==null?void 0:nt.title)??"",task:"",requests:E.requests,total:E.total,input:E.input,output:E.output,cacheRead:E.cacheRead,reasoning:E.reasoning,cacheWrite:E.cacheWrite,last:E.lastAt,active:u-E.lastAt<Zr}}),zt={requests:H.reduce((M,E)=>M+E.requests,0),total:H.reduce((M,E)=>M+E.total,0),input:H.reduce((M,E)=>M+E.input,0),output:H.reduce((M,E)=>M+E.output,0),cacheRead:H.reduce((M,E)=>M+E.cacheRead,0),reasoning:H.reduce((M,E)=>M+E.reasoning,0),cacheWrite:H.reduce((M,E)=>M+E.cacheWrite,0),active:H.some(M=>M.active),list:H},et=((T==null?void 0:T.model)??"").trim().toLowerCase(),tt=et?nn(Ht,et):void 0;return{sid:d,title:(S==null?void 0:S.title)??"",active:x.lastAt>0&&u-x.lastAt<Gr,turns:((rt=g.get(d))==null?void 0:rt.size)??0,requests:x.requests,input:x.input,output:x.output,reasoning:x.reasoning,cacheRead:x.cacheRead,cacheWrite:x.cacheWrite,total:x.total,toolCalls:x.toolCalls,retries:x.retries,ctx:x.lastIn,updated:tn(x.lastAt),lastAt:x.lastAt,last:{durationMs:(T==null?void 0:T.durationMs)??0,ttftMs:(T==null?void 0:T.ttftMs)??0,model:(T==null?void 0:T.model)??"",tps:N},lastTurn:ce,tools:ge,sub:zt,code:{add:(S==null?void 0:S.add)??null,del:(S==null?void 0:S.del)??null,files:(S==null?void 0:S.files)??null},ctxExc:x.ctxExc,contextWindow:tt??Xr,contextAuto:tt!==void 0,isSub:d.startsWith("sess_subagent"),parent:(S==null?void 0:S.parent)??null}},Qe=Y.map(Ye),Ft=A?Qe.find(d=>d.sid===A)??Ye(A):null;return{v:1,generatedAt:u,today:b,session:Ft,recent:Qe}}catch(o){return console.warn("[usage-db] snapshot failed:",o.message),null}finally{t.close()}}const mt=1500,on=3e4,sn=300,z=new Map;function ne(...e){console.error("[usage-pump]",...e)}async function cn(e){var t;const r=((t=L("zcode"))==null?void 0:t.rendererHints)??["out/renderer/index.html","renderer/index.html"];for(const n of r)try{const a=await se(e,n,{timeoutMs:1500,quiet:!0});if(a.length>0)return a}catch{}try{const a=await(await fetch(`http://127.0.0.1:${e}/json/list`,{signal:AbortSignal.timeout(3e3)})).json();return(Array.isArray(a)?a:[]).filter(Pe)}catch{return[]}}async function ut(e,r){return await Promise.race([e,new Promise(t=>setTimeout(()=>t(null),r))])}async function ln(e,r){const t=await cn(e);if(t.length===0)return;const n=[];for(const l of t){const u=new G(l.webSocketDebuggerUrl);try{await u.open();const h=await ut(u.evaluate("(window.__dreamWorkUsageWant || '')"),1500),p=typeof h=="string"?h.trim():"";p&&/^[A-Za-z0-9_-]{1,255}$/.test(p)&&!n.includes(p)&&n.push(p)}catch{}finally{u.close()}}const a=Yr(),o=n.join(",");if(o===r.lastWants&&a>0&&a===r.lastStamp)return;const s=Date.now();if(s-r.lastSpawnAt<mt){dn(e,mt-(s-r.lastSpawnAt)+50);return}r.lastWants=o,a&&(r.lastStamp=a),r.lastSpawnAt=s;const c=an(n);if(!c)return;const i="window.__dreamWorkUsageUpdate && window.__dreamWorkUsageUpdate("+JSON.stringify(c).replace(/[\u2028\u2029]/g,l=>l==="\u2028"?"\\u2028":"\\u2029")+")";for(const l of t){const u=new G(l.webSocketDebuggerUrl);try{await u.open(),await ut(u.evaluate(i),5e3)}catch{}finally{u.close()}}}function dn(e,r){const t=z.get(e);t&&(t.retryTimer&&clearTimeout(t.retryTimer),t.retryTimer=setTimeout(()=>{const n=z.get(e);n&&(n.retryTimer=null,$e(e))},Math.max(50,r)))}let Le=!1;async function $e(e){const r=z.get(e);if(!(!r||r.busy||Le)){r.busy=!0,Le=!0;try{await ln(e,r)}catch(t){ne("cycle failed:",t.message)}finally{r.busy=!1,Le=!1}}}function Ee(e){const r=z.get(e);if(!(!r||r.watcher))try{r.watcher=f.watch(Se(),(t,n)=>{if(n&&!/db\.sqlite/.test(n))return;const a=z.get(e);a&&(a.debounceTimer&&clearTimeout(a.debounceTimer),a.debounceTimer=setTimeout(()=>{const o=z.get(e);o&&(o.debounceTimer=null,$e(e))},sn))}),r.watcher.on("error",()=>{ne("db watcher error, re-arm in 5s");const t=z.get(e);if(t!=null&&t.watcher){try{t.watcher.close()}catch{}t.watcher=null}setTimeout(()=>{z.has(e)&&Ee(e)},5e3)}),ne("watching",Se(),"for port",e)}catch(t){ne("fs.watch failed, retry in 5s:",t.message),setTimeout(()=>{z.has(e)&&Ee(e)},5e3)}}function mn(e){let r=z.get(e);if(r){r.watcher||Ee(e);return}r={watcher:null,heartbeat:null,retryTimer:null,debounceTimer:null,busy:!1,lastSpawnAt:0,lastStamp:0,lastWants:""},z.set(e,r),Ee(e),r.heartbeat=setInterval(()=>void $e(e),on),ne("started for port",e),$e(e)}function un(e){const r=z.get(e);if(r){if(z.delete(e),r.watcher)try{r.watcher.close()}catch{}r.heartbeat&&clearInterval(r.heartbeat),r.retryTimer&&clearTimeout(r.retryTimer),r.debounceTimer&&clearTimeout(r.debounceTimer),ne("stopped for port",e)}}const V="dream-work-style",W="dream-work-menu",ae=new Map,me=new Map,X=new Map,ue=new Map,I={id:"wb-dream-sentinel-id",hero:"data:image/png;base64,WBDREAMHEROSENTINEL",accent:"#010203",secondary:"#040506",surface:"#070809",text:"#0a0b0c",textSubtle:"#0d0e0f",textSubtlest:"#101112",textSecondary:"#131415"},pn={zcode:[.7,.76,.88,.9],codex:[.76,.82,.86,.9,.92],catpaw:[.78,.82],"qoder-work":[.7,.82,.86,.9],"qwen-office":[.86,.9],workbuddy:[.58,.62,.92],"hana-agent":[.62,.66,.78]},Dt=[.7,.76,.88,.9];function Ut(e){return pn[e]??Dt}function hn(e){if(e)return"file:///"+encodeURI(e.replace(/\\/g,"/")).replace(/#/g,"%23").replace(/\?/g,"%3F")}const pt=new Map;function gn(e){let r;try{r=f.statSync(e)}catch{return null}const t=pt.get(e);if(t&&t.size===r.size&&t.mtimeMs===r.mtimeMs)return t.rgb;let n=null;try{const a=P.nativeImage.createFromPath(e);if(!a.isEmpty()){const o=a.resize({width:1,height:1}).toDataURL();n=Kr(Buffer.from(o.slice(o.indexOf(",")+1),"base64"))}}catch(a){console.warn("[injector] Hero average sampling failed:",a.message)}return pt.set(e,{size:r.size,mtimeMs:r.mtimeMs,rgb:n}),n}let ye=null;async function fn(){if(!ye)try{const e=m.resolve(__dirname,"manager","codex-dream-skin.css");ye=await Yt.readFile(e,"utf-8")}catch(e){console.warn("[injector] Failed to load Codex base CSS:",e.message),ye=""}return ye}async function Ot(e,r,t,n={}){const a=L(e),o=n.rendererUrlHint?[n.rendererUrlHint]:(a==null?void 0:a.rendererHints)??["renderer/index.html","index.html"];let s=[],c="No renderer targets found";for(const i of o)try{if(console.log(`[injector] Trying hint "${i}" on port ${t}`),s=await Ir(t,i,{timeoutMs:2e4,pollMs:500}),s.length>0){console.log(`[injector] Found ${s.length} targets with hint "${i}"`);break}}catch(l){c=l.message,console.log(`[injector] Hint "${i}" failed: ${l.message}`)}if(s.length===0)try{console.log(`[injector] Strict hints failed, trying relaxed page-target fallback on port ${t}`);const l=await(await fetch(`http://127.0.0.1:${t}/json/list`,{signal:AbortSignal.timeout(5e3)})).json(),u=(Array.isArray(l)?l:[]).filter(Pe).sort((h,p)=>{const g=[String(h.id??""),h.url,h.webSocketDebuggerUrl],b=[String(p.id??""),p.url,p.webSocketDebuggerUrl];for(let y=0;y<g.length;y++){if(g[y]<b[y])return-1;if(g[y]>b[y])return 1}return 0});u.length>0&&(console.log(`[injector] Relaxed fallback found ${u.length} page targets`),s=u)}catch(i){console.log(`[injector] Relaxed fallback failed: ${i.message}`)}if(s.length===0)return{success:!1,applied:0,error:c};try{const i=Re(e);if(console.log(`[injector] Loaded ${i.length} themes`),!i.some(w=>w.id===r))return{success:!1,applied:0,error:`Theme ${r} is not compatible with ${e}`};const l=zr(e,i.map(w=>w.id),r,8),u=new Map(i.map(w=>[w.id,w])),h=l.map(w=>u.get(w)).filter(Boolean),p=new Map;for(const w of h){const k=e==="zcode"?Wr(w):null;p.set(w.id,{name:w.name,css:gt(e,w.manifest,jr(w),gn(m.join(w.path,w.manifest.hero)),{video:!!k}),surface:w.manifest.colors.surface,videoUrl:hn(k)})}const g=Array.from(p.entries()).map(([w,k])=>{var D;return{id:w,name:k.name,css:k.css,surface:k.surface,accent:((D=i.find(C=>C.id===w))==null?void 0:D.manifest.colors.accent)??"#24c9d7",videoUrl:k.videoUrl}});let b=Ve();if(b.length===0){const w=e==="workbuddy"?"dreamCustomThemes":"dreamCodexCustomThemes";for(const k of s){const D=new G(k.webSocketDebuggerUrl);try{await D.open();const C=await D.evaluate(`(() => localStorage.getItem(${JSON.stringify(w)}) || '[]')()`),A=JSON.parse(C);if(Array.isArray(A)&&A.length>0){b=Fr(A);break}}catch(C){console.warn(`[injector] Failed to import existing custom themes from ${e} target ${k.id}:`,C)}finally{D.close()}}}const y=await qr(),_=e==="workbuddy"?Rn({styleId:V,menuId:W,currentThemeId:r,themes:g,sharedCustomThemes:b,sharedCustomThemeService:y,cssTemplate:Bt({id:I.id,colors:{accent:I.accent,secondary:I.secondary,surface:I.surface,text:I.text},copy:null},I.hero,{accent:I.accent,secondary:I.secondary,surface:I.surface,text:I.text})}):e==="hana-agent"?_n({styleId:V,menuId:W,currentThemeId:r,themes:g,sharedCustomThemes:b,sharedCustomThemeService:y,cssTemplate:jt({id:I.id,colors:{accent:I.accent,secondary:I.secondary,surface:I.surface,text:I.text}},I.hero,{accent:I.accent,secondary:I.secondary,surface:I.surface,text:I.text})}):Dn({styleId:V,menuId:W,currentThemeId:r,appId:e,themes:g,sharedCustomThemes:b,sharedCustomThemeService:y,cssTemplate:gt(e,{id:I.id,colors:{accent:I.accent,secondary:I.secondary,surface:I.surface,text:I.text}},I.hero,null,{template:!0}),surfaceAlphas:Ut(e)});let O=0;for(const w of s)try{console.log(`[injector] Injecting to target ${w.id}: ${w.url}`);const k=new G(w.webSocketDebuggerUrl);if(await k.open(),e==="workbuddy"&&!await k.evaluate(`(() => {
             const body = document.body;
             return body?.dataset.applicationName === 'workbuddy' && Boolean(
               document.querySelector('[data-view-id], .teams-container, .conversation-list, .main-content')
             );
-          })()`)){console.warn(`[injector] Skipping non-WorkBuddy target ${g.id}: ${g.url}`),k.close();continue}if(e==="codex"){const w=await mr();w&&await k.evaluate(`(() => {
+          })()`)){console.warn(`[injector] Skipping non-WorkBuddy target ${w.id}: ${w.url}`),k.close();continue}if(e==="codex"){const C=await fn();C&&await k.evaluate(`(() => {
               const existing = document.getElementById('codex-dream-skin-base');
               if (!existing) {
                 const style = document.createElement('style');
                 style.id = 'codex-dream-skin-base';
-                style.textContent = ${JSON.stringify(w)};
+                style.textContent = ${JSON.stringify(C)};
                 document.head.appendChild(style);
               }
-            })()`)}if(e==="hana-agent"){const w=`(() => {
-            const inject = () => ${C};
+            })()`)}if(e==="hana-agent"){const C=`(() => {
+            const inject = () => ${_};
             if (document.readyState === 'loading') {
               window.addEventListener('DOMContentLoaded', inject, { once: true });
             } else {
               inject();
             }
-          })()`,$=W.get(g.id);$&&await k.removeScriptToEvaluateOnNewDocument($).catch(()=>{});const T=await k.addScriptToEvaluateOnNewDocument(w);T&&W.set(g.id,T)}const M=await k.evaluate(e==="hana-agent"?`(() => { window.__dreamWorkForceApply = true; return ${C}; })()`:C);if(console.log(`[injector] Injection result for target ${g.id}:`,M),e==="hana-agent"){let w=!1;for(let $=0;$<20&&(w=await k.evaluate(`(() => {
-              const host = document.getElementById('${I}-host');
+          })()`,A=ae.get(w.id);A&&await k.removeScriptToEvaluateOnNewDocument(A).catch(()=>{});const R=await k.addScriptToEvaluateOnNewDocument(C);R&&ae.set(w.id,R)}const D=await k.evaluate(e==="hana-agent"?`(() => { window.__dreamWorkForceApply = true; return ${_}; })()`:_);if(console.log(`[injector] Injection result for target ${w.id}:`,D),e==="zcode"){const C=Vr(),A=ue.get(w.id);A&&await k.removeScriptToEvaluateOnNewDocument(A).catch(()=>{});const R=await k.addScriptToEvaluateOnNewDocument(`(() => { const inject = () => { ${C} }; if (document.readyState === 'loading') window.addEventListener('DOMContentLoaded', inject, { once: true }); else inject(); })()`).catch(()=>{});R&&ue.set(w.id,R),await k.evaluate(C).catch(J=>console.warn(`[injector] Usage bar injection failed for target ${w.id}:`,J.message))}if(e==="hana-agent"){let C=!1;for(let A=0;A<20&&(C=await k.evaluate(`(() => {
+              const host = document.getElementById('${W}-host');
               return Boolean(
-                document.getElementById('${D}') &&
-                host?.shadowRoot?.getElementById('${I}') &&
+                document.getElementById('${V}') &&
+                host?.shadowRoot?.getElementById('${W}') &&
                 document.documentElement.dataset.dreamTheme
               );
-            })()`).catch(()=>!1),!w);$++)await new Promise(T=>setTimeout(T,100));if(!w){console.warn(`[injector] HanaAgent injection did not become ready for target ${g.id}`),k.close();continue}}if(e==="codex")for(let w=1;w<=4;w++){const $=await k.evaluate(`(() => {
+            })()`).catch(()=>!1),!C);A++)await new Promise(R=>setTimeout(R,100));if(!C){console.warn(`[injector] HanaAgent injection did not become ready for target ${w.id}`),k.close();continue}}if(e==="codex")for(let C=1;C<=4;C++){const A=await k.evaluate(`(() => {
               const shellMain = document.querySelector('main.main-surface') || document.querySelector('main');
               let homeCandidate = shellMain ? (shellMain.matches('[role="main"]') ? shellMain : shellMain.querySelector('[role="main"]')) : null;
               
@@ -74,7 +640,7 @@ if (Test-Path -LiteralPath $full -PathType Leaf) { Write-Output $full } else { e
                 isHomeContainer,
                 isFallback
               };
-            })`);if($.homeClasses&&$.homeClasses.includes("dream-skin-home")){console.log(`[injector] Codex home detection for ${g.id}: attempt=${w}`,JSON.stringify($));break}w<4&&await new Promise(T=>setTimeout(T,800))}if(e==="codex")try{const w=await k.evaluate(`(() => {
+            })`);if(A.homeClasses&&A.homeClasses.includes("dream-skin-home")){console.log(`[injector] Codex home detection for ${w.id}: attempt=${C}`,JSON.stringify(A));break}C<4&&await new Promise(R=>setTimeout(R,800))}if(e==="codex")try{const C=await k.evaluate(`(() => {
               const html = document.documentElement;
               const body = document.body;
               const style = document.getElementById('dream-work-style');
@@ -102,48 +668,59 @@ if (Test-Path -LiteralPath $full -PathType Leaf) { Write-Output $full } else { e
                 codexDreamSkinOnHtml: html.classList.contains('codex-dream-skin'),
                 dreamTheme: html.dataset.dreamTheme || null
               };
-            })()`);console.log(`[injector] Codex debug info for ${g.id}:`,JSON.stringify(w,null,2))}catch(w){console.error(`[injector] Failed to get debug info for ${g.id}:`,w)}k.close(),A++}catch(k){console.error(`[injector] Failed to inject to target ${g.id}:`,k)}if(e==="hana-agent"&&A>0){const g=new Set(s.map($=>$.id)),k=Date.now()+2e4;let M="",w=0;for(;Date.now()<k;){let $=[];try{$=await V(t,".hanako/artifacts/renderer/",{timeoutMs:2e3,quiet:!0})}catch{}const T=$[0];if(!T){M="",w=0,await new Promise(j=>setTimeout(j,250));continue}if(!g.has(T.id)){console.log(`[injector] HanaAgent created renderer target ${T.id}; injecting theme`);const j=new U(T.webSocketDebuggerUrl);try{await j.open();const ot=`(() => {
-              const inject = () => ${C};
+            })()`);console.log(`[injector] Codex debug info for ${w.id}:`,JSON.stringify(C,null,2))}catch(C){console.error(`[injector] Failed to get debug info for ${w.id}:`,C)}k.close(),O++}catch(k){console.error(`[injector] Failed to inject to target ${w.id}:`,k)}if(e==="hana-agent"&&O>0){const w=new Set(s.map(A=>A.id)),k=Date.now()+2e4;let D="",C=0;for(;Date.now()<k;){let A=[];try{A=await se(t,".hanako/artifacts/renderer/",{timeoutMs:2e3,quiet:!0})}catch{}const R=A[0];if(!R){D="",C=0,await new Promise(F=>setTimeout(F,250));continue}if(!w.has(R.id)){console.log(`[injector] HanaAgent created renderer target ${R.id}; injecting theme`);const F=new G(R.webSocketDebuggerUrl);try{await F.open();const ie=`(() => {
+              const inject = () => ${_};
               if (document.readyState === 'loading') window.addEventListener('DOMContentLoaded', inject, { once: true });
               else inject();
-            })()`,Ce=await j.addScriptToEvaluateOnNewDocument(ot);Ce&&W.set(T.id,Ce),await j.evaluate(`(() => { window.__dreamWorkForceApply = true; return ${C}; })()`),g.add(T.id)}finally{j.close()}}const ae=new U(T.webSocketDebuggerUrl);let ve=!1;try{await ae.open(),ve=await ae.evaluate(`(() => {
-            const host = document.getElementById('${I}-host');
-            return Boolean(document.getElementById('${D}') && host?.shadowRoot?.getElementById('${I}') && document.documentElement.dataset.dreamTheme);
-          })()`)}catch{}finally{ae.close()}if(ve){if(M!==T.id)M=T.id,w=Date.now();else if(Date.now()-w>=2e3)return pr(t,C,g),ue(e,r),{success:!0,applied:1}}else M="",w=0;await new Promise(j=>setTimeout(j,250))}return{success:!1,applied:0,error:"HanaAgent renderer did not stabilize with the injected theme"}}return A>0&&ue(e,r),{success:A>0,applied:A}}catch(i){return console.error("[injector] Injection failed:",i),{success:!1,applied:0,error:i.message}}}async function ur(e,r,t={}){return gr(e,r,t)}function pr(e,r,t){const n=q.get(e);n&&clearInterval(n);const o=(O.get(e)??0)+1;O.set(e,o);let a=!1;const s=setInterval(async()=>{if(!a&&O.get(e)===o){a=!0;try{const i=(await V(e,".hanako/artifacts/renderer/",{timeoutMs:1e3,quiet:!0}))[0];if(!i||O.get(e)!==o)return;const d=new U(i.webSocketDebuggerUrl);try{await d.open();const p=await d.evaluate(`(() => {
-          const host = document.getElementById('${I}-host');
+            })()`,Q=await F.addScriptToEvaluateOnNewDocument(ie);Q&&ae.set(R.id,Q),await F.evaluate(`(() => { window.__dreamWorkForceApply = true; return ${_}; })()`),w.add(R.id)}finally{F.close()}}const J=new G(R.webSocketDebuggerUrl);let Y=!1;try{await J.open(),Y=await J.evaluate(`(() => {
+            const host = document.getElementById('${W}-host');
+            return Boolean(document.getElementById('${V}') && host?.shadowRoot?.getElementById('${W}') && document.documentElement.dataset.dreamTheme);
+          })()`)}catch{}finally{J.close()}if(Y){if(D!==R.id)D=R.id,C=Date.now();else if(Date.now()-C>=2e3)return xn(t,_,w),Fe(e,r),{success:!0,applied:1}}else D="",C=0;await new Promise(F=>setTimeout(F,250))}return{success:!1,applied:0,error:"HanaAgent renderer did not stabilize with the injected theme"}}return e==="zcode"&&O>0&&mn(t),O>0&&Fe(e,r),{success:O>0,applied:O}}catch(i){return console.error("[injector] Injection failed:",i),{success:!1,applied:0,error:i.message}}}async function bn(e,r,t={}){return yn(e,r,t)}function xn(e,r,t){const n=me.get(e);n&&clearInterval(n);const a=(X.get(e)??0)+1;X.set(e,a);let o=!1;const s=setInterval(async()=>{if(!o&&X.get(e)===a){o=!0;try{const i=(await se(e,".hanako/artifacts/renderer/",{timeoutMs:1e3,quiet:!0}))[0];if(!i||X.get(e)!==a)return;const l=new G(i.webSocketDebuggerUrl);try{await l.open();const u=await l.evaluate(`(() => {
+          const host = document.getElementById('${W}-host');
           if (document.documentElement.dataset.dreamThemeRestored === 'true') return 'restored';
-          return document.getElementById('${D}') && host?.shadowRoot?.getElementById('${I}') && document.documentElement.dataset.dreamTheme
+          return document.getElementById('${V}') && host?.shadowRoot?.getElementById('${W}') && document.documentElement.dataset.dreamTheme
             ? 'ready'
             : 'missing';
-        })()`).catch(()=>"missing");if(p==="ready"||p==="restored"){t.add(i.id);return}if(console.log(`[injector] HanaAgent watcher restoring theme on renderer target ${i.id}`),O.get(e)!==o)return;const m=`(() => {
+        })()`).catch(()=>"missing");if(u==="ready"||u==="restored"){t.add(i.id);return}if(console.log(`[injector] HanaAgent watcher restoring theme on renderer target ${i.id}`),X.get(e)!==a)return;const h=`(() => {
           const inject = () => ${r};
           if (document.readyState === 'loading') window.addEventListener('DOMContentLoaded', inject, { once: true });
           else inject();
-        })()`;if(!t.has(i.id)){const h=await d.addScriptToEvaluateOnNewDocument(m);h&&W.set(i.id,h)}if(await d.evaluate(r),O.get(e)!==o){await d.evaluate(`(() => {
-            document.getElementById('${D}')?.remove();
-            document.getElementById('${I}-host')?.remove();
+        })()`;if(!t.has(i.id)){const p=await l.addScriptToEvaluateOnNewDocument(h);p&&ae.set(i.id,p)}if(await l.evaluate(r),X.get(e)!==a){await l.evaluate(`(() => {
+            document.getElementById('${V}')?.remove();
+            document.getElementById('${W}-host')?.remove();
             clearInterval(window.__dreamWorkMenuGuard);
             delete window.__dreamWorkMenuGuard;
             delete document.documentElement.dataset.dreamTheme;
-          })()`).catch(()=>{});return}t.add(i.id)}finally{d.close()}}catch{await hr(e)||(clearInterval(s),q.delete(e))}finally{a=!1}}},1e3);q.set(e,s)}async function hr(e){try{return(await fetch(`http://127.0.0.1:${e}/json/version`,{signal:AbortSignal.timeout(500)})).ok}catch{return!1}}async function gr(e,r,t={}){var c;const n=t.rendererUrlHint?[t.rendererUrlHint]:((c=P(e))==null?void 0:c.rendererHints)??["renderer/index.html","index.html"];let o=[];for(const i of n)try{if(o=await V(r,i,{timeoutMs:1e3,quiet:!0}),o.length>0)break}catch{}if(o.length===0)try{const d=await(await fetch(`http://127.0.0.1:${r}/json/list`,{signal:AbortSignal.timeout(5e3)})).json();o=(Array.isArray(d)?d:[]).filter(xe).sort((p,m)=>{const h=[String(p.id??""),p.url,p.webSocketDebuggerUrl],f=[String(m.id??""),m.url,m.webSocketDebuggerUrl];for(let b=0;b<h.length;b++){if(h[b]<f[b])return-1;if(h[b]>f[b])return 1}return 0})}catch{}if(o.length===0)return{installed:!1,menu:!1,targets:0};const a=[];for(const i of o){const d=new U(i.webSocketDebuggerUrl);try{if(await d.open(),e==="workbuddy"&&!await d.evaluate("(() => document.body?.dataset.applicationName === 'workbuddy')()"))continue;const p=await d.evaluate(`(() => {
-        const style = document.getElementById('${D}');
-        const menuHost = document.getElementById('${I}-host');
-        const menu = document.getElementById('${I}') || menuHost?.shadowRoot?.getElementById('${I}');
+          })()`).catch(()=>{});return}t.add(i.id)}finally{l.close()}}catch{await wn(e)||(clearInterval(s),me.delete(e))}finally{o=!1}}},1e3);me.set(e,s)}async function wn(e){try{return(await fetch(`http://127.0.0.1:${e}/json/version`,{signal:AbortSignal.timeout(500)})).ok}catch{return!1}}async function yn(e,r,t={}){var c;const n=t.rendererUrlHint?[t.rendererUrlHint]:((c=L(e))==null?void 0:c.rendererHints)??["renderer/index.html","index.html"];let a=[];for(const i of n)try{if(a=await se(r,i,{timeoutMs:1e3,quiet:!0}),a.length>0)break}catch{}if(a.length===0)try{const l=await(await fetch(`http://127.0.0.1:${r}/json/list`,{signal:AbortSignal.timeout(5e3)})).json();a=(Array.isArray(l)?l:[]).filter(Pe).sort((u,h)=>{const p=[String(u.id??""),u.url,u.webSocketDebuggerUrl],g=[String(h.id??""),h.url,h.webSocketDebuggerUrl];for(let b=0;b<p.length;b++){if(p[b]<g[b])return-1;if(p[b]>g[b])return 1}return 0})}catch{}if(a.length===0)return{installed:!1,menu:!1,targets:0};const o=[];for(const i of a){const l=new G(i.webSocketDebuggerUrl);try{if(await l.open(),e==="workbuddy"&&!await l.evaluate("(() => document.body?.dataset.applicationName === 'workbuddy')()"))continue;const u=await l.evaluate(`(() => {
+        const style = document.getElementById('${V}');
+        const menuHost = document.getElementById('${W}-host');
+        const menu = document.getElementById('${W}') || menuHost?.shadowRoot?.getElementById('${W}');
         return JSON.stringify({
           installed: Boolean(style),
           menu: Boolean(menu),
           themeId: document.documentElement.dataset.dreamTheme ?? undefined
         });
-      })()`),m=JSON.parse(p);a.push(m)}catch(p){console.warn(`[injector] Status check failed for ${e} target ${i.id}:`,p)}finally{d.close()}}const s=a.find(i=>i.installed&&i.themeId)??a.find(i=>i.installed);return{installed:a.some(i=>i.installed),menu:a.some(i=>i.menu),themeId:s==null?void 0:s.themeId,targets:a.length}}async function fr(e,r,t={}){var a;if(e==="hana-agent"){O.set(r,(O.get(r)??0)+1);const s=q.get(r);s&&clearInterval(s),q.delete(r)}const n=t.rendererUrlHint??((a=P(e))==null?void 0:a.rendererHints[0])??"renderer/index.html";let o=[];try{o=await V(r,n)}catch{}if(o.length===0)try{const c=await(await fetch(`http://127.0.0.1:${r}/json/list`,{signal:AbortSignal.timeout(5e3)})).json();o=(Array.isArray(c)?c:[]).filter(xe).sort((i,d)=>{const p=[String(i.id??""),i.url,i.webSocketDebuggerUrl],m=[String(d.id??""),d.url,d.webSocketDebuggerUrl];for(let h=0;h<p.length;h++){if(p[h]<m[h])return-1;if(p[h]>m[h])return 1}return 0})}catch{}if(o.length===0)return{success:!1};for(const s of e==="hana-agent"?o:o.slice(0,1)){const c=new U(s.webSocketDebuggerUrl);if(await c.open(),e==="hana-agent"){const i=W.get(s.id);i&&(await c.removeScriptToEvaluateOnNewDocument(i).catch(()=>{}),W.delete(s.id))}await c.evaluate(`(() => {
+      })()`),h=JSON.parse(u);o.push(h)}catch(u){console.warn(`[injector] Status check failed for ${e} target ${i.id}:`,u)}finally{l.close()}}const s=o.find(i=>i.installed&&i.themeId)??o.find(i=>i.installed);return{installed:o.some(i=>i.installed),menu:o.some(i=>i.menu),themeId:s==null?void 0:s.themeId,targets:o.length}}async function vn(e,r,t={}){var o;if(e==="hana-agent"){X.set(r,(X.get(r)??0)+1);const s=me.get(r);s&&clearInterval(s),me.delete(r)}const n=t.rendererUrlHint??((o=L(e))==null?void 0:o.rendererHints[0])??"renderer/index.html";let a=[];try{a=await se(r,n)}catch{}if(a.length===0)try{const c=await(await fetch(`http://127.0.0.1:${r}/json/list`,{signal:AbortSignal.timeout(5e3)})).json();a=(Array.isArray(c)?c:[]).filter(Pe).sort((i,l)=>{const u=[String(i.id??""),i.url,i.webSocketDebuggerUrl],h=[String(l.id??""),l.url,l.webSocketDebuggerUrl];for(let p=0;p<u.length;p++){if(u[p]<h[p])return-1;if(u[p]>h[p])return 1}return 0})}catch{}if(a.length===0)return{success:!1};for(const s of e==="hana-agent"?a:a.slice(0,1)){const c=new G(s.webSocketDebuggerUrl);if(await c.open(),e==="hana-agent"){const i=ae.get(s.id);i&&(await c.removeScriptToEvaluateOnNewDocument(i).catch(()=>{}),ae.delete(s.id))}if(e==="zcode"){const i=ue.get(s.id);i&&(await c.removeScriptToEvaluateOnNewDocument(i).catch(()=>{}),ue.delete(s.id))}await c.evaluate(`(() => {
       ${e==="hana-agent"?`try { localStorage.setItem('dream-work-theme:hana-agent:restored', '1'); } catch {}
       document.documentElement.dataset.dreamThemeRestored = 'true';`:""}
-      document.getElementById('${D}')?.remove();
-      document.getElementById('${I}')?.remove();
-      document.getElementById('${I}-host')?.remove();
+      document.getElementById('${V}')?.remove();
+      document.getElementById('${W}')?.remove();
+      document.getElementById('${W}-host')?.remove();
       document.getElementById('dream-work-video-layer')?.remove();
+      document.getElementById('dream-usage-bar')?.remove();
+      document.getElementById('dream-usage-tip')?.remove();
+      document.getElementById('dream-usage-exc')?.remove();
+      document.querySelectorAll('[data-du-pad]').forEach((el) => {
+        el.style.marginBottom = el.dataset.duPad || '';
+        delete el.dataset.duPad;
+      });
       clearInterval(window.__dreamWorkMenuGuard);
       delete window.__dreamWorkMenuGuard;
       delete window.__dreamWorkVideoSrc;
+      delete window.__dreamWorkUsageBar;
+      delete window.__dreamWorkUsageUpdate;
+      delete window.__dreamWorkUsageWant;
+      window.__dreamWorkUsageGen = (window.__dreamWorkUsageGen || 0) + 1;
       if (window.__dreamWorkOutsideClick) {
         document.removeEventListener('pointerdown', window.__dreamWorkOutsideClick, true);
         delete window.__dreamWorkOutsideClick;
@@ -151,7 +728,7 @@ if (Test-Path -LiteralPath $full -PathType Leaf) { Write-Output $full } else { e
       delete document.documentElement.dataset.dreamTheme;
       delete document.documentElement.dataset.dreamShell;
       return true;
-    })`),c.close()}return{success:!0}}function br(e,r,t,n){const o=Y(e),a=n.map(c=>N(t??o,o,c)),s=X(Y(r),a,4.5);return{text:F(s),textSubtle:F(X(N(o,s,.88),a,3)),textSubtlest:F(X(N(o,s,.8),a,3)),textSecondary:F(X(N(o,s,.72),a,3))}}function xr(e){const r=e[0]/255,t=e[1]/255,n=e[2]/255,o=Math.max(r,t,n),a=Math.min(r,t,n),s=(o+a)/2,c=o-a,i=c===0?0:c/(1-Math.abs(2*s-1)),m=(((c===0?0:o===r?(t-n)/c%6:o===t?(n-r)/c+2:(r-t)/c+4)*60%360+360)%360-60+360)%360,h=(1-Math.abs(2*s-1))*Math.max(i,.35),f=h*(1-Math.abs(m/60%2-1)),b=s-h/2;return(m<60?[h,f,0]:m<120?[f,h,0]:m<180?[0,h,f]:m<240?[0,f,h]:m<300?[f,0,h]:[h,0,f]).map(C=>(C+b)*255)}function Me(e){let r;try{r=Y(e)}catch{return null}const t=r[0]/255,n=r[1]/255,o=r[2]/255,a=Math.max(t,n,o),s=Math.min(t,n,o),c=a-s;let i=0;return c>0&&(i=((a===t?(n-o)/c%6:a===n?(o-t)/c+2:(t-n)/c+4)*60%360+360)%360),{h:i,chroma:c}}function wr(e,r){const t=Me(e),n=Me(r);if(!t||!n)return r;const o=Math.abs(t.h-n.h)%360;return(o>180?360-o:o)>=45&&n.chroma>=.1?r:F(xr(Y(e)))}function Ae(e,r,t,n=null,o={}){var p,m,h,f;const a=((p=r.colors)==null?void 0:p.surface)??"#f7fbff",s=((m=r.colors)==null?void 0:m.text)??"#17344f",c=o.template?{text:s,textSubtle:x.textSubtle,textSubtlest:x.textSubtlest,textSecondary:x.textSecondary}:br(a,s,n,Ze(e)),i={accent:((h=r.colors)==null?void 0:h.accent)??"#24c9d7",secondary:((f=r.colors)==null?void 0:f.secondary)??"#ef8fd3",surface:a,...c};if(e==="zcode"&&!o.template&&(i.secondary=wr(i.accent,i.secondary)),e==="codex")return Tr(r,t,i);const d=P(e);return(d==null?void 0:d.kind)==="vscode-work"?yr(r,t,i):(d==null?void 0:d.kind)==="generic-work"?e==="hana-agent"?Ye(r,t,i):kr(e,r,t,i,!!o.video):et({...r,copy:null},t,i)}function yr(e,r,t){return`/* DREAM_THEME:${e.id} */
+    })`),c.close()}return e==="zcode"&&(ue.clear(),un(r)),{success:!0}}function kn(e,r,t,n){const a=ke(e),o=n.map(c=>te(t??a,a,c)),s=be(ke(r),o,4.5);return{text:le(s),textSubtle:le(be(te(a,s,.88),o,3)),textSubtlest:le(be(te(a,s,.8),o,3)),textSecondary:le(be(te(a,s,.72),o,3))}}function Cn(e){const r=e[0]/255,t=e[1]/255,n=e[2]/255,a=Math.max(r,t,n),o=Math.min(r,t,n),s=(a+o)/2,c=a-o,i=c===0?0:c/(1-Math.abs(2*s-1)),h=(((c===0?0:a===r?(t-n)/c%6:a===t?(n-r)/c+2:(r-t)/c+4)*60%360+360)%360-60+360)%360,p=(1-Math.abs(2*s-1))*Math.max(i,.35),g=p*(1-Math.abs(h/60%2-1)),b=s-p/2;return(h<60?[p,g,0]:h<120?[g,p,0]:h<180?[0,p,g]:h<240?[0,g,p]:h<300?[g,0,p]:[p,0,g]).map(_=>(_+b)*255)}function ht(e){let r;try{r=ke(e)}catch{return null}const t=r[0]/255,n=r[1]/255,a=r[2]/255,o=Math.max(t,n,a),s=Math.min(t,n,a),c=o-s;let i=0;return c>0&&(i=((o===t?(n-a)/c%6:o===n?(a-t)/c+2:(t-n)/c+4)*60%360+360)%360),{h:i,chroma:c}}function Sn(e,r){const t=ht(e),n=ht(r);if(!t||!n)return r;const a=Math.abs(t.h-n.h)%360;return(a>180?360-a:a)>=45&&n.chroma>=.1?r:le(Cn(ke(e)))}function gt(e,r,t,n=null,a={}){var u,h,p,g;const o=((u=r.colors)==null?void 0:u.surface)??"#f7fbff",s=((h=r.colors)==null?void 0:h.text)??"#17344f",c=a.template?{text:s,textSubtle:I.textSubtle,textSubtlest:I.textSubtlest,textSecondary:I.textSecondary}:kn(o,s,n,Ut(e)),i={accent:((p=r.colors)==null?void 0:p.accent)??"#24c9d7",secondary:((g=r.colors)==null?void 0:g.secondary)??"#ef8fd3",surface:o,...c};if(e==="zcode"&&!a.template&&(i.secondary=Sn(i.accent,i.secondary)),e==="codex")return An(r,t,i);const l=L(e);return(l==null?void 0:l.kind)==="vscode-work"?Tn(r,t,i):(l==null?void 0:l.kind)==="generic-work"?e==="hana-agent"?jt(r,t,i):$n(e,r,t,i,!!a.video):Bt({...r,copy:null},t,i)}function Tn(e,r,t){return`/* DREAM_THEME:${e.id} */
 :root {
   --vscode-editor-background: transparent !important;
   --vscode-foreground: ${t.text} !important;
@@ -339,7 +916,7 @@ html[data-dream-shell="dark"] body.solo-lite #root
   :where(svg[stroke]:not([stroke="none"]), svg [stroke]:not([stroke="none"])) {
   stroke: currentColor !important;
 }
-`}function kr(e,r,t,n,o=!1){const a={"qoder-work":'#root > div, [class*="layout"], [class*="content-area"], [class*="main-content"]',catpaw:".main-area, .main-content-container, .main-content, .chat-content-area",zcode:'main, main > div, [class*="min-h-0"][class*="flex-1"]',"qwen-office":".agents-content-area, .agents-parchment-paper-surface"},s={"qoder-work":'[class*="sidebar"]',catpaw:".sidebar-wrapper, .sidebar",zcode:"#sidebar, aside","qwen-office":".agents-sidebar, .group\\/sidebar"},c=a[e]??'main, [role="main"], [class*="main-content"]',i=s[e]??'aside, nav, [class*="sidebar"]',d=e==="qoder-work"?$r(n):e==="catpaw"?Sr(t,n):e==="zcode"?vr(n):"",p=e==="zcode"?'[class*="composer"], [class*="input-container"]':'[class*="message"], [class*="bubble"], [class*="composer"], [class*="input-container"]',m=o?"transparent !important":e==="zcode"?`url(${JSON.stringify(t)}) center / cover no-repeat fixed !important`:`linear-gradient(90deg, color-mix(in srgb, ${n.surface} 82%, transparent) 0 12%, transparent 42%), url(${JSON.stringify(t)}) center / cover no-repeat fixed !important`;return`/* DREAM_THEME:${r.id} */
+`}function $n(e,r,t,n,a=!1){const o={"qoder-work":'#root > div, [class*="layout"], [class*="content-area"], [class*="main-content"]',catpaw:".main-area, .main-content-container, .main-content, .chat-content-area",zcode:'main, main > div, [class*="min-h-0"][class*="flex-1"]',"qwen-office":".agents-content-area, .agents-parchment-paper-surface"},s={"qoder-work":'[class*="sidebar"]',catpaw:".sidebar-wrapper, .sidebar",zcode:"#sidebar, aside","qwen-office":".agents-sidebar, .group\\/sidebar"},c=o[e]??'main, [role="main"], [class*="main-content"]',i=s[e]??'aside, nav, [class*="sidebar"]',l=e==="qoder-work"?Mn(n):e==="catpaw"?In(t,n):e==="zcode"?En(n):"",u=e==="zcode"?'[class*="composer"], [class*="input-container"]':'[class*="message"], [class*="bubble"], [class*="composer"], [class*="input-container"]',h=a?"transparent !important":e==="zcode"?`url(${JSON.stringify(t)}) center / cover no-repeat fixed !important`:`linear-gradient(90deg, color-mix(in srgb, ${n.surface} 82%, transparent) 0 12%, transparent 42%), url(${JSON.stringify(t)}) center / cover no-repeat fixed !important`;return`/* DREAM_THEME:${r.id} */
 :root {
   --dream-work-accent: ${n.accent};
   --dream-work-secondary: ${n.secondary};
@@ -362,26 +939,26 @@ html[data-dream-shell="dark"] body.solo-lite #root
   --color-selected: color-mix(in srgb, ${n.accent} 16%, ${n.surface}) !important;
   --color-hover: color-mix(in srgb, ${n.accent} 10%, ${n.surface}) !important;
 }
-html, body, #root { background: ${o?"transparent":n.surface} !important; color: ${n.text} !important; }
+html, body, #root { background: ${a?"transparent":n.surface} !important; color: ${n.text} !important; }
 :is(${i}) {
   background: color-mix(in srgb, ${n.surface} 90%, transparent) !important;
   color: ${n.text} !important;
   backdrop-filter: blur(20px) saturate(108%);
 }
 :is(${c}) {
-  background: ${m};
+  background: ${h};
   color: ${n.text} !important;
 }
 :is(${c}) :where([class*="message"], [class*="chat"], [class*="composer"], [class*="editor"], [contenteditable="true"], textarea) {
   color: ${n.text} !important;
 }
-:is(${c}) :where(${p}) {
+:is(${c}) :where(${u}) {
   background-color: color-mix(in srgb, ${n.surface} 88%, transparent) !important;
   backdrop-filter: blur(16px) saturate(108%);
 }
 :is(${c}) :where(p, span, li, h1, h2, h3, h4, strong, em) { color: ${n.text} !important; }
 button[class*="bg-primary"], button[class*="bg-accent"] { background-color: ${n.accent} !important; color: #fff !important; }
-${d}${o?`
+${l}${a?`
 /* ZCode 动态视频背景：fixed 层 z-index:-1 落于普通流内容之下（内容无需抬升，
    不破坏原生 sticky），层自身带 hero 底图作加载中/失败回退；玻璃 backdrop-filter 直接采样视频 */
 #dream-work-video-layer {
@@ -404,7 +981,7 @@ ${d}${o?`
 /* 独立整页（设置/插件市场/自动化）的内容壳 div.bg-background.rounded-xl.border-border
    同样不透明（rgb 248,248,248），视频主题一并放行；页内统计卡/侧栏自身已是玻璃 */
 .bg-background.rounded-xl.border-border { background: transparent !important; }
-#dream-work-video-layer[data-motion-error="true"] video { display: none !important; }`:""}`}function vr(e){return`
+#dream-work-video-layer[data-motion-error="true"] video { display: none !important; }`:""}`}function En(e){return`
 /* ZCode conversations: the wallpaper stays on the timeline, while each
    semantic row receives its own readable surface instead of one large wash. */
 :is(main) :where(
@@ -1050,7 +1627,7 @@ aside[class*="popover-border"]::after {
   :is(main, div.border-l.border-border) [class~="group/assistant-row"] > [data-conversation-selectable]::before,
   aside[class*="popover-border"]::after,
   div[data-slot="hover-card-content"]::after { animation: none !important; }
-}`}function Ye(e,r,t){return`/* DREAM_THEME:${e.id} */
+}`}function jt(e,r,t){return`/* DREAM_THEME:${e.id} */
 :root {
   --dream-work-accent: ${t.accent};
   --dream-work-secondary: ${t.secondary};
@@ -1100,10 +1677,10 @@ html, body, #react-root, .app-shell {
 :where(button[class*="primary"], button[type="submit"]) {
   background-color: ${t.accent} !important;
   color: #ffffff !important;
-}`}function Cr(e){return`(() => {
+}`}function _n(e){return`(() => {
     const themes = ${JSON.stringify(e.themes)};
     const cssTemplate = ${JSON.stringify(e.cssTemplate)};
-    const sentinels = ${JSON.stringify(x)};
+    const sentinels = ${JSON.stringify(I)};
     const restoreKey = 'dream-work-theme:hana-agent:restored';
     const customStorageKey = 'dreamCodexCustomThemes';
     const selectedKey = 'dream-work-theme:hana-agent:selected-theme';
@@ -1424,7 +2001,7 @@ html, body, #react-root, .app-shell {
       else applyTheme('${e.currentThemeId}');
     }
     return true;
-  })()`}function $r(e){return`
+  })()`}function Mn(e){return`
 /* QoderWork shell controls */
 body > #root > div:first-child > div:first-child button[aria-label] {
   background-color: transparent !important;
@@ -1486,7 +2063,7 @@ body > #root > div:first-child > div:first-child button[aria-label="Close"]:hove
 .agents-sidebar button svg,
 body > #root > div:first-child > div:first-child button[aria-label] svg {
   color: currentColor !important;
-}`}function Sr(e,r){return`
+}`}function In(e,r){return`
 /* CatPaw new-task and conversation surfaces */
 html body #root .main-area {
   position: relative !important;
@@ -1536,7 +2113,7 @@ html body #root .catpaw-desk-inputBox :where(button, [role="button"]):hover {
 html body #root .catpaw-desk-inputBox :where(svg, svg *) {
   color: currentColor !important;
 }
-`}function _e(e,r=""){return JSON.stringify(typeof e=="string"?e:r)}function et(e,r,t){var o,a;return`/* DREAM_THEME:${String(e.id??"custom").replace(/[^a-z0-9_-]/gi,"")} */
+`}function ft(e,r=""){return JSON.stringify(typeof e=="string"?e:r)}function Bt(e,r,t){var a,o;return`/* DREAM_THEME:${String(e.id??"custom").replace(/[^a-z0-9_-]/gi,"")} */
 body[data-application-name="workbuddy"] {
   --wb-accent: ${t.accent};
   --wb-secondary: ${t.secondary};
@@ -1643,7 +2220,7 @@ body[data-application-name="workbuddy"] {
   z-index: 20;
   top: 60px;
   left: max(300px, 22vw);
-  content: ${_e((o=e.copy)==null?void 0:o.brand)};
+  content: ${ft((a=e.copy)==null?void 0:a.brand)};
   color: var(--wb-accent);
   font: 800 clamp(16px, 2vw, 30px)/1.2 ui-rounded, system-ui;
   text-shadow: 0 2px 10px white;
@@ -1657,12 +2234,12 @@ body[data-application-name="workbuddy"] {
   top: 104px;
   left: max(300px, 22vw);
   max-width: 42vw;
-  content: ${_e((a=e.copy)==null?void 0:a.headline)};
+  content: ${ft((o=e.copy)==null?void 0:o.headline)};
   color: var(--wb-text);
   font: 750 clamp(18px, 2.7vw, 42px)/1.15 ui-rounded, system-ui;
   text-shadow: 0 2px 12px white;
   pointer-events: none;
-}`}function Tr(e,r,t){const n=Er(t.surface),o=n?`color-mix(in srgb, ${t.surface} 90%, transparent)`:`color-mix(in srgb, ${t.surface} 86%, transparent)`,a=n?`color-mix(in srgb, ${t.accent} 16%, ${t.surface})`:`color-mix(in srgb, ${t.accent} 42%, ${t.surface})`,s=n?"#172033":`color-mix(in srgb, ${t.surface} 72%, #000000)`,c="#f2f6ff",i=`/* DREAM_THEME:${e.id} */
+}`}function An(e,r,t){const n=Pn(t.surface),a=n?`color-mix(in srgb, ${t.surface} 90%, transparent)`:`color-mix(in srgb, ${t.surface} 86%, transparent)`,o=n?`color-mix(in srgb, ${t.accent} 16%, ${t.surface})`:`color-mix(in srgb, ${t.accent} 42%, ${t.surface})`,s=n?"#172033":`color-mix(in srgb, ${t.surface} 72%, #000000)`,c="#f2f6ff",i=`/* DREAM_THEME:${e.id} */
 :root.codex-dream-skin {
   --ds-bg: ${t.surface};
   --ds-panel: ${t.surface};
@@ -1678,7 +2255,7 @@ body[data-application-name="workbuddy"] {
   --ds-hero-height: 252px;
   --ds-radius: 24px;
   --dream-skin-art: url(${JSON.stringify(r)});
-}`,d=`/* DREAM_THEME_BODY:${e.id} */
+}`,l=`/* DREAM_THEME_BODY:${e.id} */
 html.codex-dream-skin body {
   background-color: ${t.surface} !important;
   background-image: none !important;
@@ -1735,7 +2312,7 @@ html.codex-dream-skin main.main-surface:not(.dream-skin-home-shell) .message,
 html.codex-dream-skin main.main-surface:not(.dream-skin-home-shell) [data-message-author-role],
 html.codex-dream-skin main.main-surface:not(.dream-skin-home-shell) [class*="surface"]:not(.composer-surface-chrome):not([class*="home-main-content"]) {
   border-color: color-mix(in srgb, ${t.accent} 24%, transparent) !important;
-  background: ${o} !important;
+  background: ${a} !important;
   color: ${t.text} !important;
   text-shadow: none !important;
   backdrop-filter: blur(18px) saturate(108%) !important;
@@ -1743,7 +2320,7 @@ html.codex-dream-skin main.main-surface:not(.dream-skin-home-shell) [class*="sur
 
 html.codex-dream-skin main.main-surface:not(.dream-skin-home-shell) [data-message-author-role="user"],
 html.codex-dream-skin main.main-surface:not(.dream-skin-home-shell) [class*="bg-token-foreground"] {
-  background: ${a} !important;
+  background: ${o} !important;
   color: ${t.text} !important;
 }
 
@@ -1833,8 +2410,8 @@ html.codex-dream-skin .dream-skin-home .composer-surface-chrome {
   background-color: color-mix(in srgb, ${t.surface} 82%, transparent) !important;
   backdrop-filter: blur(14px) saturate(106%) !important;
 }`;return i+`
-`+d}function Er(e){const r=/^#([0-9a-f]{6})$/i.exec(e);if(!r)return!0;const t=parseInt(r[1],16);return .299*(t>>16&255)+.587*(t>>8&255)+.114*(t&255)>140}function Ir(e){return`(() => {
-  const data = ${JSON.stringify({styleId:e.styleId,menuId:e.menuId,activeId:e.currentThemeId,themes:e.themes,cssTemplate:e.cssTemplate,sentinels:x,storageKey:"dreamCustomThemes",selectedKey:"wb-dream-selected",sharedCustomThemes:e.sharedCustomThemes,sharedCustomThemeService:e.sharedCustomThemeService})};
+`+l}function Pn(e){const r=/^#([0-9a-f]{6})$/i.exec(e);if(!r)return!0;const t=parseInt(r[1],16);return .299*(t>>16&255)+.587*(t>>8&255)+.114*(t&255)>140}function Rn(e){return`(() => {
+  const data = ${JSON.stringify({styleId:e.styleId,menuId:e.menuId,activeId:e.currentThemeId,themes:e.themes,cssTemplate:e.cssTemplate,sentinels:I,storageKey:"dreamCustomThemes",selectedKey:"wb-dream-selected",sharedCustomThemes:e.sharedCustomThemes,sharedCustomThemeService:e.sharedCustomThemeService})};
   const recordPresetUsage = (themeId) => fetch(data.sharedCustomThemeService.usageEndpoint, {
     method: "POST",
     headers: { Authorization: "Bearer " + data.sharedCustomThemeService.token, "Content-Type": "application/json" },
@@ -2154,11 +2731,11 @@ html.codex-dream-skin .dream-skin-home .composer-surface-chrome {
 
   window.__dreamTheme = { importFromDataUrl, setTheme, clearTheme, deleteCustom };
   return true;
-})()`}function Pr(e){const r=JSON.stringify(e.themes),t=JSON.stringify(e.cssTemplate??""),n=e.appId,o=e.surfaceAlphas??Xe;return`(() => {
+})()`}function Dn(e){const r=JSON.stringify(e.themes),t=JSON.stringify(e.cssTemplate??""),n=e.appId,a=e.surfaceAlphas??Dt;return`(() => {
   const themes = ${r};
   const cssTemplate = ${t};
-  const sentinels = ${JSON.stringify(x)};
-  const surfaceAlphas = ${JSON.stringify(o)};
+  const sentinels = ${JSON.stringify(I)};
+  const surfaceAlphas = ${JSON.stringify(a)};
   const currentThemeId = '${e.currentThemeId}';
   const appId = '${n}';
   const customStorageKey = 'dreamCodexCustomThemes';
@@ -2812,23 +3389,23 @@ html.codex-dream-skin .dream-skin-home .composer-surface-chrome {
   }, 250);
   applyTheme(currentThemeId);
   ensureInjectedNodes();
-})()`}function Mr(e){if(!/^[a-z0-9._-]+$/i.test(e.id||""))throw new Error(`Invalid shortcut id: ${e.id}`);if(!/^[a-z0-9-]+$/i.test(e.appId||""))throw new Error(`Invalid appId: ${e.appId}`);if(!/^[a-z0-9._-]+$/i.test(e.themeId||""))throw new Error(`Invalid themeId: ${e.themeId}`)}function ke(e){const r=e.replace(/[^\p{L}\p{N} ._-]/gu,"").trim();return r.length>0?r.slice(0,80):"DreamWorkTheme"}async function Ar(e){try{return Mr(e),E.platform()==="win32"?_r(e):E.platform()==="darwin"?Dr(e):E.platform()==="linux"?jr(e):{success:!1,error:`Unsupported platform: ${E.platform()}`}}catch(r){return{success:!1,error:r.message}}}function _r(e){const r=l.join(E.homedir(),"Desktop"),t=l.join(r,`${ke(e.label)}.lnk`),n=process.execPath,o=l.dirname(n),a=`
+})()`}function Un(e){if(!/^[a-z0-9._-]+$/i.test(e.id||""))throw new Error(`Invalid shortcut id: ${e.id}`);if(!/^[a-z0-9-]+$/i.test(e.appId||""))throw new Error(`Invalid appId: ${e.appId}`);if(!/^[a-z0-9._-]+$/i.test(e.themeId||""))throw new Error(`Invalid themeId: ${e.themeId}`)}function Xe(e){const r=e.replace(/[^\p{L}\p{N} ._-]/gu,"").trim();return r.length>0?r.slice(0,80):"DreamWorkTheme"}async function On(e){try{return Un(e),B.platform()==="win32"?jn(e):B.platform()==="darwin"?Bn(e):B.platform()==="linux"?Nn(e):{success:!1,error:`Unsupported platform: ${B.platform()}`}}catch(r){return{success:!1,error:r.message}}}function jn(e){const r=m.join(B.homedir(),"Desktop"),t=m.join(r,`${Xe(e.label)}.lnk`),n=process.execPath,a=m.dirname(n),o=`
     $WshShell = New-Object -comObject WScript.Shell
     $Shortcut = $WshShell.CreateShortcut("${t.replace(/\\/g,"\\\\")}")
     $Shortcut.TargetPath = "${n.replace(/\\/g,"\\\\")}"
     $Shortcut.Arguments = "--launch=${e.appId}:${e.themeId}"
-    $Shortcut.WorkingDirectory = "${o.replace(/\\/g,"\\\\")}"
+    $Shortcut.WorkingDirectory = "${a.replace(/\\/g,"\\\\")}"
     $Shortcut.Save()
-  `;return new Promise(s=>{require("child_process").execFile("powershell.exe",["-NoProfile","-Command",a],c=>{s(c?{success:!1,error:c.message}:{success:!0,path:t})})})}function Dr(e){const r=l.join(E.homedir(),"Desktop"),t=l.join(r,`${ke(e.label)}.app`),o=`
+  `;return new Promise(s=>{require("child_process").execFile("powershell.exe",["-NoProfile","-Command",o],c=>{s(c?{success:!1,error:c.message}:{success:!0,path:t})})})}function Bn(e){const r=m.join(B.homedir(),"Desktop"),t=m.join(r,`${Xe(e.label)}.app`),a=`
     tell application "Terminal"
       do script "'${process.execPath}' --launch=${e.appId}:${e.themeId}"
     end tell
-  `,a=l.join(r,`${e.id}.scpt`);return u.writeFileSync(a,o),new Promise(s=>{require("child_process").execFile("osacompile",["-o",t,a],c=>{u.unlinkSync(a),s(c?{success:!1,error:c.message}:{success:!0,path:t})})})}async function jr(e){const r=l.join(E.homedir(),".local","share","applications");u.existsSync(r)||u.mkdirSync(r,{recursive:!0});const t=l.join(r,`${e.id}.desktop`),n=process.execPath,o=`[Desktop Entry]
+  `,o=m.join(r,`${e.id}.scpt`);return f.writeFileSync(o,a),new Promise(s=>{require("child_process").execFile("osacompile",["-o",t,o],c=>{f.unlinkSync(o),s(c?{success:!1,error:c.message}:{success:!0,path:t})})})}async function Nn(e){const r=m.join(B.homedir(),".local","share","applications");f.existsSync(r)||f.mkdirSync(r,{recursive:!0});const t=m.join(r,`${e.id}.desktop`),n=process.execPath,a=`[Desktop Entry]
 Type=Application
-Name=${ke(e.label)}
+Name=${Xe(e.label)}
 Exec="${n}" --launch=${e.appId}:${e.themeId}
 Icon=${e.icon||"utilities-terminal"}
 Terminal=false
 Categories=Utility;
-`;return u.writeFileSync(t,o),u.chmodSync(t,493),{success:!0,path:t}}const Rr=he.promisify(re.execFile),Or="https://api.dreamskin.cc",tt=`${Or}/v1/themes`,rt=32*1024*1024,te=6;let de=0;const Ur=["workbuddy","codex","trae-work","qoder-work","catpaw","zcode","qwen-office","hana-agent"];async function Lr(){const e=de,r=await Nr(e),t=r.items;de=e+t.length>=r.total?0:e+te;const n=We(),o={checked:t.length,imported:0,skipped:0,offset:e,page:Math.floor(e/te)+1,total:r.total,nextOffset:de,failed:[]};for(const a of t){const s=zr(a.themeId);if(!a.applyCompatible||He(s)){o.skipped++;continue}try{await Br(a,n,s)?o.imported++:o.skipped++}catch(c){o.failed.push({id:a.id,name:a.name,error:c.message})}}return o}async function Nr(e){const r=`${tt}?limit=${te}&offset=${e}&sort=recent`,t=await fetch(r,{signal:AbortSignal.timeout(3e4),redirect:"error"});if(!t.ok)throw new Error(`Theme list request failed: HTTP ${t.status}`);const n=await t.json();if(!Array.isArray(n.items)||n.items.length>te||!Number.isInteger(n.total)||n.total<0)throw new Error("Theme list response is invalid");return{items:n.items,total:n.total}}async function Br(e,r,t){Fr(e);const n=u.mkdtempSync(l.join(E.tmpdir(),"dream-work-theme-")),o=l.join(n,"theme.zip"),a=l.join(n,"extract"),s=l.join(r,`.updating-${t}-${process.pid}`);try{u.mkdirSync(a);const c=`${tt}/${e.id}/download`,i=await fetch(c,{signal:AbortSignal.timeout(12e4),redirect:"error"});if(!i.ok)throw new Error(`Theme download failed: HTTP ${i.status}`);const d=Buffer.from(await i.arrayBuffer());if(d.length!==e.packageBytes)throw new Error(`Downloaded size mismatch: expected ${e.packageBytes}, got ${d.length}`);if(d.length>rt)throw new Error("Theme package exceeds 32 MiB");if(ge.createHash("sha256").update(d).digest("hex")!==e.packageSha256)throw new Error("Downloaded SHA-256 does not match metadata");u.writeFileSync(o,d,{flag:"wx"}),await Wr(o,a);const m=Hr(a),h=JSON.parse(u.readFileSync(l.join(m,"theme.json"),"utf8")),f=h.image;if(typeof f!="string"||l.basename(f)!==f||!/\.(png|jpe?g|webp)$/i.test(f))throw new Error("Theme image name is invalid");const b=l.join(m,f),v=l.join(m,"theme.css");if(!u.existsSync(b)||!u.statSync(b).isFile())throw new Error("Theme image is missing");if(!u.existsSync(v)||!u.statSync(v).isFile())throw new Error("theme.css is missing");const C=qr(h,e,t,`hero${l.extname(f).toLowerCase()}`);return Qt(C.name,C.author,b)?!1:(u.mkdirSync(s),u.copyFileSync(b,l.join(s,C.hero)),u.copyFileSync(v,l.join(s,"theme.css")),u.writeFileSync(l.join(s,"theme.json"),`${JSON.stringify(C,null,2)}
-`),u.renameSync(s,l.join(r,t)),!0)}finally{u.rmSync(s,{recursive:!0,force:!0}),u.rmSync(n,{recursive:!0,force:!0})}}async function Wr(e,r){const{path7za:t}=require("7zip-bin");await Rr(t,["x",e,`-o${r}`,"-y"],{windowsHide:!0,timeout:12e4})}function Hr(e){const t=[e,...u.readdirSync(e,{withFileTypes:!0}).filter(n=>n.isDirectory()).map(n=>l.join(e,n.name))].filter(n=>u.existsSync(l.join(n,"theme.json"))&&u.existsSync(l.join(n,"theme.css")));if(t.length!==1)throw new Error("Theme ZIP must contain one theme root");return t[0]}function Fr(e){if(!/^ver_[a-z0-9]{8,64}$/.test(e.id))throw new Error("Theme version ID is invalid");if(!Number.isInteger(e.packageBytes)||e.packageBytes<1||e.packageBytes>rt)throw new Error("Theme package size is invalid");if(!/^[a-f0-9]{64}$/.test(e.packageSha256))throw new Error("Theme package SHA-256 is invalid")}function zr(e){return String(e).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"").replace(/-+/g,"-")||"community-theme"}function qr(e,r,t,n){const o=e.appearance==="dark"?"dark":"light",a=o==="dark"?"#10141c":"#f4f7fa",s=e.colors||{};return{schemaVersion:1,id:t,name:String(e.name||r.name||t).trim(),author:r.authorDisplayName||"DreamSkin Community",hero:n,colors:{accent:z(s.accent,"#4f8cff",a),secondary:z(s.secondary||s.accentAlt,"#7ba7d8",a),surface:z(s.panelAlt||s.panel||s.background,a,a),text:z(s.text,o==="dark"?"#eef2f7":"#1f2937",a)},copy:null,apps:Object.fromEntries(Ur.map(c=>[c,{compat:!0}]))}}function z(e,r,t){if(typeof e!="string")return r;const n=e.trim().match(/^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i);if(n){let i=n[1];return i.length===3&&(i=i.split("").map(d=>d+d).join("")),`#${i.slice(0,6).toLowerCase()}`}const o=e.trim().match(/^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*(0|1|0?\.\d+))?\s*\)$/i);if(!o)return r;const a=o[4]===void 0?1:Number(o[4]),s=z(t,r,r).slice(1).match(/../g).map(i=>parseInt(i,16));return`#${[1,2,3].map(i=>Math.round(Number(o[i])*a+s[i-1]*(1-a))).map(i=>i.toString(16).padStart(2,"0")).join("")}`}let J=null;y.protocol.registerSchemesAsPrivileged([{scheme:"theme-asset",privileges:{standard:!0,secure:!0,supportFetchAPI:!0,stream:!0}}]);function nt(){J=new y.BrowserWindow({width:1200,height:800,webPreferences:{preload:l.join(__dirname,"preload.js"),contextIsolation:!0,nodeIntegration:!1}}),process.env.VITE_DEV_SERVER_URL?J.loadURL(process.env.VITE_DEV_SERVER_URL):J.loadFile(l.join(__dirname,"../renderer/dist/index.html"))}y.app.whenReady().then(()=>{y.protocol.handle("theme-asset",e=>{const r=decodeURIComponent(new URL(e.url).pathname.replace(/^\//,"")),t=Gt(r);return t?new Response(u.readFileSync(t),{headers:{"Content-Type":Jr(t),"Cache-Control":"public, max-age=3600"}}):new Response("Theme asset not found",{status:404})}),nt()});function Jr(e){const r=l.extname(e).toLowerCase();return r===".jpg"||r===".jpeg"?"image/jpeg":r===".webp"?"image/webp":"image/png"}y.app.on("window-all-closed",()=>{process.platform!=="darwin"&&y.app.quit()});y.app.on("activate",()=>{y.BrowserWindow.getAllWindows().length===0&&nt()});const De=process.argv.find(e=>e.startsWith("--launch="));if(De){const[,e]=De.split("="),[r,t]=e.split(":");r&&t&&(console.log(`[main] Received launch args: ${r}:${t}`),setTimeout(async()=>{try{const n=await Ne(r,t);n.success?(console.log(`[main] Launched ${r} with theme ${t} on port ${n.port}`),setTimeout(async()=>{try{console.log(`[main] Starting theme injection for ${r}:${t} on port ${n.port}`);const o=await Qe(r,t,n.port);console.log("[main] Injection result:",o)}catch(o){console.error("[main] Failed to inject theme:",o)}},3e3)):console.error(`[main] Failed to launch ${r}: ${n.error}`)}catch(n){console.error("[main] Launch error:",n)}},1e3))}y.ipcMain.handle("discover-apps",async()=>St());y.ipcMain.handle("list-app-path-configurations",()=>gt());y.ipcMain.handle("choose-custom-app-path",async(e,r)=>{if(process.platform!=="win32")return{success:!1,error:"自定义应用路径目前仅支持 Windows。"};const t=P(r);if(!t)return{success:!1,error:`Unknown app: ${r}`};const n={title:`选择 ${t.name} 的可执行文件`,buttonLabel:"选择此文件",properties:["openFile"],filters:[{name:`${t.name} 可执行文件`,extensions:["exe"]}]},o=J?await y.dialog.showOpenDialog(J,n):await y.dialog.showOpenDialog(n);if(o.canceled||o.filePaths.length===0)return{success:!1,cancelled:!0};try{return{success:!0,path:bt(r,o.filePaths[0])}}catch(a){return{success:!1,error:(a==null?void 0:a.message)||String(a)}}});y.ipcMain.handle("clear-custom-app-path",(e,r)=>{try{return xt(r),{success:!0}}catch(t){return{success:!1,error:(t==null?void 0:t.message)||String(t)}}});y.ipcMain.handle("launch-app",async(e,r,t)=>Ne(r,t));y.ipcMain.handle("apply-theme",async(e,r,t,n)=>Qe(r,t,n));y.ipcMain.handle("create-shortcut",async(e,r)=>{const t={...r,id:`${r.appId}-${r.themeId}-${Date.now()}`};return Ar(t)});y.ipcMain.handle("list-themes",async(e,r)=>oe(r).map(t=>({id:t.id,name:t.name,author:t.author,hero:Xt(t.id)})));y.ipcMain.handle("update-themes",async()=>Lr());y.ipcMain.handle("get-status",async(e,r,t)=>{var o;return await Tt(r)?{...await ur(r,t||((o=P(r))==null?void 0:o.defaultPort)||9339),running:!0}:{installed:!1,menu:!1,targets:0,running:!1}});y.ipcMain.handle("remove-skin",async(e,r,t)=>fr(r,t));y.ipcMain.handle("debug-targets",async(e,r)=>{try{const n=await(await fetch(`http://127.0.0.1:${r}/json/list`,{signal:AbortSignal.timeout(5e3)})).json();return{success:!0,count:n.length,raw:n,targets:n.map(o=>({id:o.id,type:o.type,url:o.url,title:o.title,webSocketDebuggerUrl:o.webSocketDebuggerUrl}))}}catch(t){return{success:!1,error:t.message}}});
+`;return f.writeFileSync(t,a),f.chmodSync(t,493),{success:!0,path:t}}const Ln=qe.promisify(Me.execFile),Wn="https://api.dreamskin.cc",Nt=`${Wn}/v1/themes`,Lt=32*1024*1024,_e=6;let We=0;const Hn=["workbuddy","codex","trae-work","qoder-work","catpaw","zcode","qwen-office","hana-agent"];async function Fn(){const e=We,r=await zn(e),t=r.items;We=e+t.length>=r.total?0:e+_e;const n=Tt(),a={checked:t.length,imported:0,skipped:0,offset:e,page:Math.floor(e/_e)+1,total:r.total,nextOffset:We,failed:[]};for(const o of t){const s=Gn(o.themeId);if(!o.applyCompatible||$t(s)){a.skipped++;continue}try{await qn(o,n,s)?a.imported++:a.skipped++}catch(c){a.failed.push({id:o.id,name:o.name,error:c.message})}}return a}async function zn(e){const r=`${Nt}?limit=${_e}&offset=${e}&sort=recent`,t=await fetch(r,{signal:AbortSignal.timeout(3e4),redirect:"error"});if(!t.ok)throw new Error(`Theme list request failed: HTTP ${t.status}`);const n=await t.json();if(!Array.isArray(n.items)||n.items.length>_e||!Number.isInteger(n.total)||n.total<0)throw new Error("Theme list response is invalid");return{items:n.items,total:n.total}}async function qn(e,r,t){Vn(e);const n=f.mkdtempSync(m.join(B.tmpdir(),"dream-work-theme-")),a=m.join(n,"theme.zip"),o=m.join(n,"extract"),s=m.join(r,`.updating-${t}-${process.pid}`);try{f.mkdirSync(o);const c=`${Nt}/${e.id}/download`,i=await fetch(c,{signal:AbortSignal.timeout(12e4),redirect:"error"});if(!i.ok)throw new Error(`Theme download failed: HTTP ${i.status}`);const l=Buffer.from(await i.arrayBuffer());if(l.length!==e.packageBytes)throw new Error(`Downloaded size mismatch: expected ${e.packageBytes}, got ${l.length}`);if(l.length>Lt)throw new Error("Theme package exceeds 32 MiB");if(Je.createHash("sha256").update(l).digest("hex")!==e.packageSha256)throw new Error("Downloaded SHA-256 does not match metadata");f.writeFileSync(a,l,{flag:"wx"}),await Jn(a,o);const h=Kn(o),p=JSON.parse(f.readFileSync(m.join(h,"theme.json"),"utf8")),g=p.image;if(typeof g!="string"||m.basename(g)!==g||!/\.(png|jpe?g|webp)$/i.test(g))throw new Error("Theme image name is invalid");const b=m.join(h,g),y=m.join(h,"theme.css");if(!f.existsSync(b)||!f.statSync(b).isFile())throw new Error("Theme image is missing");if(!f.existsSync(y)||!f.statSync(y).isFile())throw new Error("theme.css is missing");const _=Zn(p,e,t,`hero${m.extname(g).toLowerCase()}`);return Br(_.name,_.author,b)?!1:(f.mkdirSync(s),f.copyFileSync(b,m.join(s,_.hero)),f.copyFileSync(y,m.join(s,"theme.css")),f.writeFileSync(m.join(s,"theme.json"),`${JSON.stringify(_,null,2)}
+`),f.renameSync(s,m.join(r,t)),!0)}finally{f.rmSync(s,{recursive:!0,force:!0}),f.rmSync(n,{recursive:!0,force:!0})}}async function Jn(e,r){const{path7za:t}=require("7zip-bin");await Ln(t,["x",e,`-o${r}`,"-y"],{windowsHide:!0,timeout:12e4})}function Kn(e){const t=[e,...f.readdirSync(e,{withFileTypes:!0}).filter(n=>n.isDirectory()).map(n=>m.join(e,n.name))].filter(n=>f.existsSync(m.join(n,"theme.json"))&&f.existsSync(m.join(n,"theme.css")));if(t.length!==1)throw new Error("Theme ZIP must contain one theme root");return t[0]}function Vn(e){if(!/^ver_[a-z0-9]{8,64}$/.test(e.id))throw new Error("Theme version ID is invalid");if(!Number.isInteger(e.packageBytes)||e.packageBytes<1||e.packageBytes>Lt)throw new Error("Theme package size is invalid");if(!/^[a-f0-9]{64}$/.test(e.packageSha256))throw new Error("Theme package SHA-256 is invalid")}function Gn(e){return String(e).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"").replace(/-+/g,"-")||"community-theme"}function Zn(e,r,t,n){const a=e.appearance==="dark"?"dark":"light",o=a==="dark"?"#10141c":"#f4f7fa",s=e.colors||{};return{schemaVersion:1,id:t,name:String(e.name||r.name||t).trim(),author:r.authorDisplayName||"DreamSkin Community",hero:n,colors:{accent:de(s.accent,"#4f8cff",o),secondary:de(s.secondary||s.accentAlt,"#7ba7d8",o),surface:de(s.panelAlt||s.panel||s.background,o,o),text:de(s.text,a==="dark"?"#eef2f7":"#1f2937",o)},copy:null,apps:Object.fromEntries(Hn.map(c=>[c,{compat:!0}]))}}function de(e,r,t){if(typeof e!="string")return r;const n=e.trim().match(/^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i);if(n){let i=n[1];return i.length===3&&(i=i.split("").map(l=>l+l).join("")),`#${i.slice(0,6).toLowerCase()}`}const a=e.trim().match(/^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*(0|1|0?\.\d+))?\s*\)$/i);if(!a)return r;const o=a[4]===void 0?1:Number(a[4]),s=de(t,r,r).slice(1).match(/../g).map(i=>parseInt(i,16));return`#${[1,2,3].map(i=>Math.round(Number(a[i])*o+s[i-1]*(1-o))).map(i=>i.toString(16).padStart(2,"0")).join("")}`}let pe=null;P.protocol.registerSchemesAsPrivileged([{scheme:"theme-asset",privileges:{standard:!0,secure:!0,supportFetchAPI:!0,stream:!0}}]);function Wt(){pe=new P.BrowserWindow({width:1200,height:800,webPreferences:{preload:m.join(__dirname,"preload.js"),contextIsolation:!0,nodeIntegration:!1}}),process.env.VITE_DEV_SERVER_URL?pe.loadURL(process.env.VITE_DEV_SERVER_URL):pe.loadFile(m.join(__dirname,"../renderer/dist/index.html"))}P.app.whenReady().then(()=>{P.protocol.handle("theme-asset",e=>{const r=decodeURIComponent(new URL(e.url).pathname.replace(/^\//,"")),t=Ur(r);return t?new Response(f.readFileSync(t),{headers:{"Content-Type":Xn(t),"Cache-Control":"public, max-age=3600"}}):new Response("Theme asset not found",{status:404})}),Wt()});function Xn(e){const r=m.extname(e).toLowerCase();return r===".jpg"||r===".jpeg"?"image/jpeg":r===".webp"?"image/webp":"image/png"}P.app.on("window-all-closed",()=>{process.platform!=="darwin"&&P.app.quit()});P.app.on("activate",()=>{P.BrowserWindow.getAllWindows().length===0&&Wt()});const bt=process.argv.find(e=>e.startsWith("--launch="));if(bt){const[,e]=bt.split("="),[r,t]=e.split(":");r&&t&&(console.log(`[main] Received launch args: ${r}:${t}`),setTimeout(async()=>{try{const n=await Ct(r,t);n.success?(console.log(`[main] Launched ${r} with theme ${t} on port ${n.port}`),setTimeout(async()=>{try{console.log(`[main] Starting theme injection for ${r}:${t} on port ${n.port}`);const a=await Ot(r,t,n.port);console.log("[main] Injection result:",a)}catch(a){console.error("[main] Failed to inject theme:",a)}},3e3)):console.error(`[main] Failed to launch ${r}: ${n.error}`)}catch(n){console.error("[main] Launch error:",n)}},1e3))}P.ipcMain.handle("discover-apps",async()=>mr());P.ipcMain.handle("list-app-path-configurations",()=>tr());P.ipcMain.handle("choose-custom-app-path",async(e,r)=>{if(process.platform!=="win32")return{success:!1,error:"自定义应用路径目前仅支持 Windows。"};const t=L(r);if(!t)return{success:!1,error:`Unknown app: ${r}`};const n={title:`选择 ${t.name} 的可执行文件`,buttonLabel:"选择此文件",properties:["openFile"],filters:[{name:`${t.name} 可执行文件`,extensions:["exe"]}]},a=pe?await P.dialog.showOpenDialog(pe,n):await P.dialog.showOpenDialog(n);if(a.canceled||a.filePaths.length===0)return{success:!1,cancelled:!0};try{return{success:!0,path:nr(r,a.filePaths[0])}}catch(o){return{success:!1,error:(o==null?void 0:o.message)||String(o)}}});P.ipcMain.handle("clear-custom-app-path",(e,r)=>{try{return ar(r),{success:!0}}catch(t){return{success:!1,error:(t==null?void 0:t.message)||String(t)}}});P.ipcMain.handle("launch-app",async(e,r,t)=>Ct(r,t));P.ipcMain.handle("apply-theme",async(e,r,t,n)=>Ot(r,t,n));P.ipcMain.handle("create-shortcut",async(e,r)=>{const t={...r,id:`${r.appId}-${r.themeId}-${Date.now()}`};return On(t)});P.ipcMain.handle("list-themes",async(e,r)=>Re(r).map(t=>({id:t.id,name:t.name,author:t.author,hero:Or(t.id)})));P.ipcMain.handle("update-themes",async()=>Fn());P.ipcMain.handle("get-status",async(e,r,t)=>{var a;return await ur(r)?{...await bn(r,t||((a=L(r))==null?void 0:a.defaultPort)||9339),running:!0}:{installed:!1,menu:!1,targets:0,running:!1}});P.ipcMain.handle("remove-skin",async(e,r,t)=>vn(r,t));P.ipcMain.handle("debug-targets",async(e,r)=>{try{const n=await(await fetch(`http://127.0.0.1:${r}/json/list`,{signal:AbortSignal.timeout(5e3)})).json();return{success:!0,count:n.length,raw:n,targets:n.map(a=>({id:a.id,type:a.type,url:a.url,title:a.title,webSocketDebuggerUrl:a.webSocketDebuggerUrl}))}}catch(t){return{success:!1,error:t.message}}});

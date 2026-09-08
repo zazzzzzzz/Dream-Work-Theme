@@ -8,12 +8,17 @@ import { getAppDefinition } from './app-registry';
 import { ensureSharedCustomThemeService, listSharedCustomThemes, mergeSharedCustomThemes, recordThemeUsage, selectQuickThemeIds } from './custom-theme-store';
 import { Rgb, hexToRgb, rgbToHex, mixRgb, ensureContrastAgainstAll } from './contrast';
 import { decodePngAverageRgb } from './hero-png';
+import { buildUsageBarScript } from './usage-bar';
+import { startUsagePump, stopUsagePump } from './usage-pump';
 
 const STYLE_ID = 'dream-work-style';
 const MENU_ID = 'dream-work-menu';
 const hanaAgentPersistentScripts = new Map<string, string>();
 const hanaAgentWatchers = new Map<number, NodeJS.Timeout>();
 const hanaAgentGenerations = new Map<number, number>();
+/* ZCode token 用量状态栏：Page.addScriptToEvaluateOnNewDocument 注册句柄
+ * （页面重载后自动重挂状态栏；applyTheme 重注入前先摘旧句柄） */
+const usageBarScripts = new Map<string, string>();
 const WORKBUDDY_CSS_PLACEHOLDERS = {
   id: 'wb-dream-sentinel-id',
   hero: 'data:image/png;base64,WBDREAMHEROSENTINEL',
@@ -331,6 +336,22 @@ export async function applyTheme(
           : menuScript);
         console.log(`[injector] Injection result for target ${target.id}:`, evalResult);
 
+        /* ZCode token 用量状态栏：与主题同批注入（持久化注册保证页面重载后自动重挂），
+         * 数据由 usage-pump 经 CDP 推送；配色引用主题 CSS 变量，随换肤自动跟随 */
+        if (appId === 'zcode') {
+          const barScript = buildUsageBarScript();
+          const previousBarIdentifier = usageBarScripts.get(target.id);
+          if (previousBarIdentifier) {
+            await session.removeScriptToEvaluateOnNewDocument(previousBarIdentifier).catch(() => {});
+          }
+          const barIdentifier = await session.addScriptToEvaluateOnNewDocument(
+            `(() => { const inject = () => { ${barScript} }; if (document.readyState === 'loading') window.addEventListener('DOMContentLoaded', inject, { once: true }); else inject(); })()`
+          ).catch(() => undefined);
+          if (barIdentifier) usageBarScripts.set(target.id, barIdentifier);
+          await session.evaluate(barScript).catch((e) =>
+            console.warn(`[injector] Usage bar injection failed for target ${target.id}:`, (e as Error).message));
+        }
+
         if (appId === 'hana-agent') {
           let ready = false;
           for (let attempt = 0; attempt < 20; attempt++) {
@@ -518,6 +539,7 @@ export async function applyTheme(
       }
       return { success: false, applied: 0, error: 'HanaAgent renderer did not stabilize with the injected theme' };
     }
+    if (appId === 'zcode' && applied > 0) startUsagePump(port);
     if (applied > 0) recordThemeUsage(appId, themeId);
     return { success: applied > 0, applied };
   } catch (error: any) {
@@ -726,6 +748,13 @@ export async function removeSkin(
         hanaAgentPersistentScripts.delete(target.id);
       }
     }
+    if (appId === 'zcode') {
+      const barIdentifier = usageBarScripts.get(target.id);
+      if (barIdentifier) {
+        await session.removeScriptToEvaluateOnNewDocument(barIdentifier).catch(() => {});
+        usageBarScripts.delete(target.id);
+      }
+    }
     await session.evaluate(`(() => {
       ${appId === 'hana-agent' ? `try { localStorage.setItem('dream-work-theme:hana-agent:restored', '1'); } catch {}
       document.documentElement.dataset.dreamThemeRestored = 'true';` : ''}
@@ -733,9 +762,20 @@ export async function removeSkin(
       document.getElementById('${MENU_ID}')?.remove();
       document.getElementById('${MENU_ID}-host')?.remove();
       document.getElementById('dream-work-video-layer')?.remove();
+      document.getElementById('dream-usage-bar')?.remove();
+      document.getElementById('dream-usage-tip')?.remove();
+      document.getElementById('dream-usage-exc')?.remove();
+      document.querySelectorAll('[data-du-pad]').forEach((el) => {
+        el.style.marginBottom = el.dataset.duPad || '';
+        delete el.dataset.duPad;
+      });
       clearInterval(window.__dreamWorkMenuGuard);
       delete window.__dreamWorkMenuGuard;
       delete window.__dreamWorkVideoSrc;
+      delete window.__dreamWorkUsageBar;
+      delete window.__dreamWorkUsageUpdate;
+      delete window.__dreamWorkUsageWant;
+      window.__dreamWorkUsageGen = (window.__dreamWorkUsageGen || 0) + 1;
       if (window.__dreamWorkOutsideClick) {
         document.removeEventListener('pointerdown', window.__dreamWorkOutsideClick, true);
         delete window.__dreamWorkOutsideClick;
@@ -745,6 +785,11 @@ export async function removeSkin(
       return true;
     })`);
     session.close();
+  }
+
+  if (appId === 'zcode') {
+    usageBarScripts.clear();
+    stopUsagePump(port);
   }
 
   return { success: true };
