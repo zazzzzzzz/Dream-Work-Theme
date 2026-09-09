@@ -167,14 +167,35 @@ if (Test-Path -LiteralPath $full -PathType Leaf) { Write-Output $full } else { e
     };
   }
 
-  /* 当前会话识别：ZCode 在 localStorage 的 zcode-v4-last-session:v1:<工作区路径>
+  /* 当前会话权威信号：侧栏任务列表的选中项（li[data-testid^=task-item-].bg-selected，
+   * ZCode 用 bg-selected 标记当前打开的会话，项上直接带会话 id）。比 localStorage
+   * 键启发式可靠：多工作区键并存时旧逻辑取"遍历顺序第一个"键，实测会指向另一个
+   * 工作区的零用量会话（want 引用错会话、切到池外旧会话时条显示零值）。 */
+  function activeSidFromSidebar() {
+    try {
+      var el = document.querySelector('li[data-testid^=task-item-].bg-selected');
+      if (!el) return '';
+      var m = (el.getAttribute('data-testid') || '').match(/^task-item-(sess_[A-Za-z0-9_-]+)$/);
+      return m ? m[1] : '';
+    } catch (e) { return ''; }
+  }
+  /* 当前会话识别：侧栏选中项优先（权威）；不可得（侧栏收起/设置页/类名变更）
+   * 时退回 localStorage 键启发式：ZCode 在 zcode-v4-last-session:v1:<工作区路径>
    * 键里保存各工作区当前打开的会话 id；与快照池求交集，切换优先，多候选取最近活跃。 */
   var wsPrev = null;
   function pickCurrent(d) {
     var recent = d.recent || [];
+    var active = activeSidFromSidebar();
+    if (active) {
+      for (var i = 0; i < recent.length; i++) {
+        if (recent[i].sid === active) return { sess: recent[i], want: active };
+      }
+      /* 池里还没有该会话（新开/久远）：want 回传让泵强制补拉，先显示零值 */
+      return { sess: null, want: active };
+    }
     if (!recent.length) return null;
     var bySid = {}, kv = {};
-    for (var i = 0; i < recent.length; i++) bySid[recent[i].sid] = recent[i];
+    for (var j = 0; j < recent.length; j++) bySid[recent[j].sid] = recent[j];
     try {
       Object.keys(localStorage).forEach(function (k) {
         if (/^zcode-v4-last-session:/.test(k)) {
@@ -197,16 +218,16 @@ if (Test-Path -LiteralPath $full -PathType Leaf) { Write-Output $full } else { e
     }
     wsPrev = kv;
     var want = switched || firstKeyVal;
-    if (switched && bySid[switched]) return { sess: bySid[switched], want: want };
+    if (switched && bySid[switched]) return { sess: bySid[switched], want: switched };
     var cands = [];
     for (var k3 in hit) cands.push(bySid[hit[k3]]);
-    if (cands.length === 1) return { sess: cands[0], want: want };
+    if (cands.length === 1) return { sess: cands[0], want: cands[0].sid };
     if (!cands.length) return { sess: null, want: want };
     var best = cands[0];
     for (var n = 1; n < cands.length; n++) {
       if ((cands[n].lastAt || 0) > (best.lastAt || 0)) best = cands[n];
     }
-    return { sess: best, want: want };
+    return { sess: best, want: best.sid };
   }
 
   function html(d) {
