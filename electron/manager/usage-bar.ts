@@ -452,15 +452,43 @@ export function buildUsageBarScript(): string {
     }
     return last;
   }
+  /* 可见性判定（对齐原版 overlay 实测结论）：设置页等覆盖层不卸载聊天 DOM、
+   * 也不改几何（工作区保活，offsetParent/visibility/rect 全都骗得过），
+   * 唯一可靠信号是输入框中心点的 elementFromPoint 命中测试。 */
+  function visibleBox(el) {
+    var r = el.getBoundingClientRect();
+    return r.width > 40 && r.height > 8 && r.bottom > 0 && r.top < innerHeight;
+  }
+  function isOwnOverlay(el) {
+    try { return !!(el && el.closest && el.closest('#dream-usage-tip,.dpanel,#dream-usage-exc,#dream-usage-bar')); } catch (e) { return false; }
+  }
+  /* 命中根元素 = 穿透假象：下拉/模态的滚动锁定给应用层设 pointer-events:none，
+   * elementFromPoint 会跳过被盖层一路穿到底，视同被盖。 */
+  function hitIsThroughRoot(hit) {
+    return hit === document.body || hit === document.documentElement;
+  }
+  function reallyVisible(el, ownOK) {
+    if (!visibleBox(el)) return false;
+    var r = el.getBoundingClientRect();
+    var hit;
+    try { hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); } catch (e) { return true; }
+    if (!hit) return false;
+    if (hitIsThroughRoot(hit)) return false;
+    if (hit === el || hit.contains(el) || el.contains(hit)) return true;
+    if (ownOK && isOwnOverlay(hit)) return true;
+    return false;
+  }
   function findComposer() {
+    var best = null;
     var cands = document.querySelectorAll('textarea, [contenteditable="true"]');
     for (var i = 0; i < cands.length; i++) {
-      try {
-        var r = cands[i].getBoundingClientRect();
-        if (r.width > 40 && r.height > 10 && r.top > innerHeight * 0.45 && r.bottom <= innerHeight + 40) return cands[i];
-      } catch (e) { }
+      var el = cands[i];
+      if (!reallyVisible(el)) continue;   // 设置页里被盖住的保活输入框不选
+      var r = el.getBoundingClientRect();
+      if (r.top < innerHeight * 0.45) continue;
+      if (!best || r.top > best.getBoundingClientRect().top) best = el;
     }
-    return null;
+    return best;
   }
   function releasePads() {
     try {
@@ -540,14 +568,26 @@ export function buildUsageBarScript(): string {
       if (pSid !== state.pickedSid) render(state.data);
     }
   }
+  /* 整页路由切换（设置页等）的即时信号：工作区被 CSS 整体隐藏时
+   * checkVisibility 同步返回 false（会话页 true）。这是稳定状态，不能等
+   * 400ms 防闪迟滞——用户要求"切换即消失"；迟滞只留给命中测试的瞬时抖动。 */
+  function checkHidden(el) {
+    try {
+      if (typeof el.checkVisibility === 'function') {
+        return !el.checkVisibility({ visibilityProperty: true, opacityProperty: true, contentVisibilityAuto: true });
+      }
+    } catch (e) { }
+    return false;
+  }
   function coverOK(el) {
     try {
       var r = el.getBoundingClientRect();
       var hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
       if (!hit) return false;
+      if (hitIsThroughRoot(hit)) return false;
       if (hit === el || hit.contains(el) || el.contains(hit)) return true;
       if (cardCache && cardCache.contains(el) && cardCache.contains(hit)) return true;
-      if (hit.closest && hit.closest('#dream-usage-bar,#dream-usage-tip,.dpanel,#dream-usage-exc')) return true;
+      if (isOwnOverlay(hit)) return true;
       return false;
     } catch (e) { return true; }
   }
@@ -558,9 +598,14 @@ export function buildUsageBarScript(): string {
       if (!composer || !composer.isConnected) { hideSince = 0; hideBar(); return; }
       if (cardCache && cardCache.style.marginBottom !== CARD_MARGIN) ensureCardPad();
       var r = composer.getBoundingClientRect();
-      var on = r.width > 60 && r.height > 14 && r.bottom > 0 && r.top < innerHeight &&
-        (composer.offsetParent !== null || coverOK(composer));
+      var on = reallyVisible(composer, true) || coverOK(composer);
       if (!on) {
+        /* 路由切换/工作区整体隐藏/输入框移出视口 = 稳定状态，立即隐藏 */
+        if (checkHidden(composer) || r.bottom <= 0 || r.top >= innerHeight) {
+          hideSince = 0;
+          hideBar();
+          return;
+        }
         if (!hideSince) hideSince = Date.now();
         if (Date.now() - hideSince > 400) hideBar();
         return;
