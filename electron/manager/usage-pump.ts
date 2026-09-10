@@ -21,6 +21,7 @@ interface PumpState {
   heartbeat: NodeJS.Timeout | null;
   retryTimer: NodeJS.Timeout | null;
   debounceTimer: NodeJS.Timeout | null;
+  settleTimer: NodeJS.Timeout | null;
   busy: boolean;
   lastSpawnAt: number;
   lastStamp: number;
@@ -58,7 +59,7 @@ async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T | null
   ]);
 }
 
-async function pushCycle(port: number, state: PumpState): Promise<void> {
+async function pushCycle(port: number, state: PumpState, force = false): Promise<void> {
   const targets = await listZcodePageTargets(port);
   if (targets.length === 0) return;
 
@@ -80,7 +81,7 @@ async function pushCycle(port: number, state: PumpState): Promise<void> {
 
   const stamp = usageDbStamp();
   const wantsKey = wants.join(',');
-  if (wantsKey === state.lastWants && stamp > 0 && stamp === state.lastStamp) return;
+  if (!force && wantsKey === state.lastWants && stamp > 0 && stamp === state.lastStamp) return;
   const now = Date.now();
   if (now - state.lastSpawnAt < ACTIVITY_MIN_MS) {
     scheduleRetry(port, ACTIVITY_MIN_MS - (now - state.lastSpawnAt) + 50);
@@ -106,6 +107,16 @@ async function pushCycle(port: number, state: PumpState): Promise<void> {
       session.close();
     }
   }
+  /* 追补推送：轮完成/失败是瞬时状态（turn 行落库后展示窗有限），2.5s 后强制再采一次，
+   * 保证"完成→跳跃 / 失败→沮丧"一定送达（force 绕过去重；settle 自身不再链式排程） */
+  if (!force) {
+    if (state.settleTimer) clearTimeout(state.settleTimer);
+    state.settleTimer = setTimeout(() => {
+      const st = pumps.get(port);
+      if (st) st.settleTimer = null;
+      void maybeSpawn(port, true);
+    }, 2500);
+  }
 }
 
 function scheduleRetry(port: number, ms: number): void {
@@ -121,13 +132,13 @@ function scheduleRetry(port: number, ms: number): void {
 }
 
 let cycleRunning = false;
-async function maybeSpawn(port: number): Promise<void> {
+async function maybeSpawn(port: number, force = false): Promise<void> {
   const state = pumps.get(port);
   if (!state || state.busy || cycleRunning) return;
   state.busy = true;
   cycleRunning = true;
   try {
-    await pushCycle(port, state);
+    await pushCycle(port, state, force);
   } catch (e) {
     log('cycle failed:', (e as Error).message);
   } finally {
@@ -179,7 +190,7 @@ export function startUsagePump(port: number): void {
     return;
   }
   state = {
-    watcher: null, heartbeat: null, retryTimer: null, debounceTimer: null,
+    watcher: null, heartbeat: null, retryTimer: null, debounceTimer: null, settleTimer: null,
     busy: false, lastSpawnAt: 0, lastStamp: 0, lastWants: '',
   };
   pumps.set(port, state);
@@ -197,6 +208,7 @@ export function stopUsagePump(port: number): void {
   if (state.heartbeat) clearInterval(state.heartbeat);
   if (state.retryTimer) clearTimeout(state.retryTimer);
   if (state.debounceTimer) clearTimeout(state.debounceTimer);
+  if (state.settleTimer) clearTimeout(state.settleTimer);
   log('stopped for port', port);
 }
 

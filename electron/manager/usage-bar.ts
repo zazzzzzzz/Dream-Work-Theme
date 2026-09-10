@@ -171,6 +171,7 @@ export function buildUsageBarScript(): string {
       sid: String(sid || ''), title: '', active: false, turns: 0, requests: 0,
       input: 0, output: 0, reasoning: 0, cacheRead: 0, cacheWrite: 0, total: 0,
       toolCalls: 0, retries: 0, ctx: 0, updated: '', lastAt: 0, ctxExc: 0,
+      live: { state: 'idle', at: 0 },
       lastTurn: { requests: 0, retries: 0, toolCalls: 0, toolErrors: 0, input: 0, output: 0, reasoning: 0, cacheRead: 0, cacheWrite: 0, total: 0, durationMs: 0, ttftMs: 0 },
       last: { durationMs: 0, ttftMs: 0, model: '', tps: 0 },
       code: { add: null, del: null, files: null },
@@ -402,6 +403,10 @@ export function buildUsageBarScript(): string {
     window.__dreamWorkUsageWant = (pc && pc.want) || '';
     if (!p) p = stubFor((pc && pc.want) || '');
     state.excActive = excActive(p);
+    /* 广播给宠物（皮肤注入脚本）：当前会话 + 实时任务状态 */
+    try {
+      document.dispatchEvent(new CustomEvent('dream-usage', { detail: { sid: state.pickedSid, live: (p && p.live) || null } }));
+    } catch (e) { }
     var h = html({ session: p, today: d.today || {} });
     if (h.s !== lastHtml) {
       lastHtml = h.s;

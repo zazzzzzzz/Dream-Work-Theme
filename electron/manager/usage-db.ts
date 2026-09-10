@@ -395,6 +395,7 @@ export interface SessionSnap {
   input: number; output: number; reasoning: number; cacheRead: number; cacheWrite: number; total: number;
   toolCalls: number; retries: number; ctx: number;
   updated: string; lastAt: number;
+  live: { state: 'idle' | 'thinking' | 'running' | 'done' | 'failed'; at: number };
   last: { durationMs: number; ttftMs: number; model: string; tps: number };
   lastTurn: TurnSnap;
   tools: { total: number; errors: number; list: Array<{ name: string; count: number; durationMs: number; errors: number }> };
@@ -524,12 +525,13 @@ export function buildUsageSnapshot(forceSids: string[] = []): UsageSnapshot | nu
     const dayEndMs = dayStartMs + 86400000;
     const now = Date.now();
 
-    /* Pass A：model_usage 一次流式扫描 → 会话聚合 / 今日 / 子代理 / 超限。
+    /* Pass A：model_usage 一次流式扫描 → 会话聚合 / 今日 / 子代理 / 超限 / 在飞请求。
      * turns 口径同 zusage.py：completed 请求的 distinct turn_id（turn_usage 里
      * cancelled/进行中的轮不计）。 */
     const aggs = new Map<string, SessAgg>();
     const subAggs = new Map<string, SessAgg>();
     const turnIdsSeen = new Map<string, Set<string>>();
+    const runningModels = new Map<string, number>();   // 模型在飞（status=running）→ 宠物"思考"态
     const today = { requests: 0, input: 0, output: 0, cacheRead: 0, cacheWrite: 0, reasoning: 0, total: 0, retries: 0 };
     const muRoot = roots.get('model_usage')!;
     db.scanTable(muRoot.root, muRoot.sql, [
@@ -597,20 +599,31 @@ export function buildUsageSnapshot(forceSids: string[] = []): UsageSnapshot | nu
         if (!a) { a = newAgg(); aggs.set(sid, a); }
         if (exc > a.ctxExc) a.ctxExc = exc;
       }
+      if (status === 'running') {
+        const at = num(row.started_at);
+        if (at > (runningModels.get(sid) ?? 0)) runningModels.set(sid, at);
+      }
     });
 
-    /* Pass：turn_usage（每轮权威聚合）+ tool_usage（按工具分组）+ session（标题/父会话） */
+    /* Pass：turn_usage（每轮权威聚合 + 最近轮状态）+ tool_usage（按工具分组 + 运行中）+ session */
     const turnMap = new Map<string, TurnSnap>();
+    const lastTurns = new Map<string, { status: string; at: number }>();
     const turnRoot = roots.get('turn_usage')!;
     db.scanTable(turnRoot.root, turnRoot.sql, [
-      'session_id', 'turn_id', 'status', 'model_request_count', 'model_retry_count',
+      'session_id', 'turn_id', 'status', 'started_at', 'completed_at',
+      'model_request_count', 'model_retry_count',
       'tool_call_count', 'tool_error_count', 'input_tokens', 'output_tokens',
       'reasoning_tokens', 'cache_read_input_tokens', 'cache_creation_input_tokens',
       'computed_total_tokens', 'duration_ms', 'time_to_first_token_ms',
     ], (row) => {
       const sid = str(row.session_id);
       const turnId = str(row.turn_id);
-      if (!sid || !turnId || str(row.status) !== 'completed') return;
+      if (!sid || !turnId) return;
+      const status = str(row.status);
+      const at = num(row.completed_at) || num(row.started_at);
+      const prev = lastTurns.get(sid);
+      if (at && (!prev || at >= prev.at)) lastTurns.set(sid, { status, at });
+      if (status !== 'completed') return;
       turnMap.set(sid + '|' + turnId, {
         requests: num(row.model_request_count),
         retries: num(row.model_retry_count),
@@ -628,11 +641,18 @@ export function buildUsageSnapshot(forceSids: string[] = []): UsageSnapshot | nu
     });
 
     const toolsMap = new Map<string, { total: number; errors: number; list: Map<string, { count: number; durationMs: number; errors: number }> }>();
+    const runningTools = new Map<string, number>();   // 工具在跑（status=running）→ 宠物"运行中"态
     const toolRoot = roots.get('tool_usage')!;
-    db.scanTable(toolRoot.root, toolRoot.sql, ['session_id', 'tool_name', 'status', 'duration_ms'], (row) => {
+    db.scanTable(toolRoot.root, toolRoot.sql, ['session_id', 'tool_name', 'status', 'duration_ms', 'started_at'], (row) => {
       const sid = str(row.session_id);
       const status = str(row.status);
-      if (!sid || (status !== 'completed' && status !== 'error')) return;
+      if (!sid) return;
+      if (status === 'running') {
+        const at = num(row.started_at);
+        if (at > (runningTools.get(sid) ?? 0)) runningTools.set(sid, at);
+        return;
+      }
+      if (status !== 'completed' && status !== 'error') return;
       const name = str(row.tool_name) || '(unknown)';
       let t = toolsMap.get(sid);
       if (!t) { t = { total: 0, errors: 0, list: new Map() }; toolsMap.set(sid, t); }
@@ -765,6 +785,27 @@ export function buildUsageSnapshot(forceSids: string[] = []): UsageSnapshot | nu
       };
       const modelKey = (last?.model ?? '').trim().toLowerCase();
       const catalogWindow = modelKey ? lookupContextWindow(catalog, modelKey) : undefined;
+      /* 宠物/任务实时状态（渲染端还会叠加 DOM 信号"等待确认"）：
+       * 工具在跑 > 模型在飞（思考）> 最近一轮失败/完成（各留 8s/5s 展示窗）> 空闲。
+       * 在飞行超过 10 分钟视为僵死行（崩溃残留），不算活跃。 */
+      const toolRunAt = runningTools.get(sid) ?? 0;
+      const modelRunAt = runningModels.get(sid) ?? 0;
+      const turnRow = lastTurns.get(sid);
+      let liveState: 'idle' | 'thinking' | 'running' | 'done' | 'failed' = 'idle';
+      let liveAt = 0;
+      if (toolRunAt && now - toolRunAt < 600000) {
+        liveState = 'running';
+        liveAt = toolRunAt;
+      } else if (modelRunAt && now - modelRunAt < 600000) {
+        liveState = 'thinking';
+        liveAt = modelRunAt;
+      } else if (turnRow && (turnRow.status === 'error' || turnRow.status === 'cancelled') && now - turnRow.at < 12000) {
+        liveState = 'failed';
+        liveAt = turnRow.at;
+      } else if (turnRow && turnRow.status === 'completed' && now - turnRow.at < 8000) {
+        liveState = 'done';
+        liveAt = turnRow.at;
+      }
       return {
         sid,
         title: info?.title ?? '',
@@ -782,6 +823,7 @@ export function buildUsageSnapshot(forceSids: string[] = []): UsageSnapshot | nu
         ctx: a.lastIn,
         updated: hhmmss(a.lastAt),
         lastAt: a.lastAt,
+        live: { state: liveState, at: liveAt },
         last: {
           durationMs: last?.durationMs ?? 0,
           ttftMs: last?.ttftMs ?? 0,

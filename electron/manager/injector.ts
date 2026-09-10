@@ -1,7 +1,7 @@
 import { readFile } from 'fs/promises';
 import * as fs from 'fs';
 import * as path from 'path';
-import { nativeImage } from 'electron';
+import { app, nativeImage } from 'electron';
 import { CdpSession, fetchRendererTargets, waitForRendererTargets, isAnyPageTarget } from './cdp';
 import { getThemeHeroDataUrl, getThemeVideoPath, listThemes } from './theme-store';
 import { getAppDefinition } from './app-registry';
@@ -57,6 +57,58 @@ function surfaceAlphasFor(appId: string): number[] {
 function videoFileUrl(absPath: string | null): string | undefined {
   if (!absPath) return undefined;
   return 'file:///' + encodeURI(absPath.replace(/\\/g, '/')).replace(/#/g, '%23').replace(/\?/g, '%3F');
+}
+
+/* 宠物注册表（ZCode 桌面宠物）：assets/pet/<id>/ 一目录一宠物，pet.json 提供
+ * id/name/order/scale，目录内 GIF 的文件名（去扩展名）即状态键（idle / look-left-side /
+ * look-right-side / running / running-left / running-right / review / jumping / failed /
+ * waiting / waving）——新宠物按状态命名放进目录即可加载。GIF 在注入时读成 data URL
+ * 内嵌进菜单脚本（不依赖打包路径/本地服务，管理器不在也照常显示）。 */
+export interface PetDef {
+  id: string;
+  name: string;
+  order: number;
+  scale: number;
+  states: Record<string, string>;
+}
+
+let petRegistryCache: PetDef[] | null = null;
+export function getPetRegistry(): PetDef[] | undefined {
+  if (petRegistryCache) return petRegistryCache.length ? petRegistryCache : undefined;
+  const out: PetDef[] = [];
+  try {
+    const base = path.resolve(path.join(app.getAppPath(), 'assets', 'pet'));
+    for (const dirName of fs.readdirSync(base)) {
+      /* 越界防御：目录名只接受 basename，解析结果必须落在 assets/pet 之内 */
+      if (dirName !== path.basename(dirName)) continue;
+      const dir = path.resolve(base, dirName);
+      if (dir !== base && !dir.startsWith(base + path.sep)) continue;
+      try { if (!fs.statSync(dir).isDirectory()) continue; } catch { continue; }
+      let meta: any = {};
+      try { meta = JSON.parse(fs.readFileSync(path.join(dir, 'pet.json'), 'utf8')); } catch { }
+      const states: Record<string, string> = {};
+      try {
+        for (const f of fs.readdirSync(dir)) {
+          if (!f.toLowerCase().endsWith('.gif') || f !== path.basename(f)) continue;
+          const key = f.replace(/\.gif$/i, '');
+          states[key] = 'data:image/gif;base64,' + fs.readFileSync(path.join(dir, f)).toString('base64');
+        }
+      } catch { }
+      if (!Object.keys(states).length) continue;
+      out.push({
+        id: String(meta.id || dirName),
+        name: String(meta.name || dirName),
+        order: Number.isFinite(Number(meta.order)) ? Number(meta.order) : 99,
+        scale: Number.isFinite(Number(meta.scale)) && Number(meta.scale) > 0 ? Number(meta.scale) : 0.5,
+        states,
+      });
+    }
+    out.sort((a, b) => a.order - b.order || (a.id < b.id ? -1 : 1));
+  } catch (e) {
+    console.warn('[injector] pet registry unavailable:', (e as Error).message);
+  }
+  petRegistryCache = out;
+  return out.length ? out : undefined;
 }
 
 const heroAverageCache = new Map<string, { size: number; mtimeMs: number; rgb: Rgb | null }>();
@@ -275,6 +327,8 @@ export async function applyTheme(
             },
           }, WORKBUDDY_CSS_PLACEHOLDERS.hero, null, { template: true }),
           surfaceAlphas: surfaceAlphasFor(appId),
+          // ZCode：桌面宠物（assets/pet 注册表，GIF 以 data URL 内嵌）
+          pets: appId === 'zcode' ? getPetRegistry() : undefined,
         });
 
     // Inject to all targets
@@ -761,6 +815,8 @@ export async function removeSkin(
       document.getElementById('${STYLE_ID}')?.remove();
       document.getElementById('${MENU_ID}')?.remove();
       document.getElementById('${MENU_ID}-host')?.remove();
+      document.getElementById('${MENU_ID}-pet-host')?.remove();
+      clearInterval(window.__dreamWorkPetTimer);
       document.getElementById('dream-work-video-layer')?.remove();
       document.getElementById('dream-usage-bar')?.remove();
       document.getElementById('dream-usage-tip')?.remove();
@@ -3055,6 +3111,8 @@ export function buildMenuScript(options: {
   surfaceAlphas?: number[];
   sharedCustomThemes: any[];
   sharedCustomThemeService: { endpoint: string; usageEndpoint: string; token: string };
+  petGifs?: Record<string, string>;
+  pets?: PetDef[];
 }): string {
   const themesJson = JSON.stringify(options.themes);
   const cssTemplate = JSON.stringify(options.cssTemplate ?? '');
@@ -3067,6 +3125,8 @@ export function buildMenuScript(options: {
   const surfaceAlphas = ${JSON.stringify(surfaceAlphas)};
   const currentThemeId = '${options.currentThemeId}';
   const appId = '${appId}';
+  const pets = ${JSON.stringify(options.pets ?? [])};
+  const hasPet = pets.length > 0 && appId === 'zcode';   // 桌面宠物（按任务状态切换 GIF）
   const customStorageKey = 'dreamCodexCustomThemes';
   const sharedCustomThemes = ${JSON.stringify(options.sharedCustomThemes)};
   const sharedCustomThemeService = ${JSON.stringify(options.sharedCustomThemeService)};
@@ -3275,10 +3335,242 @@ export function buildMenuScript(options: {
   button.textContent = '◉';
   button.style.cssText = "margin-left:auto;width:36px;height:36px;border-radius:10px;border:1px solid rgba(0,0,0,.12);background:rgba(255,255,255,.92);backdrop-filter:blur(10px);box-shadow:0 3px 12px rgba(0,0,0,.2);cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;color:#17344f;font-size:18px;line-height:1;";
 
+  /* 任务宠物（ZCode）：独立于换肤按钮的浮层精灵，GIF 随当前会话任务状态切换——
+   * 等待确认(waiting) > 运行中(工具在跑：沿输入框上边框左右跑动，running-left/right/running 交替)
+   * > 思考(模型在飞：review) > 任务失败(failed，8s) > 任务完成(jumping，5s) > 空闲
+   * (idle/look-left-side/look-right-side 每 3-5s 交替，每 5 轮插一次 waving)。
+   * 位置：底边对齐 .chat-composer-region 上边框（输入框上沿），跑动范围 = 输入框左右缘；
+   * pointer-events:none 纯装饰不挡点击；输入框不在（设置页等）时隐藏。换肤按钮保持原样。
+   * 状态来源 = 用量泵 payload（document 'dream-usage' 事件，实时任务状态 live）+ 本地 DOM
+   * 信号（侧栏当前任务项"等待确认"标签，含 agent 提问；对话区确认卡兜底）。 */
+  if (hasPet) {
+    (function () {
+      clearInterval(window.__dreamWorkPetTimer);   // 重注入：旧实例计时器停表
+      document.getElementById('${options.menuId}-pet-host')?.remove();
+      const PET_SRC_W = 192, PET_SRC_H = 208;   // 素材原始尺寸，按宠物 scale 缩放
+      let PET_W = 96, PET_H = 104;
+      const petHost = document.createElement('div');
+      petHost.id = '${options.menuId}-pet-host';
+      petHost.style.cssText = "all:initial!important;position:fixed!important;z-index:2147483640!important;display:block!important;pointer-events:none!important;width:fit-content!important;height:fit-content!important;contain:none!important;isolation:isolate!important;";
+      const petMount = petHost.attachShadow({ mode: 'open' });
+      const img = document.createElement('img');
+      img.draggable = false;
+      img.alt = '';
+      img.style.cssText = 'display:block;pointer-events:none;user-select:none;-webkit-user-select:none;filter:drop-shadow(0 8px 16px rgba(0,0,0,.35));';
+      petMount.appendChild(img);
+      document.documentElement.appendChild(petHost);
+      const pos = { x: -1, y: 0 };
+      let spanLeft = 0, spanRight = 0, edgeY = 0;
+      let cur = '', target = null, pauseUntil = 0;
+      /* 当前宠物：localStorage dreamPet.id（'none' = 不显示；空 = 默认第一只）。
+       * 兼容旧开关 dreamPet.enabled='0' → 视为不显示。dream-pet 事件即时生效。 */
+      const readPetSel = () => {
+        try {
+          const id = localStorage.getItem('dreamPet.id');
+          if (id) return id;
+          return localStorage.getItem('dreamPet.enabled') === '0' ? 'none' : '';
+        } catch (e) { return ''; }
+      };
+      let activePet = null;
+      const resolvePet = () => {
+        const sel = readPetSel();
+        if (sel === 'none') return null;
+        for (let i = 0; i < pets.length; i++) if (pets[i].id === sel) return pets[i];
+        return pets[0] || null;
+      };
+      const applyPet = () => {
+        activePet = resolvePet();
+        const sc = activePet && activePet.scale ? activePet.scale : 0.5;
+        PET_W = Math.round(PET_SRC_W * sc);
+        PET_H = Math.round(PET_SRC_H * sc);
+        img.style.width = PET_W + 'px';
+        img.style.height = PET_H + 'px';
+        cur = '';   // 换宠物：状态键不变也要重挂新宠物的图
+      };
+      applyPet();
+      /* 切换宠物：立即重挂新图——空闲轮换有最长 5s 节流，不重置 idleNextAt 会出现
+       * "切了宠物要等好几秒才换" 的迟滞（cur='' 只保证下一次 setGif 会执行，
+       * 但空闲分支要等轮换到点才会调 setGif） */
+      document.addEventListener('dream-pet', () => { applyPet(); idleNextAt = 0; });
+      let live = null, liveAt = 0;
+      let idleNextAt = 0, idleIdx = 0, idleCount = 0, lastState = '';
+      /* 状态键 → 当前宠物的 GIF data URL；缺状态回退（跑步方向→running→idle，其余→idle） */
+      const stateGif = (key) => {
+        const s = activePet ? activePet.states : null;
+        if (!s) return '';
+        return s[key] || ((key === 'running-left' || key === 'running-right') ? (s.running || s.idle) : '') || s.idle || '';
+      };
+      const setGif = (name) => {
+        const key = name === 'thinking' ? 'review' : name === 'done' ? 'jumping' : name;
+        if (cur === key) return;
+        cur = key;
+        const url = stateGif(key);
+        if (url) img.src = url;
+        img.dataset.gif = key;   // 诊断/测试可读
+      };
+      const place = () => {
+        /* petHost 的 all:initial!important 会把无 !important 的 left/top 一起重置，
+         * 必须走 setProperty 带 important 才能生效 */
+        petHost.style.setProperty('left', Math.round(pos.x) + 'px', 'important');
+        petHost.style.setProperty('top', Math.round(pos.y) + 'px', 'important');
+        img.dataset.petPos = Math.round(pos.x) + ',' + Math.round(pos.y);
+      };
+      /* 贴边定位：底边 = 输入框（.chat-composer-region）上边框，跑动范围 = 输入框左右缘。
+       * 设置页等整页路由**不卸载会话 DOM、几何依旧有效**（工作区保活），必须叠加
+       * checkVisibility（隐藏层同步返回 false）判定，否则宠物会跟着"保活"的输入框留在设置页。 */
+      const trackEdge = () => {
+        const region = document.querySelector('.chat-composer-region');
+        if (!region) return false;
+        try {
+          if (typeof region.checkVisibility === 'function' &&
+              !region.checkVisibility({ visibilityProperty: true, opacityProperty: true, contentVisibilityAuto: true })) return false;
+        } catch (e) { }
+        const r = region.getBoundingClientRect();
+        if (r.width < 120 || r.height < 40) return false;
+        edgeY = r.top - PET_H;
+        spanLeft = r.left;
+        spanRight = Math.max(r.left, r.right - PET_W);
+        return true;
+      };
+      document.addEventListener('dream-usage', (e) => {
+        const d = e && e.detail;
+        if (!d) return;
+        live = d.live || null;
+        liveAt = Date.now();
+      });
+      const domWaiting = () => {
+        try {
+          const li = document.querySelector('li[data-testid^=task-item-].bg-selected');
+          if (li && li.textContent && li.textContent.indexOf('等待确认') >= 0) return true;
+          const els = document.querySelectorAll('span, div, button');
+          for (let i = 0; i < els.length; i++) {
+            const el = els[i];
+            if (el.children.length || (el.textContent || '').trim() !== '等待确认') continue;
+            if (el.closest && el.closest('#sidebar')) continue;
+            /* offsetParent 对 position:fixed 恒为 null，用 checkVisibility 判可见 */
+            const vis = el.checkVisibility ? el.checkVisibility() : el.getClientRects().length > 0;
+            if (vis) return true;
+          }
+        } catch (e) { }
+        return false;
+      };
+      /* 回合进行中的 DOM 信号：输入框区域里的"停止生成"按钮（生成期间可见，回合结束隐藏）。
+       * 数据库没有在飞模型请求的行（实测全库 0 条 running），"思考"只能由此判定：
+       * 回合进行中且没有工具在跑 = 模型在思考/生成。 */
+      const domTurnActive = () => {
+        try {
+          const region = document.querySelector('.chat-composer-region');
+          if (!region) return false;
+          const btns = region.querySelectorAll('button');
+          for (let i = 0; i < btns.length; i++) {
+            const b = btns[i];
+            const label = (b.getAttribute('aria-label') || b.title || '').trim();
+            if (!/停止|Stop/i.test(label)) continue;
+            const vis = b.checkVisibility ? b.checkVisibility() : b.getClientRects().length > 0;
+            if (vis) return true;
+          }
+        } catch (e) { }
+        return false;
+      };
+      const pickState = (now) => {
+        if (domWaiting()) return 'waiting';
+        if (live && now - liveAt < 150000) {
+          if (live.state === 'waiting') return 'waiting';
+          if (live.state === 'running') return 'running';   // 工具在跑（db 在飞行）
+          if (live.state === 'failed' && now - live.at < 12000) return 'failed';
+          if (live.state === 'done' && now - live.at < 8000) return 'done';
+        }
+        if (domTurnActive()) return 'thinking';
+        return 'idle';
+      };
+      const tick = () => {
+        if (!petHost.isConnected) return;   // 旧实例：宿主已被重注入替换
+        try {
+          if (!activePet) { petHost.style.setProperty('display', 'none', 'important'); return; }
+          const now = Date.now();
+          const state = pickState(now);
+          if (!trackEdge()) {
+            petHost.style.setProperty('display', 'none', 'important');   // 输入框不在（设置页等）
+            return;
+          }
+          petHost.style.setProperty('display', 'block', 'important');
+          if (pos.x < 0) pos.x = spanRight;   // 首次：从输入框右端起
+          if (pos.x < spanLeft) pos.x = spanLeft;
+          if (pos.x > spanRight) pos.x = spanRight;
+          pos.y = edgeY;
+          if (state === 'running') {
+            if (pauseUntil && now < pauseUntil) {
+              setGif('running');
+            } else if (target === null) {
+              target = spanLeft + Math.random() * (spanRight - spanLeft);   // 沿上边框随机选一个落点
+            } else {
+              const dx = target - pos.x;
+              if (Math.abs(dx) < 4) {
+                target = null;
+                pauseUntil = now + 500 + Math.random() * 1000;
+                setGif('running');
+              } else {
+                pos.x += Math.min(Math.abs(dx), 14) * (dx > 0 ? 1 : -1);   // ~115px/s @120ms
+                setGif(dx > 2 ? 'running-right' : dx < -2 ? 'running-left' : 'running');
+              }
+            }
+          } else if (state === 'idle') {
+            target = null; pauseUntil = 0;
+            if (lastState !== 'idle') idleNextAt = 0;   // 从其它状态回空闲：立即换回空闲帧，不等轮换节流
+            if (now >= idleNextAt) {
+              idleNextAt = now + 3000 + Math.random() * 2000;
+              const seq = ['idle', 'look-left-side', 'look-right-side'];
+              setGif(idleCount > 0 && idleCount % 5 === 0 ? 'waving' : seq[idleIdx % 3]);
+              idleIdx++;
+              idleCount++;
+            }
+          } else {
+            target = null; pauseUntil = 0;
+            setGif(state);
+          }
+          lastState = state;
+          place();
+        } catch (e) { }
+      };
+      if (trackEdge()) pos.x = spanRight;
+      pos.y = Math.max(0, edgeY);
+      setGif('idle');
+      place();
+      window.__dreamWorkPetTimer = setInterval(tick, 120);
+    })();
+  }
+
   const panel = document.createElement('div');
   panel.style.cssText = "display:none;margin-bottom:8px;min-width:200px;padding:6px;border-radius:12px;border:1px solid rgba(0,0,0,.1);background:rgba(255,255,255,.96);backdrop-filter:blur(16px);box-shadow:0 10px 30px rgba(0,0,0,.18);color:#17344f!important;-webkit-text-fill-color:#17344f!important;";
 
-  const row = (label, dotColor, onPick, before) => {
+  /* 分类：皮肤（8 款常用预设 + 自定义 + 还原）与宠物各为折叠组，点击分类标签展开/收起，
+   * 展开态存 localStorage（dreamMenu.cat），重注入后保持。 */
+  const skinBox = document.createElement('div');
+  const petBox = document.createElement('div');
+  const catState = (() => { try { return JSON.parse(localStorage.getItem('dreamMenu.cat') || '{}') || {}; } catch (e) { return {}; } })();
+  const saveCat = () => { try { localStorage.setItem('dreamMenu.cat', JSON.stringify(catState)); } catch (e) { } };
+  const catRow = (label, key, box) => {
+    const item = document.createElement('div');
+    item.style.cssText = "display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;cursor:pointer;font-weight:700;color:#17344f!important;-webkit-text-fill-color:#17344f!important;";
+    const caret = document.createElement('span');
+    caret.style.cssText = "flex:none;width:12px;text-align:center;opacity:.65;font-size:11px;color:#17344f!important;-webkit-text-fill-color:#17344f!important;";
+    const text = document.createElement('span');
+    text.textContent = label;
+    text.style.cssText = 'color:#17344f!important;-webkit-text-fill-color:#17344f!important;';
+    item.append(caret, text);
+    const sync = () => {
+      const open = !!catState[key];
+      caret.textContent = open ? '▾' : '▸';
+      box.style.display = open ? 'block' : 'none';
+    };
+    item.addEventListener('mouseenter', () => { item.style.background = 'rgba(0,0,0,.05)'; });
+    item.addEventListener('mouseleave', () => { item.style.background = 'transparent'; });
+    item.addEventListener('click', () => { catState[key] = !catState[key]; saveCat(); sync(); });
+    sync();
+    return item;
+  };
+
+  const row = (label, dotColor, onPick, before, container) => {
     const item = document.createElement('div');
     item.style.cssText = "display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;cursor:pointer;color:#17344f!important;-webkit-text-fill-color:#17344f!important;";
     const dot = document.createElement('span');
@@ -3290,9 +3582,49 @@ export function buildMenuScript(options: {
     item.addEventListener('mouseenter', () => { if (item.style.fontWeight !== '700') item.style.background = 'rgba(0,0,0,.05)'; });
     item.addEventListener('mouseleave', () => { item.style.background = 'transparent'; });
     item.addEventListener('click', () => onPick(item));
-    if (before) panel.insertBefore(item, before); else panel.appendChild(item);
+    const host = container || skinBox;
+    if (before) host.insertBefore(item, before); else host.appendChild(item);
     return item;
   };
+
+  panel.append(catRow('皮肤', 'skin', skinBox), skinBox);
+  if (hasPet) {
+    panel.append(catRow('宠物', 'pet', petBox), petBox);
+    /* 宠物选择：一宠物一行 + 「不显示宠物」，✓ = 当前选中（dreamPet.id 持久化；
+     * dream-pet 事件让宠物脚本即时切换/隐藏） */
+    const petSel = () => {
+      try {
+        const id = localStorage.getItem('dreamPet.id');
+        if (id) return id;
+        return localStorage.getItem('dreamPet.enabled') === '0' ? 'none' : pets[0].id;
+      } catch (e) { return pets[0].id; }
+    };
+    const petRows = [];
+    const syncPetRows = () => {
+      const sel = petSel();
+      petRows.forEach(({ item, id }) => {
+        const on = id === sel;
+        item.style.opacity = on ? '1' : '.5';
+        const mark = item.querySelector('.dream-pet-mark');
+        if (mark) mark.textContent = on ? '✓' : '';
+      });
+    };
+    const addPetRow = (id, label, dot) => {
+      const item = row(label, dot, () => {
+        try { localStorage.setItem('dreamPet.id', id); } catch (e) { }
+        document.dispatchEvent(new CustomEvent('dream-pet'));
+        syncPetRows();
+      }, null, petBox);
+      const mark = document.createElement('span');
+      mark.className = 'dream-pet-mark';
+      mark.style.cssText = 'margin-left:auto;flex:none;font-weight:700;color:#2a9d68!important;-webkit-text-fill-color:#2a9d68!important;';
+      item.appendChild(mark);
+      petRows.push({ item, id });
+    };
+    addPetRow('none', '不显示宠物', 'rgba(0,0,0,.24)');
+    for (const petDef of pets) addPetRow(petDef.id, petDef.name, '#e2557a');
+    syncPetRows();
+  }
 
   for (const theme of themes) {
     const item = row(theme.name, theme.accent || '#24c9d7', () => {
@@ -3672,7 +4004,9 @@ export function buildMenuScript(options: {
   });
   const uploadRow = row('＋ 自定义图片', 'rgba(36,201,215,.9)', () => picker.click());
   uploadRow.style.borderTop = '1px solid rgba(0,0,0,.08)';
-  const native = row('还原主题', 'rgba(0,0,0,.24)', () => restoreNative());
+  /* 「还原主题」不进皮肤分类：常驻面板顶层底部，随时可点 */
+  const native = row('还原主题', 'rgba(0,0,0,.24)', () => restoreNative(), null, panel);
+  native.style.borderTop = '1px solid rgba(0,0,0,.08)';
   initialCustomThemes.forEach(ensureCustomRow);
   fetch(sharedCustomThemeService.endpoint, {
     headers: { Authorization: 'Bearer ' + sharedCustomThemeService.token },
