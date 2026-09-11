@@ -62,8 +62,9 @@ function videoFileUrl(absPath: string | null): string | undefined {
 /* 宠物注册表（ZCode 桌面宠物）：assets/pet/<id>/ 一目录一宠物，pet.json 提供
  * id/name/order/scale，目录内 GIF 的文件名（去扩展名）即状态键（idle / look-left-side /
  * look-right-side / running / running-left / running-right / review / jumping / failed /
- * waiting / waving）——新宠物按状态命名放进目录即可加载。GIF 在注入时读成 data URL
- * 内嵌进菜单脚本（不依赖打包路径/本地服务，管理器不在也照常显示）。 */
+ * waiting / waving）——新宠物按状态命名放进目录即可加载。
+ * GIF 以 file:// URL 注入（与视频层同款：安装包内映射 app.asar.unpacked，Chromium
+ * 的 img 读不了 asar；按需懒加载，菜单脚本不被素材体积拖大）。 */
 export interface PetDef {
   id: string;
   name: string;
@@ -77,7 +78,9 @@ export function getPetRegistry(): PetDef[] | undefined {
   if (petRegistryCache) return petRegistryCache.length ? petRegistryCache : undefined;
   const out: PetDef[] = [];
   try {
-    const base = path.resolve(path.join(app.getAppPath(), 'assets', 'pet'));
+    const appPath = app.getAppPath();
+    const inAsar = (p: string) => appPath.endsWith('.asar') && (p === appPath || p.startsWith(appPath + path.sep));
+    const base = path.resolve(path.join(appPath, 'assets', 'pet'));
     for (const dirName of fs.readdirSync(base)) {
       /* 越界防御：目录名只接受 basename，解析结果必须落在 assets/pet 之内 */
       if (dirName !== path.basename(dirName)) continue;
@@ -89,9 +92,22 @@ export function getPetRegistry(): PetDef[] | undefined {
       const states: Record<string, string> = {};
       try {
         for (const f of fs.readdirSync(dir)) {
-          if (!f.toLowerCase().endsWith('.gif') || f !== path.basename(f)) continue;
-          const key = f.replace(/\.gif$/i, '');
-          states[key] = 'data:image/gif;base64,' + fs.readFileSync(path.join(dir, f)).toString('base64');
+          /* 状态键 = 文件名去扩展名；同一状态多格式时 .webp（8 位 alpha 平滑轮廓）优先 */
+          const ext = path.extname(f).toLowerCase();
+          if (!['.gif', '.webp', '.png'].includes(ext) || f !== path.basename(f)) continue;
+          const key = f.slice(0, -ext.length);
+          if (states[key] && ext !== '.webp') continue;
+          let filePath = path.join(dir, f);
+          if (inAsar(filePath)) {
+            const unpacked = path.resolve(appPath + '.unpacked', path.relative(appPath, filePath));
+            if (fs.existsSync(unpacked)) filePath = unpacked;
+          }
+          const url = videoFileUrl(filePath);
+          if (!url) continue;
+          /* mtime 作查询串防 Chromium 缓存旧素材（file:// 解析只用路径，查询不影响取文件） */
+          let stamp = 0;
+          try { stamp = Math.round(fs.statSync(filePath).mtimeMs); } catch { }
+          states[key] = stamp ? url + '?v=' + stamp : url;
         }
       } catch { }
       if (!Object.keys(states).length) continue;
@@ -3353,11 +3369,18 @@ export function buildMenuScript(options: {
       petHost.id = '${options.menuId}-pet-host';
       petHost.style.cssText = "all:initial!important;position:fixed!important;z-index:2147483640!important;display:block!important;pointer-events:none!important;width:fit-content!important;height:fit-content!important;contain:none!important;isolation:isolate!important;";
       const petMount = petHost.attachShadow({ mode: 'open' });
+      const wrap = document.createElement('div');
+      wrap.style.cssText = 'position:relative;line-height:0;';
+      /* 落地阴影：静态椭圆（不依赖逐帧 alpha）——drop-shadow 滤镜会随 GIF 每帧轮廓重算，
+       * 精灵一动影子就闪，已弃用 */
+      const shadowEl = document.createElement('div');
+      shadowEl.style.cssText = 'position:absolute;left:50%;bottom:1px;transform:translateX(-50%);width:58%;height:9px;border-radius:50%;background:radial-gradient(ellipse at center,rgba(0,0,0,.34) 0%,rgba(0,0,0,.16) 48%,transparent 74%);pointer-events:none;';
       const img = document.createElement('img');
       img.draggable = false;
       img.alt = '';
-      img.style.cssText = 'display:block;pointer-events:none;user-select:none;-webkit-user-select:none;filter:drop-shadow(0 8px 16px rgba(0,0,0,.35));';
-      petMount.appendChild(img);
+      img.style.cssText = 'position:relative;display:block;pointer-events:none;user-select:none;-webkit-user-select:none;';
+      wrap.append(shadowEl, img);
+      petMount.appendChild(wrap);
       document.documentElement.appendChild(petHost);
       const pos = { x: -1, y: 0 };
       let spanLeft = 0, spanRight = 0, edgeY = 0;
@@ -3394,6 +3417,11 @@ export function buildMenuScript(options: {
       document.addEventListener('dream-pet', () => { applyPet(); idleNextAt = 0; });
       let live = null, liveAt = 0;
       let idleNextAt = 0, idleIdx = 0, idleCount = 0, lastState = '';
+      /* 回合结束的 DOM 边沿检测：停止生成按钮消失的那一刻立即进入完成态（不等泵推送，
+       * 实测泵最快也要 1.5s）；若这段窗口内数据库随后报 failed（回合其实失败/被取消），
+       * failed 判定优先于合成完成，宠物切到沮丧帧。切会话时复位，避免把上一个会话的
+       * 完成带进新会话。 */
+      let synthDoneUntil = 0, lastTurnActive = false, lastUseSid = '';
       /* 状态键 → 当前宠物的 GIF data URL；缺状态回退（跑步方向→running→idle，其余→idle） */
       const stateGif = (key) => {
         const s = activePet ? activePet.states : null;
@@ -3435,6 +3463,8 @@ export function buildMenuScript(options: {
       document.addEventListener('dream-usage', (e) => {
         const d = e && e.detail;
         if (!d) return;
+        if (d.sid && lastUseSid && d.sid !== lastUseSid) synthDoneUntil = 0;   // 切会话：复位
+        if (d.sid) lastUseSid = d.sid;
         live = d.live || null;
         liveAt = Date.now();
       });
@@ -3472,7 +3502,7 @@ export function buildMenuScript(options: {
         } catch (e) { }
         return false;
       };
-      const pickState = (now) => {
+      const pickState = (now, turnActive) => {
         if (domWaiting()) return 'waiting';
         if (live && now - liveAt < 150000) {
           if (live.state === 'waiting') return 'waiting';
@@ -3480,7 +3510,8 @@ export function buildMenuScript(options: {
           if (live.state === 'failed' && now - live.at < 12000) return 'failed';
           if (live.state === 'done' && now - live.at < 8000) return 'done';
         }
-        if (domTurnActive()) return 'thinking';
+        if (turnActive) return 'thinking';
+        if (now < synthDoneUntil) return 'done';   // DOM 边沿：回合刚结束，立即跳跃
         return 'idle';
       };
       const tick = () => {
@@ -3488,7 +3519,10 @@ export function buildMenuScript(options: {
         try {
           if (!activePet) { petHost.style.setProperty('display', 'none', 'important'); return; }
           const now = Date.now();
-          const state = pickState(now);
+          const turnActive = domTurnActive();
+          if (lastTurnActive && !turnActive) synthDoneUntil = now + 8000;   // 回合刚结束
+          lastTurnActive = turnActive;
+          const state = pickState(now, turnActive);
           if (!trackEdge()) {
             petHost.style.setProperty('display', 'none', 'important');   // 输入框不在（设置页等）
             return;

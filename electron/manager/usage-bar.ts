@@ -264,20 +264,24 @@ export function buildUsageBarScript(): string {
       var exc = excActive(sess);
       var big = cw >= 1000000;
       var cls = exc ? 'dexc' : pct >= (big ? 60 : 85) ? 'dhot' : pct >= (big ? 40 : 70) ? 'dwarm' : 'dok';
-      var inner = cw
+      var inner = sess.pending
+        ? '<span class="dk">…</span>'
+        : cw
         ? '<span class="dcbar"><i class="' + cls + '" style="width:' + Math.min(100, pct).toFixed(1) + '%"></i></span>' +
           '<span class="dpct ' + cls + '">' + pct.toFixed(1) + '%</span>'
         : '<span class="dv' + (exc ? ' dexc' : '') + '">' + fmt(sess.ctx) + '</span>';
-      it(inner, '上下文：当前会话上下文大小（最近一次请求的总输入）÷ 窗口容量\n已用 ' + fmt(sess.ctx) + ' / 窗口 ' + fmt(cw) +
+      it(inner, (sess.pending ? '会话数据加载中（刚切换，等待下一次刷新）\n' : '') +
+        '上下文：当前会话上下文大小（最近一次请求的总输入）÷ 窗口容量\n已用 ' + fmt(sess.ctx) + ' / 窗口 ' + fmt(cw) +
         '\n颜色随占比：' + (big ? '≤40% 绿 · 40–60% 黄 · ≥60% 红（窗口 ≥100 万）' : '<70% 绿 · 70–85% 黄 · ≥85% 红') +
         ' · 超限被拒=亮红闪烁' + (exc ? '\n⚠ 上下文超限：最近一次请求超出窗口容量被拒绝（' + sess.updated + '），需要压缩会话或新开会话' : ''));
     }
     if (state.show.turn) {
-      it(ico(ICON_TURN) +
+      it(sess.pending ? ico(ICON_TURN) + '<span class="dk">…</span>' : ico(ICON_TURN) +
         '<span class="dv">' + fmt(lt.total) + '</span>' + cachePct(lt.cacheRead, lt.input) +
         '<span class="dk">' + (lt.requests || 0) + '次</span>' +
         ico('<path d="M6 3h12M6 21h12M8 3v3.5L12 11l4-4.5V3M8 21v-3.5L12 13l4 4.5V21"/>') + '<span class="dk">' + sec(last.durationMs) + '</span>' +
         ico('<path d="M5 20v-5M12 20v-9M19 20V5"/>') + '<span class="dk">' + sec(last.ttftMs) + '</span>',
+        (sess.pending ? '会话数据加载中（刚切换，等待下一次刷新）\n' : '') +
         '本轮：最近一轮的 token 消耗（该轮共 ' + (lt.requests || 0) + ' 次模型请求）\n' +
         ioc(lt.input, lt.output, lt.cacheRead, lt.reasoning, lt.cacheWrite) +
         '\n单次耗时 ' + sec(last.durationMs) + ' · 首字 ' + sec(last.ttftMs) + ' · 轮总耗时 ' + sec(lt.durationMs) +
@@ -285,9 +289,10 @@ export function buildUsageBarScript(): string {
         ((lt.retries || lt.toolErrors) ? ' · 重试 ' + (lt.retries || 0) + ' · 工具错误 ' + (lt.toolErrors || 0) : ''));
     }
     if (state.show.win) {
-      it(ico(ICON_WIN) +
+      it(sess.pending ? ico(ICON_WIN) + '<span class="dk">…</span>' : ico(ICON_WIN) +
         '<span class="dv">' + fmt(sess.total) + '</span>' + cachePct(sess.cacheRead, sess.input) +
         '<span class="dk">' + (sess.turns || 0) + '轮 · ' + (sess.requests || 0) + '次</span>',
+        (sess.pending ? '会话数据加载中（刚切换，等待下一次刷新）\n' : '') +
         '会话累计：当前会话全部请求的 token 消耗\n' + ioc(sess.input, sess.output, sess.cacheRead, sess.reasoning, sess.cacheWrite) +
         '\n' + (sess.turns || 0) + ' 轮 · ' + (sess.requests || 0) + ' 次请求' +
         (sess.toolCalls ? ' · 工具调用 ' + sess.toolCalls : '') +
@@ -299,8 +304,9 @@ export function buildUsageBarScript(): string {
       (tls.list || []).forEach(function (t1) {
         toolLines.push(t1.name + ' ' + t1.count + '次 · ' + sec(t1.durationMs) + (t1.errors ? ' · ' + t1.errors + ' 个错误' : ''));
       });
-      it(ico(ICON_TOOLS) + '<span class="dv">' + (tls.total || 0) + '</span>' +
+      it(sess.pending ? ico(ICON_TOOLS) + '<span class="dk">…</span>' : ico(ICON_TOOLS) + '<span class="dv">' + (tls.total || 0) + '</span>' +
         (tls.errors ? '<span class="deb">' + ico(ICON_ERR) + tls.errors + '</span>' : ''),
+        (sess.pending ? '会话数据加载中（刚切换，等待下一次刷新）\n' : '') +
         '工具调用：当前会话的工具使用统计（按调用次数排序）\n' +
         (toolLines.length ? toolLines.join('\n') : '无工具调用记录'));
     }
@@ -401,7 +407,10 @@ export function buildUsageBarScript(): string {
     var p = pc ? pc.sess : (d.session || null);
     state.pickedSid = p ? p.sid : '';
     window.__dreamWorkUsageWant = (pc && pc.want) || '';
-    if (!p) p = stubFor((pc && pc.want) || '');
+    if (!p) { p = stubFor((pc && pc.want) || ''); p.pending = !!(pc && pc.want); }
+    else if (p.sid && (!d.recent || !d.recent.some(function (r) { return r.sid === p.sid; })) && pc && pc.want === p.sid) {
+      p.pending = true;   // 池里还没这个会话（刚切换）：显示加载中，而不是把 0 值当数据
+    }
     state.excActive = excActive(p);
     /* 广播给宠物（皮肤注入脚本）：当前会话 + 实时任务状态 */
     try {

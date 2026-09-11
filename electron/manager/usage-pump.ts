@@ -183,6 +183,29 @@ function watchDb(port: number): void {
   }
 }
 
+/* 会话切换的快速感知：泵的常规推送由 db 写入驱动，切会话本身不写库——只靠 30s 心跳
+ * 会让用量条/宠物滞后很久。这里每 2s 轻量读一次页面的 __dreamWorkUsageWant（一条 CDP
+ * eval），变了自己触发一轮推送（不读库、不建快照时零成本）。 */
+let wantWatchTimer: NodeJS.Timeout | null = null;
+async function wantWatch(port: number): Promise<void> {
+  const state = pumps.get(port);
+  if (!state || state.busy) return;
+  const targets = await listZcodePageTargets(port).catch(() => []);
+  const first = targets && targets[0];
+  if (!first) return;
+  const session = new CdpSession(first.webSocketDebuggerUrl);
+  try {
+    await session.open();
+    const want = await withTimeout(session.evaluate("(window.__dreamWorkUsageWant || '')"), 1200);
+    const sid = typeof want === 'string' ? want.trim() : '';
+    if (sid && /^[A-Za-z0-9_-]{1,255}$/.test(sid) && !state.lastWants.split(',').includes(sid)) {
+      void maybeSpawn(port);
+    }
+  } catch { } finally {
+    session.close();
+  }
+}
+
 export function startUsagePump(port: number): void {
   let state = pumps.get(port);
   if (state) {
@@ -196,6 +219,7 @@ export function startUsagePump(port: number): void {
   pumps.set(port, state);
   watchDb(port);
   state.heartbeat = setInterval(() => void maybeSpawn(port), HEARTBEAT_MS);
+  wantWatchTimer = setInterval(() => void wantWatch(port), 2000);
   log('started for port', port);
   void maybeSpawn(port);   // 启动先拉一次
 }
@@ -209,6 +233,7 @@ export function stopUsagePump(port: number): void {
   if (state.retryTimer) clearTimeout(state.retryTimer);
   if (state.debounceTimer) clearTimeout(state.debounceTimer);
   if (state.settleTimer) clearTimeout(state.settleTimer);
+  if (wantWatchTimer) { clearInterval(wantWatchTimer); wantWatchTimer = null; }
   log('stopped for port', port);
 }
 
