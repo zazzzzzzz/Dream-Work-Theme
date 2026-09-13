@@ -9,8 +9,27 @@ import { getThemeAssetPath, getThemeAssetUrl, listThemes } from './manager/theme
 import { getAppDefinition } from './manager/app-registry';
 import { clearCustomAppPath, getAppPathConfigurations, setCustomAppPath } from './manager/app-path-store';
 import { updateCommunityThemes } from './manager/theme-updater';
+import { startUsagePump, isUsagePumpRunning } from './manager/usage-pump';
 
 let mainWindow: BrowserWindow | null = null;
+
+/* 用量泵被动保活（0.7.10）：泵原本只在"注入成功"后启动（injector 的
+ * `if (appId === 'zcode' && applied > 0) startUsagePump(port)`），而皮肤一旦已是页面内的
+ * 最新状态就不会再走注入分支 —— 管理器重启、或先开管理器再开 ZCode 时泵永不启动，
+ * 用量条只剩一个 ⚙。这里只按"目标应用在跑"这一个条件保活（泵幂等，与注入无关）。 */
+const ZCODE_PORT = getAppDefinition('zcode')?.defaultPort ?? 9344;
+async function ensureUsagePump(): Promise<void> {
+  try {
+    if (isUsagePumpRunning(ZCODE_PORT)) return;
+    if (!await isAppRunning('zcode')) return;
+    startUsagePump(ZCODE_PORT);
+    console.error('[main] usage pump ensured for zcode (passive start, 0.7.10)');
+  } catch { }
+}
+app.whenReady().then(() => {
+  void ensureUsagePump();
+  setInterval(() => void ensureUsagePump(), 10000);
+});
 
 protocol.registerSchemesAsPrivileged([
   { scheme: 'theme-asset', privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } },

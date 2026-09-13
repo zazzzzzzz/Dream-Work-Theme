@@ -218,9 +218,13 @@ export function startUsagePump(port: number): void {
   };
   pumps.set(port, state);
   watchDb(port);
-  state.heartbeat = setInterval(() => void maybeSpawn(port), HEARTBEAT_MS);
+  /* 心跳强制推送：去重会跳过"数据没变"的心跳，但 ZCode 重启后主题注入晚于泵的首推、
+   * 首推丢失后没有 db 写入就一直空条——心跳必须无条件送一帧 */
+  state.heartbeat = setInterval(() => void maybeSpawn(port, true), HEARTBEAT_MS);
   wantWatchTimer = setInterval(() => void wantWatch(port), 2000);
-  log('started for port', port);
+  /* 启动斜坡：主题/条脚本注入可能晚于泵首推，3/8/15s 强制补推确保条尽快有数据 */
+  [3000, 8000, 15000].forEach((ms) => setTimeout(() => { if (pumps.has(port)) void maybeSpawn(port, true); }, ms));
+  log('started for port', port, '(forced heartbeat + startup ramp, 0.7.8)');   // 版本标记（产物校验用）
   void maybeSpawn(port);   // 启动先拉一次
 }
 

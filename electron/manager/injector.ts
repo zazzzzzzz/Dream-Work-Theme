@@ -6,7 +6,7 @@ import { CdpSession, fetchRendererTargets, waitForRendererTargets, isAnyPageTarg
 import { getThemeHeroDataUrl, getThemeVideoPath, listThemes } from './theme-store';
 import { getAppDefinition } from './app-registry';
 import { ensureSharedCustomThemeService, listSharedCustomThemes, mergeSharedCustomThemes, recordThemeUsage, selectQuickThemeIds } from './custom-theme-store';
-import { Rgb, hexToRgb, rgbToHex, mixRgb, ensureContrastAgainstAll } from './contrast';
+import { Rgb, hexToRgb, rgbToHex, mixRgb, ensureContrastAgainstAll, contrastRatio, rgbToHsl, hslToRgb } from './contrast';
 import { decodePngAverageRgb } from './hero-png';
 import { buildUsageBarScript } from './usage-bar';
 import { startUsagePump, stopUsagePump } from './usage-pump';
@@ -868,6 +868,28 @@ export async function removeSkin(
 };
 
 // ---- 文字对比度推导：工具函数见 ./contrast.ts ----
+/* 视频主题的文字基色：明度取对比度最优极（暗底近白 / 亮底近黑），色相只做
+ * **极弱染色**（跟随主题 accent 色相，饱和度 ≈0.22）——每套视频主题都是多色相背景，
+ * 高饱和彩色正文会与背景互相抢色（实测观感差）；近中性微冷/微暖既保住主题气质，
+ * 又把对比度留在接近上限的区间。随后仍由 deriveTextColors 做 4.5:1/3:1 兜底。 */
+const VIDEO_TEXT_TINT = 0.35;   // 染色浓度（0 = 纯黑白；想更明显调大、想更素调小）
+function themeTintedTextColor(accentHex: string, surfaceHex: string, heroAverage: Rgb | null, alphas: number[]): string {
+  let surface: Rgb;
+  let hue = 0.58;
+  try {
+    surface = hexToRgb(surfaceHex);
+    hue = rgbToHsl(hexToRgb(accentHex))[0];
+  } catch {
+    surface = [12, 12, 18];
+  }
+  const hero = heroAverage ?? surface;
+  const backgrounds = alphas.map((alpha) => mixRgb(hero, surface, alpha));
+  const minContrast = (fg: Rgb) => Math.min(...backgrounds.map((bg) => contrastRatio(fg, bg)));
+  const lightPole = hslToRgb(hue, VIDEO_TEXT_TINT, 0.90);
+  const darkPole = hslToRgb(hue, VIDEO_TEXT_TINT, 0.15);
+  return rgbToHex(minContrast(lightPole) >= minContrast(darkPole) ? lightPole : darkPole);
+}
+
 // 主文字 4.5:1、次级文字 3:1（WCAG 大字号下限），背景取各半透明表面
 // 与壁纸平均色的合成色，保证毛玻璃上的真实可读性。
 function deriveTextColors(surfaceHex: string, textHex: string, heroAverage: Rgb | null, alphas: number[]) {
@@ -947,6 +969,7 @@ export function buildAppCss(
   const text = manifest.colors?.text ?? '#17344f';
   // 模板模式下占位哨兵色必须原样透传：一旦在这里跑对比度提升，
   // 哨兵字符串（如 #0a0b0c）会被改写，页面端 split/join 替换将永远不命中。
+  const accentColor = manifest.colors?.accent ?? '#24c9d7';
   const derived = options.template
     ? {
         text,
@@ -954,9 +977,15 @@ export function buildAppCss(
         textSubtlest: WORKBUDDY_CSS_PLACEHOLDERS.textSubtlest,
         textSecondary: WORKBUDDY_CSS_PLACEHOLDERS.textSecondary,
       }
-    : deriveTextColors(surface, text, heroAverage, surfaceAlphasFor(appId));
+    : deriveTextColors(
+        surface,
+        /* 视频主题：近中性微染色文字（明度取对比度最优极，色相极弱跟随主题） */
+        options.video ? themeTintedTextColor(accentColor, surface, heroAverage, surfaceAlphasFor(appId)) : text,
+        heroAverage,
+        surfaceAlphasFor(appId)
+      );
   const colors = {
-    accent: manifest.colors?.accent ?? '#24c9d7',
+    accent: accentColor,
     secondary: manifest.colors?.secondary ?? '#ef8fd3',
     surface,
     ...derived,
@@ -1196,7 +1225,7 @@ function buildGenericWorkCss(appId: string, manifest: any, heroDataUrl: string, 
     : appId === 'catpaw'
       ? buildCatPawCss(heroDataUrl, colors)
       : appId === 'zcode'
-        ? buildZCodeConversationCss(colors)
+        ? buildZCodeConversationCss(colors, video)
       : '';
   const contentSurfaceSelectors = appId === 'zcode'
     ? '[class*="composer"], [class*="input-container"]'
@@ -1250,7 +1279,7 @@ html, body, #root { background: ${video ? 'transparent' : colors.surface} !impor
   background-color: color-mix(in srgb, ${colors.surface} 88%, transparent) !important;
   backdrop-filter: blur(16px) saturate(108%);
 }
-:is(${main}) :where(p, span, li, h1, h2, h3, h4, strong, em) { color: ${colors.text} !important; }
+:is(${main}) :where(p, span, li, h1, h2, h3, h4, strong, em, code, pre, kbd, samp, time, small, b, i, u, del, ins, mark) { color: ${colors.text} !important; }
 button[class*="bg-primary"], button[class*="bg-accent"] { background-color: ${colors.accent} !important; color: #fff !important; }
 ${appSpecificCss}${video ? `
 /* ZCode 动态视频背景：fixed 层 z-index:-1 落于普通流内容之下（内容无需抬升，
@@ -1272,13 +1301,17 @@ ${appSpecificCss}${video ? `
 /* 应用壳层根容器（bg-background-win-alt，实测 rgb(236,236,238)）不透明底会整个压住
    z-index:-1 的视频层——视频主题必须一并放行，人物/画面才可见 */
 .bg-background-win-alt, [class*="bg-background-win"] { background: transparent !important; }
-/* 独立整页（设置/插件市场/自动化）的内容壳 div.bg-background.rounded-xl.border-border
-   同样不透明（rgb 248,248,248），视频主题一并放行；页内统计卡/侧栏自身已是玻璃 */
-.bg-background.rounded-xl.border-border { background: transparent !important; }
+/* 独立整页（设置/插件市场/自动化）的内容壳 div.bg-background.rounded-*.border-border
+   同样不透明（rgb 248,248,248），视频主题一并放行；页内统计卡/侧栏自身已是玻璃。
+   3.12.1 起圆角类从 rounded-xl 改为 rounded-[5px]/rounded——选择器放宽为"带边框色的
+   bg-background"，不再绑定具体圆角类 */
+.bg-background.border-border, .bg-background.rounded-xl.border-border { background: transparent !important; }
 #dream-work-video-layer[data-motion-error="true"] video { display: none !important; }` : ''}`;
 }
 
-function buildZCodeConversationCss(colors: any): string {
+function buildZCodeConversationCss(colors: any, video = false): string {
+  const PNL = 76;
+  const USR = 70;
   return `
 /* ZCode conversations: the wallpaper stays on the timeline, while each
    semantic row receives its own readable surface instead of one large wash. */
@@ -1302,14 +1335,14 @@ function buildZCodeConversationCss(colors: any): string {
 ) {
   border: 1px solid color-mix(in srgb, ${colors.accent} 30%, transparent) !important;
   border-radius: 16px !important;
-  background: color-mix(in srgb, ${colors.surface} 76%, transparent) !important;
+  background: color-mix(in srgb, ${colors.surface} ${PNL}%, transparent) !important;
   box-shadow: 0 12px 30px color-mix(in srgb, ${colors.surface} 30%, transparent), inset 0 1px color-mix(in srgb, white 12%, transparent) !important;
   backdrop-filter: blur(14px) saturate(108%) !important;
 }
 
 :is(main) [class~="group/user-row"] > div:is(:first-child, [class*="rounded-xl"]) {
   border-color: color-mix(in srgb, ${colors.accent} 44%, transparent) !important;
-  background: color-mix(in srgb, ${colors.surface} 70%, transparent) !important;
+  background: color-mix(in srgb, ${colors.surface} ${USR}%, transparent) !important;
 }
 
 :is(main) [class~="group/assistant-row"] > [data-conversation-selectable] {
@@ -1341,12 +1374,32 @@ function buildZCodeConversationCss(colors: any): string {
 :is(main, div.border-l.border-border) [data-row-id]:has([data-reasoning-content][data-state="open"]) {
   border: 1px solid color-mix(in srgb, ${colors.accent} 30%, transparent) !important;
   border-radius: 16px !important;
-  background: color-mix(in srgb, ${colors.surface} 76%, transparent) !important;
+  background: color-mix(in srgb, ${colors.surface} ${PNL}%, transparent) !important;
   box-shadow: 0 12px 30px color-mix(in srgb, ${colors.surface} 30%, transparent), inset 0 1px color-mix(in srgb, white 12%, transparent) !important;
   backdrop-filter: blur(14px) saturate(108%) !important;
   -webkit-backdrop-filter: blur(14px) saturate(108%) !important;
   color: ${colors.text} !important;
   text-shadow: none !important;
+}
+
+/* 裸行（思考行 group/reasoning、工具摘要行 group/tool-summary）自身及祖先都没有表面，
+   易被 app 的次级色/硬编码半透明色压得读不清 —— 一律用主题自身文字色（整屏统一，
+   不做逐行判定：逐行挑色会出现相邻行一深一浅、随时间来回翻的"反转"观感）。 */
+:is(main, div.border-l.border-border) [class~="group/reasoning"],
+:is(main, div.border-l.border-border) [class~="group/reasoning"] :where(*),
+:is(main, div.border-l.border-border) [class~="group/tool-summary"],
+:is(main, div.border-l.border-border) [class~="group/tool-summary"] :where(*) {
+  color: var(--dream-work-text) !important;
+}
+/* 关掉这两类行里的扫光（app 的 gradient-flow：文字填充透明 + background-clip:text 的
+   渐变，浅色段扫过时整段字变成"跳动的白块"；实测 .tool-summary-kind-label 上
+   background-size:300%、4s 循环）。皮肤下统一改回实色文字、去掉渐变与动画。 */
+:is(main, div.border-l.border-border) :is([class~="group/tool-summary"], [class~="group/reasoning"]) :where(*) {
+  background-image: none !important;
+  -webkit-background-clip: border-box !important;
+  background-clip: border-box !important;
+  -webkit-text-fill-color: currentColor !important;
+  animation: none !important;
 }
 
 /* ---- 毛玻璃材质统一：左侧边栏 / 状态面板（Git 变更）/ 切换面板右侧栏 ----
@@ -1360,7 +1413,7 @@ function buildZCodeConversationCss(colors: any): string {
   backdrop-filter: none !important;
 }
 #sidebar aside {
-  background: color-mix(in srgb, ${colors.surface} 76%, transparent) !important;
+  background: color-mix(in srgb, ${colors.surface} ${PNL}%, transparent) !important;
   backdrop-filter: blur(14px) saturate(108%) !important;
 }
 /* 侧边栏整列包裹主题自适应边框：accent 30% 混透明，与会话行/输入区同配方。
@@ -1405,7 +1458,7 @@ function buildZCodeConversationCss(colors: any): string {
 }
 
 #root aside[class*="bg-[var(--color-popover)]"] {
-  background: color-mix(in srgb, ${colors.surface} 76%, transparent) !important;
+  background: color-mix(in srgb, ${colors.surface} ${PNL}%, transparent) !important;
   border-color: color-mix(in srgb, ${colors.accent} 30%, transparent) !important;
   backdrop-filter: blur(14px) saturate(108%) !important;
 }
@@ -1415,7 +1468,7 @@ function buildZCodeConversationCss(colors: any): string {
 }
 
 .side-pane-open-tab-shell {
-  background: color-mix(in srgb, ${colors.surface} 76%, transparent) !important;
+  background: color-mix(in srgb, ${colors.surface} ${PNL}%, transparent) !important;
   backdrop-filter: blur(14px) saturate(108%) !important;
 }
 .side-pane-open-tab-shell [class*="min-h-0"][class*="flex-1"] {
@@ -1432,7 +1485,7 @@ html:has(aside.min-w-0 nav) main :is(button, input, select):where(
 html:has(aside.min-w-0 nav) main span:where(
   [class*="bg-surface"], [class*="bg-secondary"], [class*="bg-selected"]
 ) {
-  background: color-mix(in srgb, ${colors.surface} 76%, transparent) !important;
+  background: color-mix(in srgb, ${colors.surface} ${PNL}%, transparent) !important;
   border: 1px solid color-mix(in srgb, ${colors.accent} 30%, transparent) !important;
   backdrop-filter: blur(14px) saturate(108%) !important;
   color: ${colors.text} !important;
@@ -1461,7 +1514,7 @@ html:has(aside.min-w-0 nav) main :where(
   section[class*="bg-surface"],
   div[role="tablist"]
 ) {
-  background: color-mix(in srgb, ${colors.surface} 76%, transparent) !important;
+  background: color-mix(in srgb, ${colors.surface} ${PNL}%, transparent) !important;
   border: 1px solid color-mix(in srgb, ${colors.accent} 30%, transparent) !important;
   backdrop-filter: blur(14px) saturate(108%) !important;
   color: ${colors.text} !important;
@@ -1528,7 +1581,7 @@ div.border-l.border-border div[data-slot="tabs-list"] :is(button, [role="tab"]):
   z-index: -1 !important;
   border-radius: 10px !important;
   border: 1px solid color-mix(in srgb, ${colors.accent} 30%, transparent) !important;
-  background: color-mix(in srgb, ${colors.surface} 76%, transparent) !important;
+  background: color-mix(in srgb, ${colors.surface} ${PNL}%, transparent) !important;
   backdrop-filter: blur(14px) saturate(108%) !important;
   -webkit-backdrop-filter: blur(14px) saturate(108%) !important;
   pointer-events: none !important;
@@ -1551,7 +1604,7 @@ div.border-l.border-border :where(
 ) {
   border: 1px solid color-mix(in srgb, ${colors.accent} 30%, transparent) !important;
   border-radius: 16px !important;
-  background: color-mix(in srgb, ${colors.surface} 76%, transparent) !important;
+  background: color-mix(in srgb, ${colors.surface} ${PNL}%, transparent) !important;
   box-shadow: 0 12px 30px color-mix(in srgb, ${colors.surface} 30%, transparent), inset 0 1px color-mix(in srgb, white 12%, transparent) !important;
   backdrop-filter: blur(14px) saturate(108%) !important;
   color: ${colors.text} !important;
@@ -1559,7 +1612,7 @@ div.border-l.border-border :where(
 }
 div.border-l.border-border [class~="group/user-row"] > div:is(:first-child, [class*="rounded-xl"]) {
   border-color: color-mix(in srgb, ${colors.accent} 44%, transparent) !important;
-  background: color-mix(in srgb, ${colors.surface} 70%, transparent) !important;
+  background: color-mix(in srgb, ${colors.surface} ${USR}%, transparent) !important;
 }
 
 /* 子代理输出（主对话与辅助对话面板中）同款毛玻璃材质。 */
@@ -1571,7 +1624,7 @@ div.border-l.border-border [class~="group/user-row"] > div:is(:first-child, [cla
 ) {
   border: 1px solid color-mix(in srgb, ${colors.accent} 30%, transparent) !important;
   border-radius: 16px !important;
-  background: color-mix(in srgb, ${colors.surface} 76%, transparent) !important;
+  background: color-mix(in srgb, ${colors.surface} ${PNL}%, transparent) !important;
   box-shadow: 0 12px 30px color-mix(in srgb, ${colors.surface} 30%, transparent), inset 0 1px color-mix(in srgb, white 12%, transparent) !important;
   backdrop-filter: blur(14px) saturate(108%) !important;
   color: ${colors.text} !important;
@@ -1580,7 +1633,7 @@ div.border-l.border-border [class~="group/user-row"] > div:is(:first-child, [cla
 
 /* 已执行命令的输出卡片（bg-panel 白底）同款毛玻璃材质。 */
 :is(main, div.border-l.border-border) div[class*="bg-panel"][class*="rounded-xl"] {
-  background: color-mix(in srgb, ${colors.surface} 76%, transparent) !important;
+  background: color-mix(in srgb, ${colors.surface} ${PNL}%, transparent) !important;
   border: 1px solid color-mix(in srgb, ${colors.accent} 30%, transparent) !important;
   backdrop-filter: blur(14px) saturate(108%) !important;
   color: ${colors.text} !important;
@@ -1762,7 +1815,7 @@ main [class*="max-w-4xl"]:has(h1) :is(
   div[class*="rounded-xl"],
   div[class*="min-h-11"]
 ):not([class*="bg-accent"]):not([class*="bg-primary"]) {
-  background: color-mix(in srgb, ${colors.surface} 76%, transparent) !important;
+  background: color-mix(in srgb, ${colors.surface} ${PNL}%, transparent) !important;
   border: 1px solid color-mix(in srgb, ${colors.accent} 30%, transparent) !important;
   box-shadow: 0 12px 30px color-mix(in srgb, ${colors.surface} 30%, transparent) !important;
   backdrop-filter: blur(14px) saturate(108%) !important;
@@ -1787,7 +1840,7 @@ main [class*="max-w-4xl"]:has(h1) input::placeholder {
    接入与设置页卡片同款毛玻璃材质；行底的 bg-background/50 深色叠底
    改为透明，避免在玻璃上再压一层暗色。 */
 :is(main, div.border-l.border-border) [class~="group/assistant-turn"] div[class~="bg-card"] {
-  background: color-mix(in srgb, ${colors.surface} 76%, transparent) !important;
+  background: color-mix(in srgb, ${colors.surface} ${PNL}%, transparent) !important;
   border: 1px solid color-mix(in srgb, ${colors.accent} 30%, transparent) !important;
   backdrop-filter: blur(14px) saturate(108%) !important;
   -webkit-backdrop-filter: blur(14px) saturate(108%) !important;
@@ -3502,14 +3555,34 @@ export function buildMenuScript(options: {
         } catch (e) { }
         return false;
       };
+      /* 工具在跑的 DOM 信号：会话里出现可见的"正在执行"标签（工具调用进行中）。
+       * 数据库从来不落在飞行（全库 0 条 running），"运行中"过去只能靠 db → 实机从不触发，
+       * 工具执行时宠物一直停在"思考"。此信号独立于 db/泵，任何时候都成立。 */
+      const domToolRunning = () => {
+        try {
+          const els = document.querySelectorAll('span, div');
+          for (let i = 0; i < els.length; i++) {
+            const el = els[i];
+            if (el.children.length) continue;
+            if ((el.textContent || '').trim() !== '正在执行') continue;
+            if (el.closest && el.closest('#sidebar')) continue;
+            const vis = el.checkVisibility ? el.checkVisibility() : el.getClientRects().length > 0;
+            if (vis) return true;
+          }
+        } catch (e) { }
+        return false;
+      };
       const pickState = (now, turnActive) => {
         if (domWaiting()) return 'waiting';
         if (live && now - liveAt < 150000) {
           if (live.state === 'waiting') return 'waiting';
-          if (live.state === 'running') return 'running';   // 工具在跑（db 在飞行）
           if (live.state === 'failed' && now - live.at < 12000) return 'failed';
           if (live.state === 'done' && now - live.at < 8000) return 'done';
         }
+        /* 工具执行中沿输入框上边框跑动。要求回合在跑：否则残留的"正在执行"标签
+           会压住紧随其后的完成跳跃（done 依赖回合边沿）。 */
+        if (turnActive && domToolRunning()) return 'running';
+        if (live && live.state === 'running') return 'running';
         if (turnActive) return 'thinking';
         if (now < synthDoneUntil) return 'done';   // DOM 边沿：回合刚结束，立即跳跃
         return 'idle';
@@ -3573,6 +3646,26 @@ export function buildMenuScript(options: {
       window.__dreamWorkPetTimer = setInterval(tick, 120);
     })();
   }
+
+  /* 0.7.12：逐行对比守卫整体移除（裸行统一用主题文字色）。重注入不刷新页面时，
+     旧实例的定时器与它写在行上的变量/属性会残留（定时器还会继续按帧采样视频），
+     这里就地清干净。 */
+  (() => {
+    if (window.__dreamWorkRowGuardTimer) {
+      clearInterval(window.__dreamWorkRowGuardTimer);
+      window.__dreamWorkRowGuardTimer = 0;
+    }
+    try {
+      const stale = document.querySelectorAll('[data-dream-row-pole]');
+      for (let i = 0; i < stale.length; i++) {
+        stale[i].removeAttribute('data-dream-row-pole');
+        stale[i].removeAttribute('data-dream-row-lum');
+        stale[i].removeAttribute('data-dream-row-at');
+        stale[i].removeAttribute('data-dream-row-guard');
+        stale[i].style.removeProperty('--dream-row-text');
+      }
+    } catch (e) { }
+  })();
 
   const panel = document.createElement('div');
   panel.style.cssText = "display:none;margin-bottom:8px;min-width:200px;padding:6px;border-radius:12px;border:1px solid rgba(0,0,0,.1);background:rgba(255,255,255,.96);backdrop-filter:blur(16px);box-shadow:0 10px 30px rgba(0,0,0,.18);color:#17344f!important;-webkit-text-fill-color:#17344f!important;";
