@@ -12,9 +12,11 @@ import { buildUsageSnapshot, usageDbDir, usageDbStamp } from './usage-db';
  * 活动期限频 activity_min_ms（默认 1.5s），限频到点自动补拉最后一笔写入。
  * 任何失败只打日志，不影响 ZCode 与主题注入。 */
 
-const ACTIVITY_MIN_MS = 1500;
+/* 实时性（0.7.13）：db 写入 → 推送的链路尽量短 —— 去抖 300→120ms、活动期限频
+ * 1.5s→400ms（去抖本身会合并连写风暴，限频只是防极端刷屏），心跳 30s 兜底不变。 */
+const ACTIVITY_MIN_MS = 400;
 const HEARTBEAT_MS = 30000;
-const DEBOUNCE_MS = 300;
+const DEBOUNCE_MS = 120;
 
 interface PumpState {
   watcher: fs.FSWatcher | null;
@@ -224,7 +226,7 @@ export function startUsagePump(port: number): void {
   wantWatchTimer = setInterval(() => void wantWatch(port), 2000);
   /* 启动斜坡：主题/条脚本注入可能晚于泵首推，3/8/15s 强制补推确保条尽快有数据 */
   [3000, 8000, 15000].forEach((ms) => setTimeout(() => { if (pumps.has(port)) void maybeSpawn(port, true); }, ms));
-  log('started for port', port, '(forced heartbeat + startup ramp, 0.7.8)');   // 版本标记（产物校验用）
+  log('started for port', port, '(forced heartbeat + startup ramp + realtime 120ms, 0.7.13)');   // 版本标记（产物校验用）
   void maybeSpawn(port);   // 启动先拉一次
 }
 

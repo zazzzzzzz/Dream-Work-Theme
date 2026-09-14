@@ -43,21 +43,24 @@ export function buildUsageBarScript(): string {
 
   var style = document.createElement('style');
   style.textContent =
-    '#dream-usage-bar{position:fixed;display:none;font:13px/1.3 Consolas,\'Cascadia Mono\',Menlo,\'Microsoft YaHei UI\',\'Microsoft YaHei\',monospace;' +
+    /* 无毛玻璃底面（0.7.13 用户点名）：纯文字直接压在壁纸上，贴着输入框下边框居中显示；
+       不画玻璃/边框/阴影/圆角，文字色仍取主题文字色 --dream-work-text。 */
+    /* 行高压到 1：会话框恢复原位后，下边框到窗底只剩 ~21px，13px/1 的单行文字才放得下 */
+    '#dream-usage-bar{position:fixed;display:none;font:13px/1 Consolas,\'Cascadia Mono\',Menlo,\'Microsoft YaHei UI\',\'Microsoft YaHei\',monospace;' +
     'font-variant-numeric:tabular-nums;color:var(--dream-work-text,#e9edf4);' +
-    'background:color-mix(in srgb,var(--dream-work-surface,#10141c) 78%,transparent);' +
-    'backdrop-filter:blur(14px) saturate(108%);-webkit-backdrop-filter:blur(14px) saturate(108%);' +
-    'border:1px solid color-mix(in srgb,var(--dream-work-accent,#24c9d7) 30%,transparent);' +
-    'border-radius:12px;padding:2px 6px;user-select:none;white-space:nowrap;z-index:50;' +
-    'box-shadow:0 12px 30px color-mix(in srgb,var(--dream-work-surface,#10141c) 30%,transparent),inset 0 1px color-mix(in srgb,white 12%,transparent);' +
+    'background:none;border:none;box-shadow:none;padding:0;user-select:none;white-space:nowrap;z-index:50;' +
     'align-items:center;gap:2px}' +
-    '#du-main{overflow:hidden;min-width:0;flex:1 1 auto;display:flex;align-items:center;gap:1px}' +
-    '.dit{display:flex;align-items:center;gap:4px;padding:2px 6px;border-radius:8px;' +
+    '#du-main{overflow:hidden;min-width:0;flex:1 1 auto;display:flex;align-items:center;justify-content:center;gap:1px}' +
+    /* ⚙ 脱离文档流固定在右缘，避免把居中的正文推偏 */
+    '#du-gear{position:absolute;right:0;top:50%;transform:translateY(-50%)}' +
+    /* flex:0 0 auto：条目绝不压缩（窄输入框下被压扁会挤成一团），放不下时由 #du-main 裁切 */
+    '.dit{display:flex;align-items:center;gap:4px;padding:2px 6px;border-radius:8px;flex:0 0 auto;' +
     'transition:background-color .12s ease-out}' +
     '.dit:hover{background:color-mix(in srgb,var(--dream-work-accent,#24c9d7) 14%,transparent)}' +
     '.dsep{width:1px;height:15px;background:color-mix(in srgb,var(--dream-work-text,#e9edf4) 16%,transparent);flex:0 0 auto;margin:0 1px}' +
-    '.dk{color:color-mix(in srgb,var(--dream-work-text,#e9edf4) 62%,transparent)}' +
-    '.dv{color:var(--dream-work-text,#e9edf4);font-weight:600}' +
+    /* 分层鲜艳取色：数值用 accent 高彩度档、标签用 secondary 色相档 */
+    '.dk{color:color-mix(in srgb,var(--dream-work-text-alt,var(--dream-work-text,#e9edf4)) 78%,transparent)}' +
+    '.dv{color:var(--dream-work-text-vivid,var(--dream-work-text,#e9edf4));font-weight:600}' +
     '.dpct{font-weight:700}' +
     '.dok{color:color-mix(in srgb,#3ecf8e 84%,var(--dream-work-text,#e9edf4))}' +
     '.dwarm{color:color-mix(in srgb,#f5b944 84%,var(--dream-work-text,#e9edf4))}' +
@@ -455,14 +458,11 @@ export function buildUsageBarScript(): string {
     if (excBubble.style.top !== top + 'px') excBubble.style.top = top + 'px';
   }
 
-  /* ---------- 定位：输入框玻璃外壳正下方（留分离带，不与框体贴合成一体）。
-   * 关键：ZCode 输入框的可见边界是 .chat-composer-region（玻璃壳 + 渐变描边，
-   * 比内部圆角输入卡低 ~34px），让位 margin 必须加在玻璃壳上——加在内层卡上
-   * 只是扩大壳内空隙，壳不动，条会落进壳里（实测翻车）。sticky bottom-0 容器
-   * 内内容增高即整体上移，壳被抬离窗底，条落在壳与窗底之间的壁纸上。 ---------- */
+  /* ---------- 定位：输入框（玻璃壳 .chat-composer-region，可见边界即其下边框）正下方。
+   * 0.7.13 起不再抬起会话框（历史版本用壳上 margin-bottom 44px 腾出分离带，用户点名恢复原位），
+   * 条直接落在输入框下边框与窗底之间的窄带里：顶边贴住下边框（+1px），内容居中。 ---------- */
   var composer = null, cardCache = null, hideSince = 0, lastPos = [-1, -1], curDisplay = 'none';
-  var CARD_MARGIN = '44px';
-  var BAR_GAP = 10;
+  var BAR_GAP = 1;
 
   function isVisualBox(el) {
     try {
@@ -533,12 +533,11 @@ export function buildUsageBarScript(): string {
       });
     } catch (e) { }
   }
+  /* 会话框不再被抬高（0.7.13 用户点名"恢复会话框原本位置"）：条贴着输入框下边框落在
+     输入框与窗底之间的窄带里，不需要给壳腾出 44px。这里只负责把历史版本加过的内联
+     marginBottom 还原掉（老页面重注入时清干净）。 */
   function ensureCardPad() {
-    if (!cardCache) return;
-    try {
-      if (cardCache.dataset.duPad === undefined) cardCache.dataset.duPad = cardCache.style.marginBottom || '';
-      if (cardCache.style.marginBottom !== CARD_MARGIN) cardCache.style.marginBottom = CARD_MARGIN;
-    } catch (e) { }
+    try { releasePads(); } catch (e) { }
   }
   function setComposer(el) {
     releasePads();
@@ -631,7 +630,6 @@ export function buildUsageBarScript(): string {
     try {
       syncExcBubble();
       if (!composer || !composer.isConnected) { hideSince = 0; hideBar(); return; }
-      if (cardCache && cardCache.style.marginBottom !== CARD_MARGIN) ensureCardPad();
       var r = composer.getBoundingClientRect();
       var on = reallyVisible(composer, true) || coverOK(composer);
       if (!on) {
@@ -656,9 +654,14 @@ export function buildUsageBarScript(): string {
         bar.style.top = top + 'px';
         lastPos = [left, top];
       }
-      /* 条宽 = 输入卡片同宽：左右缘与卡片对齐；条目左对齐、⚙ 推到右缘 */
+      /* 条宽 = 输入卡片同宽，内容居中；内容超宽时改左对齐（只在右缘裁切，避免两头都缺） */
       var w = Math.max(60, Math.round(ar.width));
       if (bar.style.width !== w + 'px') bar.style.width = w + 'px';
+      var m = bar.querySelector('#du-main');
+      if (m) {
+        var want = m.scrollWidth > m.clientWidth + 1 ? 'flex-start' : 'center';
+        if (m.style.justifyContent !== want) m.style.justifyContent = want;
+      }
     } catch (e) { } finally {
       requestAnimationFrame(track);
     }

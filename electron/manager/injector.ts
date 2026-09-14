@@ -6,7 +6,7 @@ import { CdpSession, fetchRendererTargets, waitForRendererTargets, isAnyPageTarg
 import { getThemeHeroDataUrl, getThemeVideoPath, listThemes } from './theme-store';
 import { getAppDefinition } from './app-registry';
 import { ensureSharedCustomThemeService, listSharedCustomThemes, mergeSharedCustomThemes, recordThemeUsage, selectQuickThemeIds } from './custom-theme-store';
-import { Rgb, hexToRgb, rgbToHex, mixRgb, ensureContrastAgainstAll, contrastRatio, rgbToHsl, hslToRgb } from './contrast';
+import { Rgb, hexToRgb, rgbToHex, mixRgb, ensureContrastAgainstAll, contrastRatio, relativeLuminance, rgbToHsl, hslToRgb } from './contrast';
 import { decodePngAverageRgb } from './hero-png';
 import { buildUsageBarScript } from './usage-bar';
 import { startUsagePump, stopUsagePump } from './usage-pump';
@@ -868,11 +868,51 @@ export async function removeSkin(
 };
 
 // ---- 文字对比度推导：工具函数见 ./contrast.ts ----
-/* 视频主题的文字基色：明度取对比度最优极（暗底近白 / 亮底近黑），色相只做
- * **极弱染色**（跟随主题 accent 色相，饱和度 ≈0.22）——每套视频主题都是多色相背景，
- * 高饱和彩色正文会与背景互相抢色（实测观感差）；近中性微冷/微暖既保住主题气质，
- * 又把对比度留在接近上限的区间。随后仍由 deriveTextColors 做 4.5:1/3:1 兜底。 */
-const VIDEO_TEXT_TINT = 0.35;   // 染色浓度（0 = 纯黑白；想更明显调大、想更素调小）
+/* 鲜艳取色（0.7.14 用户裁定"保彩度、只动明度"）：
+   文字色不再朝黑/白/表面色混（那样一混彩度就掉，观感发灰），而是**沿用主题色相的
+   高饱和基色，只让 ensureContrastRgb 沿明度轴把它压到对比度下限**——同色相下能在
+   达标线附近拿到的最鲜艳那一档。`sat` 是基色饱和度：正文 0.60、数值 0.92、次级 0.45。 */
+const TEXT_SAT_BODY = 0.90;    // 正文饱和度（0.7.15 用户点名 0.60 → 0.90）
+const TEXT_SAT_VIVID = 0.92;
+const TEXT_SAT_SUBTLE = 0.45;
+function vividBase(hue: number, sat: number, light: number): Rgb {
+  return hslToRgb(((hue % 1) + 1) % 1, sat, Math.max(0.02, Math.min(0.98, light)));
+}
+/* 亮度提升（0.7.16 用户点名"提高亮度"）：推导结果再沿明度轴**朝远离背景的方向**推
+   TEXT_BRIGHT_K（比背景亮的更亮、比背景暗的更暗）。注意方向必须按背景判，不能按"亮/暗"
+   一刀切——次级档本来就在背景与正文之间，朝极端推会把它推向背景、对比度反降（实测翻车）。 */
+const TEXT_BRIGHT_K = 0.20;   // 提亮幅度（0.35 会把近白端彩度冲光、观感退回"白字"，实测被否）
+function pushAwayFromBg(rgb: Rgb, backgrounds: Rgb[], k = TEXT_BRIGHT_K): Rgb {
+  if (!backgrounds.length) return rgb;
+  const l = relativeLuminance(rgb);
+  const bg = backgrounds.reduce((sum, b) => sum + relativeLuminance(b), 0) / backgrounds.length;
+  const [h, s, hl] = rgbToHsl(rgb);
+  const next = l >= bg ? hl + (1 - hl) * k : hl * (1 - k);
+  return hslToRgb(h, s, Math.max(0.02, Math.min(0.99, next)));
+}
+/* 彩度下限（0.7.16）：明度越高彩度被压得越扁，近白端会看不出主题色相（用户："又变回去了"）。
+   通道极差不足时先提饱和度、再小幅回落明度，直到色相可辨；若因此跌破对比度下限，
+   宁可保留亮度（对比度优先于彩度）。 */
+const TEXT_MIN_SPREAD = 30;   // 通道极差下限（0-255）：低于这个数就看不出主题色相
+function ensureTint(rgb: Rgb, backgrounds: Rgb[], floor: number, target = TEXT_MIN_SPREAD): Rgb {
+  const spread = (c: Rgb) => Math.max(c[0], c[1], c[2]) - Math.min(c[0], c[1], c[2]);
+  const minC = (c: Rgb) => (backgrounds.length ? Math.min(...backgrounds.map((bg) => contrastRatio(c, bg))) : 99);
+  if (spread(rgb) >= target) return rgb;
+  const [h, s, l] = rgbToHsl(rgb);
+  /* 彩度在中间明度最高：近白/近黑的文字要往 0.5 方向收才涨彩度（越亮只会更白） */
+  const towardMid = l > 0.5 ? -1 : 1;
+  let best = rgb;
+  for (let i = 1; i <= 20; i++) {
+    const cand = hslToRgb(h, Math.min(1, s + 0.06 * i), Math.max(0.06, Math.min(0.99, l + towardMid * 0.02 * i)));
+    if (minC(cand) < floor) break;   // 涨彩度不能破对比度下限
+    best = cand;
+    if (spread(cand) >= target) break;
+  }
+  return best;
+}
+/* 视频主题的文字基色：色相取 accent、高饱和，明度取对比度最优极（暗底近白 / 亮底近黑），
+   随后由 deriveTextColors 做 4.5:1/3:1 兜底。 */
+const VIDEO_TEXT_SAT = 0.70;   // 视频主题染色浓度（鲜艳取向）
 function themeTintedTextColor(accentHex: string, surfaceHex: string, heroAverage: Rgb | null, alphas: number[]): string {
   let surface: Rgb;
   let hue = 0.58;
@@ -885,23 +925,45 @@ function themeTintedTextColor(accentHex: string, surfaceHex: string, heroAverage
   const hero = heroAverage ?? surface;
   const backgrounds = alphas.map((alpha) => mixRgb(hero, surface, alpha));
   const minContrast = (fg: Rgb) => Math.min(...backgrounds.map((bg) => contrastRatio(fg, bg)));
-  const lightPole = hslToRgb(hue, VIDEO_TEXT_TINT, 0.90);
-  const darkPole = hslToRgb(hue, VIDEO_TEXT_TINT, 0.15);
+  const lightPole = vividBase(hue, VIDEO_TEXT_SAT, 0.92);   // 提亮但不过头：再亮就把彩度冲光
+  const darkPole = vividBase(hue, VIDEO_TEXT_SAT, 0.12);
   return rgbToHex(minContrast(lightPole) >= minContrast(darkPole) ? lightPole : darkPole);
 }
 
-// 主文字 4.5:1、次级文字 3:1（WCAG 大字号下限），背景取各半透明表面
-// 与壁纸平均色的合成色，保证毛玻璃上的真实可读性。
-function deriveTextColors(surfaceHex: string, textHex: string, heroAverage: Rgb | null, alphas: number[]) {
+/* 主文字 4.5:1、次级 3:1（WCAG 大字号下限），背景取各半透明表面与壁纸平均色的合成色。
+   基色一律"主题色相 + 高饱和 + 清单明度"（清单 text 只用来定位明度轴的方向），
+   不达标时沿明度轴收，彩度保留 —— 鲜艳与可读性同时要。 */
+function deriveTextColors(surfaceHex: string, textHex: string, heroAverage: Rgb | null, alphas: number[], accentHex?: string, secondaryHex?: string) {
   const surface = hexToRgb(surfaceHex);
   // hero 未采样到时退化为纯 surface（mixRgb(surface, surface, a) === surface）
   const backgrounds = alphas.map((alpha) => mixRgb(heroAverage ?? surface, surface, alpha));
-  const text = ensureContrastAgainstAll(hexToRgb(textHex), backgrounds, 4.5);
+  const parse = (hex?: string, fallback?: Rgb): Rgb => { try { return hex ? hexToRgb(hex) : (fallback ?? [255, 255, 255]); } catch { return fallback ?? [255, 255, 255]; } };
+  const base = parse(textHex, [255, 255, 255]);
+  const accent = parse(accentHex, base);
+  const secondary = parse(secondaryHex, accent);
+  const accentHue = rgbToHsl(accent)[0];
+  const secondaryHue = rgbToHsl(secondary)[0];
+  const baseLight = rgbToHsl(base)[2];
+  const text = ensureContrastAgainstAll(vividBase(accentHue, TEXT_SAT_BODY, baseLight), backgrounds, 4.5);
+  /* 分层双色相：数值/关键值用 accent 高彩度（textVivid），标签/次级用 secondary 色相
+     （textAlt）；subtle 族保持主色相、彩度略低，避免整屏只有一种纯度。 */
+  const tint = (from: Rgb, sat: number, l: number, floor: number, target: number, hueShift = 0) => {
+    const [h0] = rgbToHsl(from);
+    const h = ((h0 + hueShift) % 1 + 1) % 1;
+    const lifted = pushAwayFromBg(ensureContrastAgainstAll(vividBase(h, sat, l), backgrounds, floor), backgrounds);
+    return ensureTint(lifted, backgrounds, floor, target);
+  };
+  const textRgb = ensureTint(pushAwayFromBg(text, backgrounds), backgrounds, 4.5, 60);
+  const textL = rgbToHsl(textRgb)[2];
   return {
-    text: rgbToHex(text),
-    textSubtle: rgbToHex(ensureContrastAgainstAll(mixRgb(surface, text, 0.88), backgrounds, 3)),
-    textSubtlest: rgbToHex(ensureContrastAgainstAll(mixRgb(surface, text, 0.80), backgrounds, 3)),
-    textSecondary: rgbToHex(ensureContrastAgainstAll(mixRgb(surface, text, 0.72), backgrounds, 3)),
+    text: rgbToHex(textRgb),
+    textVivid: rgbToHex(tint(accent, TEXT_SAT_VIVID, baseLight, 4.5, 80)),
+    textAlt: rgbToHex(tint(secondary, Math.max(TEXT_SAT_SUBTLE + 0.25, 0.70), baseLight, 3, 45)),
+    /* 相反色相档（0.7.16 用户点名）：思考行/工具输出标签用 accent 的对面色相 + 高饱和 */
+    textOpposite: rgbToHex(tint(accent, 0.95, baseLight, 3, 90, 0.5)),
+    textSubtle: rgbToHex(tint(accent, TEXT_SAT_SUBTLE, textL < 0.5 ? Math.min(0.98, textL + 0.30) : Math.max(0.02, textL - 0.26), 3, 34)),
+    textSubtlest: rgbToHex(tint(accent, TEXT_SAT_SUBTLE * 0.8, textL < 0.5 ? Math.min(0.98, textL + 0.44) : Math.max(0.02, textL - 0.38), 3, 30)),
+    textSecondary: rgbToHex(tint(accent, TEXT_SAT_SUBTLE * 0.9, textL < 0.5 ? Math.min(0.98, textL + 0.36) : Math.max(0.02, textL - 0.32), 3, 32)),
   };
 }
 
@@ -979,10 +1041,15 @@ export function buildAppCss(
       }
     : deriveTextColors(
         surface,
-        /* 视频主题：近中性微染色文字（明度取对比度最优极，色相极弱跟随主题） */
+        /* 视频主题：高饱和主题色相文字（明度取对比度最优极） */
         options.video ? themeTintedTextColor(accentColor, surface, heroAverage, surfaceAlphasFor(appId)) : text,
         heroAverage,
-        surfaceAlphasFor(appId)
+        surfaceAlphasFor(appId),
+        accentColor,
+        /* 次级/标签色相先过伴生门限，让 textAlt 与流光环同源 */
+        appId === 'zcode' && !options.template
+          ? zcodeRingCompanion(accentColor, manifest.colors?.secondary ?? '#ef8fd3')
+          : manifest.colors?.secondary ?? '#ef8fd3'
       );
   const colors = {
     accent: accentColor,
@@ -1234,19 +1301,29 @@ function buildGenericWorkCss(appId: string, manifest: any, heroDataUrl: string, 
   // (buildZCodeConversationCss), so its wallpaper needs no gradient mask.
   // 视频主题：壁纸画布让位给 fixed 视频层（mainBackground 透明，hero 转由
   // 视频层自身底图承担，加载/失败时即静态回退）。
+  /* 背景亮暗（快捷面板的"背景亮暗"）只作用于壁纸层：静态主题在壁纸同一声明里叠一层
+     蒙版渐变 --dream-dim-veil（黑=压暗 / 白=提亮），改变量即时生效且不动文字与玻璃。 */
+  const dimVeil = `linear-gradient(var(--dream-dim-veil, transparent), var(--dream-dim-veil, transparent))`;
   const mainBackground = video
     ? 'transparent !important'
     : appId === 'zcode'
-    ? `url(${JSON.stringify(heroDataUrl)}) center / cover no-repeat fixed !important`
-    : `linear-gradient(90deg, color-mix(in srgb, ${colors.surface} 82%, transparent) 0 12%, transparent 42%), url(${JSON.stringify(heroDataUrl)}) center / cover no-repeat fixed !important`;
+    ? `${dimVeil}, url(${JSON.stringify(heroDataUrl)}) center / cover no-repeat fixed !important`
+    : `linear-gradient(90deg, color-mix(in srgb, ${colors.surface} 82%, transparent) 0 12%, transparent 42%), ${dimVeil}, url(${JSON.stringify(heroDataUrl)}) center / cover no-repeat fixed !important`;
   return `/* DREAM_THEME:${manifest.id} */
 :root {
   --dream-work-accent: ${colors.accent};
   --dream-work-secondary: ${colors.secondary};
   --dream-work-surface: ${colors.surface};
   --dream-work-text: ${colors.text};
-  /* ZCode 原生前景色变量：跟随动态提升后的文字色，毛玻璃背景上保持可读；
-     次级色按 88%/80%/72% 混合并保证 3:1 对比度下限（见 deriveTextColors） */
+  /* 分层鲜艳取色（0.7.14）：数值/关键值用 accent 高彩度档、标签/次级用 secondary 色相档，
+     正文保持主题色相 + 0.60 饱和（都经 4.5:1 / 3:1 兜底，见 deriveTextColors） */
+  --dream-work-text-vivid: ${colors.textVivid ?? colors.text};
+  --dream-work-text-alt: ${colors.textAlt ?? colors.textSecondary ?? colors.text};
+  /* 相反色相档：思考行与工具输出标签（accent +180°、高饱和） */
+  --dream-work-text-opposite: ${colors.textOpposite ?? colors.textVivid ?? colors.text};
+  /* 正文技术记号的"纯黑/纯白"档：亮主题纯黑、暗主题纯白（按正文极性的明度判定） */
+  --dream-work-ink: ${(() => { try { const c = hexToRgb(colors.text); const lum = 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; return lum < 96 ? '#000000' : '#ffffff'; } catch { return '#ffffff'; } })()};
+  /* ZCode 原生前景色变量：跟随动态提升后的文字色，毛玻璃背景上保持可读 */
   --color-foreground: ${colors.text} !important;
   --color-foreground-subtle: ${colors.textSubtle} !important;
   --color-foreground-subtlest: ${colors.textSubtlest} !important;
@@ -1291,6 +1368,9 @@ ${appSpecificCss}${video ? `
   pointer-events: none !important;
   overflow: hidden !important;
   background: url(${JSON.stringify(heroDataUrl)}) center / cover no-repeat !important;
+}
+#dream-work-video-layer {
+  filter: brightness(var(--dream-dim-k, 1)) !important;
 }
 #dream-work-video-layer video {
   width: 100% !important;
@@ -1390,6 +1470,27 @@ function buildZCodeConversationCss(colors: any, video = false): string {
 :is(main, div.border-l.border-border) [class~="group/tool-summary"],
 :is(main, div.border-l.border-border) [class~="group/tool-summary"] :where(*) {
   color: var(--dream-work-text) !important;
+}
+/* 分层双色相：抢眼信息从正文里挑出来 —— 工具类别标签（终端/写入/读取/编辑…）与
+   思考行标签（思考 · 持续了 N 秒）走 secondary 色相档，正文/命令行保持 accent 主档。
+   思考行只作用于触发按钮（标签行），展开的思考正文不在其中。 */
+/* 最终口径（用户裁定"算了，全部走主题色"）：会话区所有文字——标签、图标、命令行、
+   文件路径、元信息、正文与其中的代码/技术记号——统一用主题文字色；不再有纯黑纯白档
+   与相反色相档（两个变量保留以备后用，但没有任何规则消费它们）。 */
+:is(main, div.border-l.border-border) [class~="tool-summary-kind-label"],
+:is(main, div.border-l.border-border) button[data-testid="chat-reasoning-trigger"],
+:is(main, div.border-l.border-border) button[data-testid="chat-reasoning-trigger"] :where(*),
+:is(main, div.border-l.border-border) [class~="group/tool-summary"] :where(svg) {
+  color: var(--dream-work-text) !important;
+}
+/* 标题走数值档（accent 高彩度） */
+:is(main, div.border-l.border-border) :where(h1, h2, h3, h4, [class*="title"]) {
+  color: var(--dream-work-text-vivid) !important;
+}
+/* 侧栏选中会话项走数值档（accent 高彩度），与选中底色同源更醒目 */
+#sidebar li[class*="bg-selected"],
+#sidebar li[class*="bg-selected"] :where(*) {
+  color: var(--dream-work-text-vivid) !important;
 }
 /* 关掉这两类行里的扫光（app 的 gradient-flow：文字填充透明 + background-clip:text 的
    渐变，浅色段扫过时整段字变成"跳动的白块"；实测 .tool-summary-kind-label 上
@@ -1988,6 +2089,9 @@ function buildHanaAgentCss(manifest: any, heroDataUrl: string, colors: any): str
   --dream-work-secondary: ${colors.secondary};
   --dream-work-surface: ${colors.surface};
   --dream-work-text: ${colors.text};
+  --dream-work-text-vivid: ${colors.textVivid ?? colors.text};
+  --dream-work-text-alt: ${colors.textAlt ?? colors.textSecondary ?? colors.text};
+  --dream-work-text-opposite: ${colors.textOpposite ?? colors.textVivid ?? colors.text};
 }
 html, body, #react-root, .app-shell {
   background-color: ${colors.surface} !important;
@@ -3714,6 +3818,56 @@ export function buildMenuScript(options: {
     return item;
   };
 
+  /* 背景亮暗（只作用于壁纸层）：视频主题走 #dream-work-video-layer 的 filter: brightness，
+     静态主题走 main 背景里的 --dream-dim-veil 蒙版渐变；静态主题另有内层壁纸层会盖住蒙版，
+     亮暗≠0 时临时摘除其 background-image、归零还原（改动只落在壁纸层，不碰文字/玻璃）。 */
+  const BRIGHT_KEY = 'dreamBright';
+  const brightVal = () => {
+    const n = parseInt(localStorage.getItem(BRIGHT_KEY) || '0', 10);
+    return isNaN(n) ? 0 : Math.max(-50, Math.min(50, n));
+  };
+  /* 亮暗只走两个纯壁纸通道：视频主题 = #dream-work-video-layer 的 filter: brightness，
+     静态主题 = main 背景声明里的 --dream-dim-veil 蒙版渐变。**不改动任何内容元素的背景**
+     （用户点名：命令行/文件路径/图标/元信息这些不能被亮暗影响）。 */
+  const applyBright = () => {
+    const v = brightVal();
+    const root = document.documentElement;
+    root.style.setProperty('--dream-dim-k', String(Math.max(0.35, 1 + v / 100)));
+    const a = Math.min(0.8, (Math.abs(v) / 100) * 0.8);
+    root.style.setProperty('--dream-dim-veil', v < 0 ? 'rgba(0,0,0,' + a.toFixed(3) + ')' : (v > 0 ? 'rgba(255,255,255,' + a.toFixed(3) + ')' : 'transparent'));
+  };
+  const brightRow = document.createElement('div');
+  brightRow.style.cssText = 'display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;color:#17344f!important;-webkit-text-fill-color:#17344f!important;';
+  const brightLabel = document.createElement('span');
+  brightLabel.textContent = '背景亮暗';
+  brightLabel.style.cssText = 'flex:1 1 auto;color:#17344f!important;-webkit-text-fill-color:#17344f!important;';
+  const mkBtn = (txt) => {
+    const b = document.createElement('span');
+    b.textContent = txt;
+    b.style.cssText = 'flex:none;width:22px;height:22px;line-height:20px;text-align:center;border-radius:6px;border:1px solid rgba(0,0,0,.18);cursor:pointer;user-select:none;color:#17344f!important;-webkit-text-fill-color:#17344f!important;font-weight:700;';
+    b.addEventListener('mouseenter', () => { b.style.background = 'rgba(0,0,0,.06)'; });
+    b.addEventListener('mouseleave', () => { b.style.background = 'transparent'; });
+    return b;
+  };
+  const brightValEl = document.createElement('span');
+  brightValEl.style.cssText = 'flex:none;min-width:44px;text-align:right;color:#17344f!important;-webkit-text-fill-color:#17344f!important;';
+  const bMinus = mkBtn('−');
+  const bPlus = mkBtn('＋');
+  const syncBright = () => { const v = brightVal(); brightValEl.textContent = (v > 0 ? '+' : '') + v + '%'; };
+  const stepBright = (d) => (e) => {
+    e.stopPropagation();
+    localStorage.setItem(BRIGHT_KEY, String(Math.max(-50, Math.min(50, brightVal() + d))));
+    applyBright();
+    syncBright();
+  };
+  bMinus.addEventListener('click', stepBright(-5));
+  bPlus.addEventListener('click', stepBright(5));
+  brightRow.append(brightLabel, bMinus, brightValEl, bPlus);
+  brightRow.dataset.dreamBright = '1';
+  syncBright();
+  applyBright();
+  panel.appendChild(brightRow);
+
   panel.append(catRow('皮肤', 'skin', skinBox), skinBox);
   if (hasPet) {
     panel.append(catRow('宠物', 'pet', petBox), petBox);
@@ -3902,12 +4056,49 @@ export function buildMenuScript(options: {
     const surface = pageHexToRgb(colors.surface);
     const hero = pageHexToRgb(colors.average || colors.surface);
     const backgrounds = surfaceAlphas.map((alpha) => pageMixRgb(hero, surface, alpha));
-    const text = pageEnsureAll(pageHexToRgb(colors.text), backgrounds, 4.5);
+    /* 与主进程同款"保彩度只动明度"鲜艳取色 + 亮度提升：基色 = 主题色相 + 高饱和 +
+       清单明度，收到达标线后再朝极端推一档（浅字更白 / 深字更黑） */
+    const bright = (rgb) => {
+      const [h, s, l] = pageRgbToHsl(rgb);
+      const bgLum = backgrounds.reduce((sum, b) => sum + pageLuminance(b), 0) / Math.max(1, backgrounds.length);
+      const next = pageLuminance(rgb) >= bgLum ? l + (1 - l) * 0.35 : l * 0.65;
+      return pageHslToRgb(h, s, Math.max(0.02, Math.min(0.99, next)));
+    };
+    const tintMin = (rgb, floor, target) => {
+      const spread = (c) => Math.max(c[0], c[1], c[2]) - Math.min(c[0], c[1], c[2]);
+      if (spread(rgb) >= target) return rgb;
+      const [h, s, l] = pageRgbToHsl(rgb);
+      const towardMid = l > 0.5 ? -1 : 1;
+      let best = rgb;
+      for (let i = 1; i <= 20; i++) {
+        const cand = pageHslToRgb(h, Math.min(1, s + 0.06 * i), Math.max(0.06, Math.min(0.99, l + towardMid * 0.02 * i)));
+        const worst = backgrounds.length ? Math.min.apply(null, backgrounds.map((bg) => pageContrast(cand, bg))) : 99;
+        if (worst < floor) break;
+        best = cand;
+        if (spread(cand) >= target) break;
+      }
+      return best;
+    };
+    const vivid = (from, sat, l, floor, target, hueShift) => {
+      const [h0] = pageRgbToHsl(from);
+      const h = (((h0 + (hueShift || 0)) % 1) + 1) % 1;
+      const base = pageHslToRgb(h, sat, Math.max(0.02, Math.min(0.98, l)));
+      return tintMin(bright(pageEnsureAll(base, backgrounds, floor)), floor, target);
+    };
+    const textRgb = pageHexToRgb(colors.text);
+    const baseLight = pageRgbToHsl(textRgb)[2];
+    const accent = pageHexToRgb(colors.accent || colors.text);
+    const secondary = pageHexToRgb(colors.secondary || colors.accent || colors.text);
+    const text = tintMin(bright(pageEnsureAll(pageHslToRgb(pageRgbToHsl(accent)[0], 0.9, baseLight), backgrounds, 4.5)), 4.5, 60);
+    const textL = pageRgbToHsl(text)[2];
     return {
       text: pageRgbToHex(text),
-      textSubtle: pageRgbToHex(pageEnsureAll(pageMixRgb(surface, text, 0.88), backgrounds, 3)),
-      textSubtlest: pageRgbToHex(pageEnsureAll(pageMixRgb(surface, text, 0.80), backgrounds, 3)),
-      textSecondary: pageRgbToHex(pageEnsureAll(pageMixRgb(surface, text, 0.72), backgrounds, 3)),
+      textVivid: pageRgbToHex(vivid(accent, 0.92, baseLight, 4.5, 80)),
+      textAlt: pageRgbToHex(vivid(secondary, 0.7, baseLight, 3, 45)),
+      textOpposite: pageRgbToHex(vivid(accent, 0.95, baseLight, 3, 90, 0.5)),
+      textSubtle: pageRgbToHex(vivid(accent, 0.45, textL < 0.5 ? Math.min(0.98, textL + 0.30) : Math.max(0.02, textL - 0.26), 3, 34)),
+      textSubtlest: pageRgbToHex(vivid(accent, 0.36, textL < 0.5 ? Math.min(0.98, textL + 0.44) : Math.max(0.02, textL - 0.38), 3)),
+      textSecondary: pageRgbToHex(vivid(accent, 0.4, textL < 0.5 ? Math.min(0.98, textL + 0.36) : Math.max(0.02, textL - 0.32), 3)),
     };
   };
   /* __DREAM_PAGE_CONTRAST_END__ */
