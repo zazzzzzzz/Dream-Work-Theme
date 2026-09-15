@@ -38,7 +38,7 @@ const WORKBUDDY_CSS_PLACEHOLDERS = {
 // 的材质对应）。对比度按 surface×alpha + 壁纸平均色×(1-alpha) 的合成
 // 背景计算，而不是纯 surface，否则半透明玻璃上的真实对比度会被高估。
 const HERO_BACKED_SURFACE_ALPHAS: Record<string, number[]> = {
-  zcode: [0.70, 0.76, 0.88, 0.90],
+  zcode: [0.60, 0.66, 0.78, 0.80],
   codex: [0.76, 0.82, 0.86, 0.90, 0.92],
   catpaw: [0.78, 0.82],
   'qoder-work': [0.70, 0.82, 0.86, 0.90],
@@ -46,7 +46,7 @@ const HERO_BACKED_SURFACE_ALPHAS: Record<string, number[]> = {
   workbuddy: [0.58, 0.62, 0.92],
   'hana-agent': [0.62, 0.66, 0.78],
 };
-const DEFAULT_SURFACE_ALPHAS = [0.70, 0.76, 0.88, 0.90];
+const DEFAULT_SURFACE_ALPHAS = [0.6, 0.66, 0.78, 0.8];   // 与增透后的玻璃一致（PNL/USR 与各弹层混比）
 
 function surfaceAlphasFor(appId: string): number[] {
   return HERO_BACKED_SURFACE_ALPHAS[appId] ?? DEFAULT_SURFACE_ALPHAS;
@@ -967,6 +967,7 @@ function deriveTextColors(surfaceHex: string, textHex: string, heroAverage: Rgb 
   };
 }
 
+
 // 壁纸色彩单一（调色板里没有与主色相差 >50° 的色相桶）时的 secondary 兜底：
 // 旧兜底 = accent 提白，与主色同色相，多彩流光环六段交替感官只剩一色。
 // 改取 accent 色相 −60° 的同源伴生色（粉→紫方向），饱和度下限 0.35、明度沿用，
@@ -1085,9 +1086,9 @@ function buildVsCodeWorkCss(manifest: any, heroDataUrl: string, colors: any): st
 :root {
   --vscode-editor-background: transparent !important;
   --vscode-foreground: ${colors.text} !important;
-  --vscode-sideBar-background: color-mix(in srgb, ${colors.surface} 92%, transparent) !important;
+  --vscode-sideBar-background: color-mix(in srgb, ${colors.surface} 82%, transparent) !important;
   --vscode-panel-background: transparent !important;
-  --vscode-input-background: color-mix(in srgb, ${colors.surface} 94%, transparent) !important;
+  --vscode-input-background: color-mix(in srgb, ${colors.surface} 84%, transparent) !important;
   --vscode-button-background: ${colors.accent} !important;
   --vscode-button-foreground: #ffffff !important;
   --vscode-focusBorder: ${colors.accent} !important;
@@ -1133,7 +1134,7 @@ body.solo-lite #solo-lite-root {
   background-image: none !important;
 }
 .messageInputContainer {
-  background-color: color-mix(in srgb, ${colors.surface} 76%, transparent) !important;
+  background-color: color-mix(in srgb, ${colors.surface} 66%, transparent) !important;
   color: ${colors.text} !important;
   backdrop-filter: blur(12px) saturate(105%);
 }
@@ -1308,7 +1309,7 @@ function buildGenericWorkCss(appId: string, manifest: any, heroDataUrl: string, 
     ? 'transparent !important'
     : appId === 'zcode'
     ? `${dimVeil}, url(${JSON.stringify(heroDataUrl)}) center / cover no-repeat fixed !important`
-    : `linear-gradient(90deg, color-mix(in srgb, ${colors.surface} 82%, transparent) 0 12%, transparent 42%), ${dimVeil}, url(${JSON.stringify(heroDataUrl)}) center / cover no-repeat fixed !important`;
+    : `linear-gradient(90deg, color-mix(in srgb, ${colors.surface} 72%, transparent) 0 12%, transparent 42%), ${dimVeil}, url(${JSON.stringify(heroDataUrl)}) center / cover no-repeat fixed !important`;
   return `/* DREAM_THEME:${manifest.id} */
 :root {
   --dream-work-accent: ${colors.accent};
@@ -1330,10 +1331,10 @@ function buildGenericWorkCss(appId: string, manifest: any, heroDataUrl: string, 
   --catpaw-bg-primary: ${colors.surface} !important;
   --catpaw-text-primary: ${colors.text} !important;
   --catpaw-text-secondary: ${colors.textSecondary} !important;
-  --agents-sidebar-material-bg: color-mix(in srgb, ${colors.surface} 90%, transparent) !important;
+  --agents-sidebar-material-bg: color-mix(in srgb, ${colors.surface} 80%, transparent) !important;
   --text-base-primary: ${colors.text} !important;
   --text-base-secondary: ${colors.textSecondary} !important;
-  --bg-base: color-mix(in srgb, ${colors.surface} 86%, transparent) !important;
+  --bg-base: color-mix(in srgb, ${colors.surface} 76%, transparent) !important;
   /* ZCode 选中/悬停变量：组件自身的 data-active:!bg-selected 类带 !important
      引用 --color-selected，接管变量让这类选中背景也跟随主题 accent */
   --color-selected: color-mix(in srgb, ${colors.accent} 16%, ${colors.surface}) !important;
@@ -1341,9 +1342,11 @@ function buildGenericWorkCss(appId: string, manifest: any, heroDataUrl: string, 
 }
 html, body, #root { background: ${video ? 'transparent' : colors.surface} !important; color: ${colors.text} !important; }
 :is(${sidebar}) {
-  background: color-mix(in srgb, ${colors.surface} 90%, transparent) !important;
+  background: color-mix(in srgb, ${colors.surface} 82%, transparent) !important;
   color: ${colors.text} !important;
-  backdrop-filter: blur(20px) saturate(108%);
+  /* 不给侧栏挂 backdrop-filter：它会给 position:fixed 后代创建包含块，账号菜单一类
+     "选中右侧弹出"的子菜单若未 portal 出去就会被困在侧栏的 overflow:hidden 里（被遮挡）。
+     毛玻璃观感靠 92% 的实底保住，视觉差别极小。 */
 }
 :is(${main}) {
   background: ${mainBackground};
@@ -1353,7 +1356,7 @@ html, body, #root { background: ${video ? 'transparent' : colors.surface} !impor
   color: ${colors.text} !important;
 }
 :is(${main}) :where(${contentSurfaceSelectors}) {
-  background-color: color-mix(in srgb, ${colors.surface} 88%, transparent) !important;
+  background-color: color-mix(in srgb, ${colors.surface} 78%, transparent) !important;
   backdrop-filter: blur(16px) saturate(108%);
 }
 :is(${main}) :where(p, span, li, h1, h2, h3, h4, strong, em, code, pre, kbd, samp, time, small, b, i, u, del, ins, mark) { color: ${colors.text} !important; }
@@ -1390,8 +1393,8 @@ ${appSpecificCss}${video ? `
 }
 
 function buildZCodeConversationCss(colors: any, video = false): string {
-  const PNL = 76;
-  const USR = 70;
+  const PNL = 66;   // 增透：76 -> 66（用户点名"增加毛玻璃透明度"）
+  const USR = 60;   // 增透：70 -> 60
   return `
 /* ZCode conversations: the wallpaper stays on the timeline, while each
    semantic row receives its own readable surface instead of one large wash. */
@@ -1417,7 +1420,8 @@ function buildZCodeConversationCss(colors: any, video = false): string {
   border-radius: 16px !important;
   background: color-mix(in srgb, ${colors.surface} ${PNL}%, transparent) !important;
   box-shadow: 0 12px 30px color-mix(in srgb, ${colors.surface} 30%, transparent), inset 0 1px color-mix(in srgb, white 12%, transparent) !important;
-  backdrop-filter: blur(14px) saturate(108%) !important;
+  /* 会话卡片不做背景模糊（用户点名"不要玻璃模糊效果"）：去掉 backdrop-filter，
+     卡片只剩半透明底色，观感不再受模糊重采样影响。 */
 }
 
 :is(main) [class~="group/user-row"] > div:is(:first-child, [class*="rounded-xl"]) {
@@ -1429,10 +1433,9 @@ function buildZCodeConversationCss(colors: any, video = false): string {
   padding: 14px 16px !important;
 }
 
-:is(main) [data-row-id]:has([data-reasoning-content]) {
-  padding: 12px 16px !important;
-}
-
+/* 折叠的思考行不加内边距：原版标签行与会话内其它行左缘对齐（皮肤曾给整行加
+   padding: 12px 16px，导致"思考 · 持续了 N 秒"比工具行缩进、行距也与原版不同）。
+   内边距只在展开态（下面是玻璃卡片规则里）补回。 */
 :is(main) [data-row-id]:has([data-reasoning-content]) [data-reasoning-content] {
   background: transparent !important;
   box-shadow: none !important;
@@ -1456,10 +1459,9 @@ function buildZCodeConversationCss(colors: any, video = false): string {
   border-radius: 16px !important;
   background: color-mix(in srgb, ${colors.surface} ${PNL}%, transparent) !important;
   box-shadow: 0 12px 30px color-mix(in srgb, ${colors.surface} 30%, transparent), inset 0 1px color-mix(in srgb, white 12%, transparent) !important;
-  backdrop-filter: blur(14px) saturate(108%) !important;
-  -webkit-backdrop-filter: blur(14px) saturate(108%) !important;
   color: ${colors.text} !important;
   text-shadow: none !important;
+  padding: 12px 16px !important;   /* 展开态卡片才需要内边距 */
 }
 
 /* 裸行（思考行 group/reasoning、工具摘要行 group/tool-summary）自身及祖先都没有表面，
@@ -1492,16 +1494,9 @@ function buildZCodeConversationCss(colors: any, video = false): string {
 #sidebar li[class*="bg-selected"] :where(*) {
   color: var(--dream-work-text-vivid) !important;
 }
-/* 关掉这两类行里的扫光（app 的 gradient-flow：文字填充透明 + background-clip:text 的
-   渐变，浅色段扫过时整段字变成"跳动的白块"；实测 .tool-summary-kind-label 上
-   background-size:300%、4s 循环）。皮肤下统一改回实色文字、去掉渐变与动画。 */
-:is(main, div.border-l.border-border) :is([class~="group/tool-summary"], [class~="group/reasoning"]) :where(*) {
-  background-image: none !important;
-  -webkit-background-clip: border-box !important;
-  background-clip: border-box !important;
-  -webkit-text-fill-color: currentColor !important;
-  animation: none !important;
-}
+/* 保留原版的"执行/思考"标签动画（app 的 gradient-flow：-webkit-text-fill-color 透明 +
+   background-clip:text 的渐变扫光，4s 循环）——用户点名要恢复（此前为治"白块"把它关掉了，
+   现在标签已是实色主题字，动画在实色基础上扫过即可，不再压掉文字）。 */
 
 /* ---- 毛玻璃材质统一：左侧边栏 / 状态面板（Git 变更）/ 切换面板右侧栏 ----
    与会话输入、模型输出行使用同一种玻璃材质（surface 76% + blur 14px），
@@ -1515,7 +1510,13 @@ function buildZCodeConversationCss(colors: any, video = false): string {
 }
 #sidebar aside {
   background: color-mix(in srgb, ${colors.surface} ${PNL}%, transparent) !important;
-  backdrop-filter: blur(14px) saturate(108%) !important;
+  /* 同上：侧栏内的 aside 不挂 backdrop-filter（避免包含块/裁剪困住侧栏内的浮层） */
+}
+/* 侧栏内"选中右侧弹出"的子菜单兜底：只对 Radix 的浮层 portal 生效。
+   注意别写成 [data-slot*="menu"] —— 侧栏任务项本身就是 context-menu-trigger，
+   被抬到超高 z-index 后反而会盖住弹出的子菜单（实测踩坑）。 */
+[data-radix-popper-content-wrapper] {
+  z-index: 2147483000 !important;
 }
 /* 侧边栏整列包裹主题自适应边框：accent 30% 混透明，与会话行/输入区同配方。
    边框落在 #sidebar 外层列上，连同底部账号区一起被包住；贴窗缘的三边
@@ -1638,6 +1639,18 @@ html:has(aside.min-w-0 nav) main :where(
   border-radius: 16px !important;
   border: 1px solid color-mix(in srgb, ${colors.accent} 30%, transparent) !important;
 }
+/* 输入框玻璃与会话卡片同档（用户点名"输入框也加上这个透明度"）：surface 66% 半透明、
+   不做背景模糊（卡片那边的模糊已按用户要求去掉，这里保持一致）。
+   选择器带 :is(main) 前缀是为了压过 contentSurfaceSelectors 那条 78% 的规则（同权重时后者靠前）。 */
+:is(main) .chat-composer-region,
+:is(main) .chat-composer-input-surface,
+:is(main, div.border-l.border-border) .chat-composer-region,
+:is(main, div.border-l.border-border) .chat-composer-input-surface {
+  background: color-mix(in srgb, ${colors.surface} ${PNL}%, transparent) !important;
+  background-color: color-mix(in srgb, ${colors.surface} ${PNL}%, transparent) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
 
 /* 辅助对话面板打开时与主对话之间的分割线：原生 border-l 是无主题色的灰线，
    换成 accent 30% 主题自适应边框，与 #sidebar 边框同配方同宽度（2px）。 */
@@ -1732,11 +1745,11 @@ div.border-l.border-border [class~="group/user-row"] > div:is(:first-child, [cla
   text-shadow: none !important;
 }
 
-/* 已执行命令的输出卡片（bg-panel 白底）同款毛玻璃材质。 */
+/* 已执行命令的输出卡片（工具/终端展开后的内容卡）同款半透明底；
+   按用户点名不做背景模糊 —— 与会话卡片/输入框保持一致（surface 66%、无 blur）。 */
 :is(main, div.border-l.border-border) div[class*="bg-panel"][class*="rounded-xl"] {
   background: color-mix(in srgb, ${colors.surface} ${PNL}%, transparent) !important;
   border: 1px solid color-mix(in srgb, ${colors.accent} 30%, transparent) !important;
-  backdrop-filter: blur(14px) saturate(108%) !important;
   color: ${colors.text} !important;
 }
 
@@ -1831,10 +1844,12 @@ html:has(aside.min-w-0 nav) main [class*="max-w-4xl"] [class*="tabs-list"] {
   div[class*="bg-popover"],
   div[class*="bg-dropdown"]
 ):not([class*="Overlay"]):not([data-radix-dialog-overlay]):not([class*="backdrop"]) {
-  background: color-mix(in srgb, ${colors.surface} 88%, transparent) !important;
+  background: color-mix(in srgb, ${colors.surface} 78%, transparent) !important;
   border: 1px solid color-mix(in srgb, ${colors.accent} 30%, transparent) !important;
   box-shadow: 0 12px 30px color-mix(in srgb, ${colors.surface} 30%, transparent) !important;
-  backdrop-filter: blur(14px) saturate(108%) !important;
+  /* 弹层不挂 backdrop-filter：它会给 position:fixed 的子菜单创建包含块，子菜单随即被弹层
+     自身的 overflow:hidden 裁掉 —— 实机表现就是"选中后右侧悬浮面板不显示"（关皮肤即恢复，
+     已用 computer-use 复现定位）。88% 半透明底 + 边框 + 阴影观感已足够接近毛玻璃。 */
   color: ${colors.text} !important;
   text-shadow: none !important;
 }
@@ -1855,7 +1870,7 @@ body.zcode-startup-ready [role="menu"][data-slot="dropdown-menu-content"]:has([d
   inset: 0;
   z-index: -1;
   border-radius: inherit;
-  background: color-mix(in srgb, ${colors.surface} 88%, transparent);
+  background: color-mix(in srgb, ${colors.surface} 78%, transparent);
   backdrop-filter: blur(14px) saturate(108%);
   -webkit-backdrop-filter: blur(14px) saturate(108%);
   pointer-events: none;
@@ -1865,17 +1880,16 @@ body.zcode-startup-ready [role="menu"][data-slot="dropdown-menu-content"]:has([d
    + after:bg-menu 补缝条）自带不透明原生底，会盖住菜单玻璃形成黑块。
    换成与弹层同款玻璃（surface 88% + blur14），滚动经过的菜单项在其后被磨砂遮住。 */
 [role="menu"] .bg-menu {
-  background: color-mix(in srgb, ${colors.surface} 88%, transparent) !important;
-  backdrop-filter: blur(14px) saturate(108%) !important;
-  -webkit-backdrop-filter: blur(14px) saturate(108%) !important;
+  background: color-mix(in srgb, ${colors.surface} 78%, transparent) !important;
+  /* 同上：菜单内部的底衬层也不能挂 backdrop-filter（否则裁掉子菜单） */
 }
 [role="menu"] .bg-menu::after {
-  background: color-mix(in srgb, ${colors.surface} 88%, transparent) !important;
+  background: color-mix(in srgb, ${colors.surface} 78%, transparent) !important;
 }
 
 /* tooltip 更小更密：更高不透明度保证可读性 */
 [role="tooltip"] {
-  background: color-mix(in srgb, ${colors.surface} 92%, transparent) !important;
+  background: color-mix(in srgb, ${colors.surface} 82%, transparent) !important;
   border: 1px solid color-mix(in srgb, ${colors.accent} 30%, transparent) !important;
   box-shadow: 0 8px 20px color-mix(in srgb, ${colors.surface} 30%, transparent) !important;
   backdrop-filter: blur(14px) saturate(108%) !important;
@@ -1943,8 +1957,6 @@ main [class*="max-w-4xl"]:has(h1) input::placeholder {
 :is(main, div.border-l.border-border) [class~="group/assistant-turn"] div[class~="bg-card"] {
   background: color-mix(in srgb, ${colors.surface} ${PNL}%, transparent) !important;
   border: 1px solid color-mix(in srgb, ${colors.accent} 30%, transparent) !important;
-  backdrop-filter: blur(14px) saturate(108%) !important;
-  -webkit-backdrop-filter: blur(14px) saturate(108%) !important;
   color: ${colors.text} !important;
 }
 :is(main, div.border-l.border-border) [class~="group/assistant-turn"] div[class~="bg-card"] div[class~="bg-background/50"] {
@@ -2107,18 +2119,18 @@ html, body, #react-root, .app-shell {
   background-image: none !important;
 }
 #sidebar, #jianSidebar .universal-card, #previewBody {
-  background: color-mix(in srgb, ${colors.surface} 66%, transparent) !important;
+  background: color-mix(in srgb, ${colors.surface} 56%, transparent) !important;
   border-color: color-mix(in srgb, ${colors.accent} 24%, transparent) !important;
   color: ${colors.text} !important;
   backdrop-filter: blur(20px) saturate(110%) !important;
 }
 .titlebar {
-  background: color-mix(in srgb, ${colors.surface} 62%, transparent) !important;
+  background: color-mix(in srgb, ${colors.surface} 52%, transparent) !important;
   color: ${colors.text} !important;
   backdrop-filter: blur(18px) saturate(108%) !important;
 }
 [class*="input-wrapper"] {
-  background: color-mix(in srgb, ${colors.surface} 78%, transparent) !important;
+  background: color-mix(in srgb, ${colors.surface} 68%, transparent) !important;
   border-color: color-mix(in srgb, ${colors.accent} 30%, transparent) !important;
   color: ${colors.text} !important;
   box-shadow: 0 16px 42px color-mix(in srgb, ${colors.surface} 28%, transparent) !important;
@@ -2524,7 +2536,7 @@ body > #root > div:first-child > div:first-child button[aria-label="Close"]:hove
 }
 .agents-content-area button.rounded-full:not(.SendButton-send),
 .agents-parchment-paper-surface button.rounded-full:not(.SendButton-send) {
-  background-color: color-mix(in srgb, ${colors.surface} 70%, transparent) !important;
+  background-color: color-mix(in srgb, ${colors.surface} 60%, transparent) !important;
   color: ${colors.text} !important;
   border-color: color-mix(in srgb, ${colors.text} 14%, transparent) !important;
   box-shadow: none !important;
@@ -2566,7 +2578,7 @@ html body #root .chat-content-area [class~="bg-catpaw-bg-primary"] {
 }
 html body #root .catpaw-desk-inputBox > .bg-catpaw-bg-card,
 html body #root .catpaw-desk-inputBox [class~="bg-catpaw-bg-card"] {
-  background-color: color-mix(in srgb, ${colors.surface} 78%, transparent) !important;
+  background-color: color-mix(in srgb, ${colors.surface} 68%, transparent) !important;
   border: 1px solid color-mix(in srgb, ${colors.accent} 30%, transparent) !important;
   box-shadow: 0 16px 42px color-mix(in srgb, ${colors.surface} 30%, transparent) !important;
   backdrop-filter: blur(16px) saturate(108%) !important;
@@ -2733,12 +2745,12 @@ body[data-application-name="workbuddy"] {
 function buildCodexCss(manifest: any, heroDataUrl: string, colors: any): string {
   const isLight = isLightHex(colors.surface);
   const conversationSurface = isLight
-    ? `color-mix(in srgb, ${colors.surface} 90%, transparent)`
-    : `color-mix(in srgb, ${colors.surface} 86%, transparent)`;
+    ? `color-mix(in srgb, ${colors.surface} 80%, transparent)`
+    : `color-mix(in srgb, ${colors.surface} 76%, transparent)`;
   const userSurface = isLight
     ? `color-mix(in srgb, ${colors.accent} 16%, ${colors.surface})`
     : `color-mix(in srgb, ${colors.accent} 42%, ${colors.surface})`;
-  const codeSurface = isLight ? '#172033' : `color-mix(in srgb, ${colors.surface} 72%, #000000)`;
+  const codeSurface = isLight ? '#172033' : `color-mix(in srgb, ${colors.surface} 62%, #000000)`;
   const codeText = '#f2f6ff';
 
   // Theme-specific variable overrides
@@ -2790,7 +2802,7 @@ html.codex-dream-skin main.main-surface::before {
 }
 
 html.codex-dream-skin main.main-surface > header.app-header-tint {
-  background: color-mix(in srgb, ${colors.surface} 76%, transparent) !important;
+  background: color-mix(in srgb, ${colors.surface} 66%, transparent) !important;
   backdrop-filter: blur(14px) saturate(108%) !important;
 }
 
@@ -2867,7 +2879,7 @@ html.codex-dream-skin main.main-surface:not(.dream-skin-home-shell)
 }
 
 html.codex-dream-skin .composer-surface-chrome {
-  background: color-mix(in srgb, ${colors.surface} 92%, transparent) !important;
+  background: color-mix(in srgb, ${colors.surface} 82%, transparent) !important;
   color: ${colors.text} !important;
 }
 
@@ -2914,7 +2926,7 @@ html.codex-dream-skin main.main-surface [class*="container-name:home-main-conten
   backdrop-filter: none !important;
 }
 html.codex-dream-skin .dream-skin-home .composer-surface-chrome {
-  background-color: color-mix(in srgb, ${colors.surface} 82%, transparent) !important;
+  background-color: color-mix(in srgb, ${colors.surface} 72%, transparent) !important;
   backdrop-filter: blur(14px) saturate(106%) !important;
 }`;
 
@@ -3772,7 +3784,7 @@ export function buildMenuScript(options: {
   })();
 
   const panel = document.createElement('div');
-  panel.style.cssText = "display:none;margin-bottom:8px;min-width:200px;padding:6px;border-radius:12px;border:1px solid rgba(0,0,0,.1);background:rgba(255,255,255,.96);backdrop-filter:blur(16px);box-shadow:0 10px 30px rgba(0,0,0,.18);color:#17344f!important;-webkit-text-fill-color:#17344f!important;";
+  panel.style.cssText = "display:none;margin-bottom:8px;min-width:200px;padding:6px;border-radius:12px;border:1px solid rgba(0,0,0,.1);background:rgba(255,255,255,.96);backdrop-filter:blur(16px);box-shadow:0 10px 30px rgba(0,0,0,.18);color:#17344f!important;-webkit-text-fill-color:#17344f!important;"; 
 
   /* 分类：皮肤（8 款常用预设 + 自定义 + 还原）与宠物各为折叠组，点击分类标签展开/收起，
    * 展开态存 localStorage（dreamMenu.cat），重注入后保持。 */
