@@ -1395,6 +1395,13 @@ ${appSpecificCss}${video ? `
 function buildZCodeConversationCss(colors: any, video = false): string {
   const PNL = 66;   // 增透：76 -> 66（用户点名"增加毛玻璃透明度"）
   const USR = 60;   // 增透：70 -> 60
+  /* 辅助对话 / 子代理面板的作用域。该面板原为右侧分栏（div.border-l.border-border），
+     3.12.1 起改成浮动圆角面板（h-full overflow-hidden bg-background rounded-[5px]
+     border border-border）——旧类名随后在 DOM 里彻底消失，皮肤所有挂该作用域的规则
+     全部落空（面板里的会话卡片/输入框/子代理输出一起退回原生裸样式）。
+     两个类名都收进一个 :is()，新老结构通吃；:not(main *) 排除 main 内同样带这组
+     类名的整页壳（设置/市场）——那些页面由 main 作用域自己覆盖，不该吃到面板规则。 */
+  const AUX = ':is(div.border-l.border-border, div.bg-background.border-border:not(main *))';
   return `
 /* ZCode conversations: the wallpaper stays on the timeline, while each
    semantic row receives its own readable surface instead of one large wash. */
@@ -1411,7 +1418,7 @@ function buildZCodeConversationCss(colors: any, video = false): string {
   backdrop-filter: none !important;
 }
 
-:is(main) :where(
+:is(main, ${AUX}) :where(
   [class~="group/user-row"] > div:first-child,
   [class~="group/user-row"] > div[class*="rounded-xl"],
   [class~="group/assistant-row"] > [data-conversation-selectable]
@@ -1420,23 +1427,27 @@ function buildZCodeConversationCss(colors: any, video = false): string {
   border-radius: 16px !important;
   background: color-mix(in srgb, ${colors.surface} ${PNL}%, transparent) !important;
   box-shadow: 0 12px 30px color-mix(in srgb, ${colors.surface} 30%, transparent), inset 0 1px color-mix(in srgb, white 12%, transparent) !important;
+  /* 卡片自身也接管文字色：辅助/子代理面板不在 main 内，拿不到 main 作用域的那批
+     文字规则（原先由面板专属段落补，现随该段落一起并到这里） */
+  color: ${colors.text} !important;
+  text-shadow: none !important;
   /* 会话卡片不做背景模糊（用户点名"不要玻璃模糊效果"）：去掉 backdrop-filter，
      卡片只剩半透明底色，观感不再受模糊重采样影响。 */
 }
 
-:is(main) [class~="group/user-row"] > div:is(:first-child, [class*="rounded-xl"]) {
+:is(main, ${AUX}) [class~="group/user-row"] > div:is(:first-child, [class*="rounded-xl"]) {
   border-color: color-mix(in srgb, ${colors.accent} 44%, transparent) !important;
   background: color-mix(in srgb, ${colors.surface} ${USR}%, transparent) !important;
 }
 
-:is(main) [class~="group/assistant-row"] > [data-conversation-selectable] {
+:is(main, ${AUX}) [class~="group/assistant-row"] > [data-conversation-selectable] {
   padding: 14px 16px !important;
 }
 
 /* 折叠的思考行不加内边距：原版标签行与会话内其它行左缘对齐（皮肤曾给整行加
    padding: 12px 16px，导致"思考 · 持续了 N 秒"比工具行缩进、行距也与原版不同）。
    内边距只在展开态（下面是玻璃卡片规则里）补回。 */
-:is(main) [data-row-id]:has([data-reasoning-content]) [data-reasoning-content] {
+:is(main, ${AUX}) [data-row-id]:has([data-reasoning-content]) [data-reasoning-content] {
   background: transparent !important;
   box-shadow: none !important;
   backdrop-filter: none !important;
@@ -1445,7 +1456,7 @@ function buildZCodeConversationCss(colors: any, video = false): string {
 /* 思考行（Radix collapsible）：折叠态的"思考 · 持续了…"标签裸露，不加玻璃包裹；
    仅 data-state="open"（思考内容已展开）时整行恢复与会话行同款玻璃卡片。
    默认规则覆盖 main 与辅助对话面板两种作用域；缺 data-state 时宁可保持裸露也不误包。 */
-:is(main, div.border-l.border-border) [data-row-id]:has([data-reasoning-content]) {
+:is(main, ${AUX}) [data-row-id]:has([data-reasoning-content]) {
   background: transparent !important;
   background-image: none !important;
   border: none !important;
@@ -1454,7 +1465,7 @@ function buildZCodeConversationCss(colors: any, video = false): string {
   -webkit-backdrop-filter: none !important;
 }
 
-:is(main, div.border-l.border-border) [data-row-id]:has([data-reasoning-content][data-state="open"]) {
+:is(main, ${AUX}) [data-row-id]:has([data-reasoning-content][data-state="open"]) {
   border: 1px solid color-mix(in srgb, ${colors.accent} 30%, transparent) !important;
   border-radius: 16px !important;
   background: color-mix(in srgb, ${colors.surface} ${PNL}%, transparent) !important;
@@ -1467,10 +1478,10 @@ function buildZCodeConversationCss(colors: any, video = false): string {
 /* 裸行（思考行 group/reasoning、工具摘要行 group/tool-summary）自身及祖先都没有表面，
    易被 app 的次级色/硬编码半透明色压得读不清 —— 一律用主题自身文字色（整屏统一，
    不做逐行判定：逐行挑色会出现相邻行一深一浅、随时间来回翻的"反转"观感）。 */
-:is(main, div.border-l.border-border) [class~="group/reasoning"],
-:is(main, div.border-l.border-border) [class~="group/reasoning"] :where(*),
-:is(main, div.border-l.border-border) [class~="group/tool-summary"],
-:is(main, div.border-l.border-border) [class~="group/tool-summary"] :where(*) {
+:is(main, ${AUX}) [class~="group/reasoning"],
+:is(main, ${AUX}) [class~="group/reasoning"] :where(*),
+:is(main, ${AUX}) [class~="group/tool-summary"],
+:is(main, ${AUX}) [class~="group/tool-summary"] :where(*) {
   color: var(--dream-work-text) !important;
 }
 /* 分层双色相：抢眼信息从正文里挑出来 —— 工具类别标签（终端/写入/读取/编辑…）与
@@ -1479,14 +1490,14 @@ function buildZCodeConversationCss(colors: any, video = false): string {
 /* 最终口径（用户裁定"算了，全部走主题色"）：会话区所有文字——标签、图标、命令行、
    文件路径、元信息、正文与其中的代码/技术记号——统一用主题文字色；不再有纯黑纯白档
    与相反色相档（两个变量保留以备后用，但没有任何规则消费它们）。 */
-:is(main, div.border-l.border-border) [class~="tool-summary-kind-label"],
-:is(main, div.border-l.border-border) button[data-testid="chat-reasoning-trigger"],
-:is(main, div.border-l.border-border) button[data-testid="chat-reasoning-trigger"] :where(*),
-:is(main, div.border-l.border-border) [class~="group/tool-summary"] :where(svg) {
+:is(main, ${AUX}) [class~="tool-summary-kind-label"],
+:is(main, ${AUX}) button[data-testid="chat-reasoning-trigger"],
+:is(main, ${AUX}) button[data-testid="chat-reasoning-trigger"] :where(*),
+:is(main, ${AUX}) [class~="group/tool-summary"] :where(svg) {
   color: var(--dream-work-text) !important;
 }
 /* 标题走数值档（accent 高彩度） */
-:is(main, div.border-l.border-border) :where(h1, h2, h3, h4, [class*="title"]) {
+:is(main, ${AUX}) :where(h1, h2, h3, h4, [class*="title"]) {
   color: var(--dream-work-text-vivid) !important;
 }
 /* 侧栏选中会话项走数值档（accent 高彩度），与选中底色同源更醒目 */
@@ -1641,21 +1652,88 @@ html:has(aside.min-w-0 nav) main :where(
 }
 /* 输入框玻璃与会话卡片同档（用户点名"输入框也加上这个透明度"）：surface 66% 半透明、
    不做背景模糊（卡片那边的模糊已按用户要求去掉，这里保持一致）。
-   选择器带 :is(main) 前缀是为了压过 contentSurfaceSelectors 那条 78% 的规则（同权重时后者靠前）。 */
-:is(main) .chat-composer-region,
-:is(main) .chat-composer-input-surface,
-:is(main, div.border-l.border-border) .chat-composer-region,
-:is(main, div.border-l.border-border) .chat-composer-input-surface {
+   选择器带 :is(main, AUX) 前缀是为了压过 contentSurfaceSelectors 那条 78% 的规则
+   （同权重时后者靠前）；辅助/子代理面板里的输入框同样算在内。 */
+:is(main, ${AUX}) .chat-composer-region,
+:is(main, ${AUX}) .chat-composer-input-surface {
   background: color-mix(in srgb, ${colors.surface} ${PNL}%, transparent) !important;
   background-color: color-mix(in srgb, ${colors.surface} ${PNL}%, transparent) !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
 }
 
-/* 辅助对话面板打开时与主对话之间的分割线：原生 border-l 是无主题色的灰线，
-   换成 accent 30% 主题自适应边框，与 #sidebar 边框同配方同宽度（2px）。 */
+/* 设置页（模型/供应商）里的 bg-input 表面：模型列表容器（overflow-hidden rounded-lg
+   border border-input-border bg-input）与输入框外壳都用它，原生是不透明的输入控件底色
+   —— 皮肤只处理过 bg-card/bg-surface，这类容器于是整块实底压在玻璃上，看着像挖了个黑洞
+   （模型列表尤其明显：行本身无背景，深色全来自这个容器）。统一接会话输入框同款玻璃
+   （surface 66%、不做背景模糊、accent 30% 边框）；内层真实控件透明，避免双层叠暗
+   （同 composer 配方）。会话输入框自己由上方规则管，这里用 :not 排除，防止叠成两层玻璃；
+   弹层（dialog）里的同类输入面一并收进来 —— 它们同样是玻璃表面，留一块实底一样突兀。 */
+:is(main, ${AUX}, [role="dialog"], [role="alertdialog"]) :where(div, section)[class*="bg-input"]:not(.chat-composer-region *, .chat-composer-input-surface *) {
+  background: color-mix(in srgb, ${colors.surface} ${PNL}%, transparent) !important;
+  background-color: color-mix(in srgb, ${colors.surface} ${PNL}%, transparent) !important;
+  border-color: color-mix(in srgb, ${colors.accent} 30%, transparent) !important;
+  color: ${colors.text} !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+:is(main, ${AUX}, [role="dialog"], [role="alertdialog"]) :where(div, section)[class*="bg-input"]:not(.chat-composer-region *, .chat-composer-input-surface *) :is(input, textarea, select) {
+  background: transparent !important;
+  background-color: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
+/* ---- 右侧多标签面板（辅助对话 / 审查 / 浏览器）的内容材质 ----
+   面板内容外壳原生是 section.bg-background（实测 oklch(0.205) 近乎全黑的实底），把整块
+   半透明面板压成一块黑板；列表行（审查的文件行）是 button.bg-background + blur(8px)，
+   同样是实底。这里与会话区对齐：
+   - 外壳（section）透明 —— 壁纸/视频从面板玻璃里透出来，和会话时间轴一致；
+   - 文件行换成会话卡片同款玻璃（surface ${PNL}%、accent 30% 边框、无模糊），行高矮所以圆角收 10px；
+   - bg-input 一类的按钮/下拉（未保存、刷新、浏览器地址栏）走同一档玻璃。
+   **展开的文件预览区保持 ZCode 原生样式**（用户点名，红框那块）：
+   - 透明化只作用于 section 外壳，不碰面板内的 div；
+   - 不复写 --color-background / --diffs-bg 这类底色 token，diff 库内联的
+     --diffs-bg: var(--color-background) 照旧解析成原生不透明深底；
+   - 但预览内容自己不带底色（代码预览那套完全透明，全靠面板根那层 bg-background），
+     面板根被玻璃化后它就会透出壁纸 —— 所以显式给预览根补回 var(--color-background)：
+     用的就是 app 自己的 token，等于原生样式，也不受主题影响；
+   - :not([data-diff-viewer] *, [data-patch-plain-text-preview] *) 再兜一层，
+     保证预览内部不被上面几条规则碰到。 */
+:is(div.bg-background.border-border:not(main *)) section[class~="bg-background"] {
+  background: transparent !important;
+  background-image: none !important;
+}
+[data-diff-viewer],
+[data-patch-plain-text-preview] {
+  background: var(--color-background) !important;
+}
+:is(div.bg-background.border-border:not(main *)) :where(button)[class~="bg-background"]:not([data-diff-viewer] *, [data-patch-plain-text-preview] *) {
+  border: 1px solid color-mix(in srgb, ${colors.accent} 30%, transparent) !important;
+  border-radius: 10px !important;
+  background: color-mix(in srgb, ${colors.surface} ${PNL}%, transparent) !important;
+  color: ${colors.text} !important;
+  text-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+:is(div.bg-background.border-border:not(main *)) :where(button, div, section, span, input)[class*="bg-input"]:not([data-diff-viewer] *, [data-patch-plain-text-preview] *) {
+  background: color-mix(in srgb, ${colors.surface} ${PNL}%, transparent) !important;
+  background-color: color-mix(in srgb, ${colors.surface} ${PNL}%, transparent) !important;
+  border-color: color-mix(in srgb, ${colors.accent} 30%, transparent) !important;
+  color: ${colors.text} !important;
+}
+
+/* 辅助对话 / 子代理面板与主对话之间的边界：旧结构是右侧分栏（原生只有一条无主题色的
+   border-l 灰线），新结构（3.12.1）改成浮动圆角面板。两者都换成 accent 30% 主题边框，
+   与 #sidebar 同配方 —— 分栏版只补左分隔线；浮动面板版四边同配方（它自带的 1px 原生
+   白边没有主题色，且面板不再与窗口边缘重合，四边留框才成体统）。 */
 div.border-l.border-border {
   border-left: 2px solid color-mix(in srgb, ${colors.accent} 30%, transparent) !important;
+}
+div.bg-background.border-border:not(main *) {
+  border: 2px solid color-mix(in srgb, ${colors.accent} 30%, transparent) !important;
 }
 
 /* 主对话顶部工具条（workspace-header）：原生只有灰色 border-b，
@@ -1667,12 +1745,18 @@ header[class*="workspace-header"] {
 }
 
 /* 辅助面板顶部标签条：主题自适应包裹。
-   作用域挂在辅助面板（div.border-l.border-border）之下，避免波及设置页的 tabs-list。
-   上边不留框（工具条下边框充当分隔）、左边不留框（面板分割线充当），
-   重合处归一成一条线。 */
+   作用域挂在辅助面板（分栏版 div.border-l.border-border / 浮动版
+   div.bg-background.border-border）之下，避免波及设置页的 tabs-list。
+   分栏版：上/左不留框（工具条下边框与面板分隔线充当），只补右与下，重合处归一成一条线。
+   浮动版：面板自身已是四边主题边框，标签条只留底部分隔线 —— 右边框若照旧保留，
+   会与面板右边框贴成双线。 */
 div.border-l.border-border div[data-slot="tabs-list"] {
   border: solid color-mix(in srgb, ${colors.accent} 30%, transparent) !important;
   border-width: 0 2px 2px 0 !important;
+}
+div.bg-background.border-border:not(main *) div[data-slot="tabs-list"] {
+  border: solid color-mix(in srgb, ${colors.accent} 30%, transparent) !important;
+  border-width: 0 0 2px 0 !important;
 }
 
 /* 标签条内的按钮（折叠箭头 / 加号）：与会话行同款毛玻璃。
@@ -1681,14 +1765,14 @@ div.border-l.border-border div[data-slot="tabs-list"] {
    本体只接管文字色。圆角统一 10px —— 0 圆角玻璃会被看成白色矩形框。
    标签胶囊（tooltip-trigger / tabs-trigger）不上毛玻璃（用户定稿），
    只压掉原生不透明白底，保持透明、文字走全局主题变量。 */
-div.border-l.border-border div[data-slot="tabs-list"] :is(button, [role="tab"]) {
+${AUX} div[data-slot="tabs-list"] :is(button, [role="tab"]) {
   position: relative !important;
   isolation: isolate !important;
   color: ${colors.text} !important;
   text-shadow: none !important;
 }
 
-div.border-l.border-border div[data-slot="tabs-list"] :is(button, [role="tab"])::before {
+${AUX} div[data-slot="tabs-list"] :is(button, [role="tab"])::before {
   content: "" !important;
   position: absolute !important;
   inset: 0 !important;
@@ -1704,33 +1788,19 @@ div.border-l.border-border div[data-slot="tabs-list"] :is(button, [role="tab"]):
 /* 标签胶囊（tooltip-trigger / tabs-trigger）保持原生 —— 皮肤不碰它的底色与边框。
    玻璃只给条内的独立按钮（折叠箭头 / 加号）；胶囊内的 × 关闭按钮
    通过 content:none 豁免，避免在原生胶囊上再叠玻璃方块。 */
-div.border-l.border-border div[data-slot="tabs-list"] [data-slot="tooltip-trigger"] button::before,
-div.border-l.border-border div[data-slot="tabs-list"] [data-slot="tabs-trigger"] button::before {
+${AUX} div[data-slot="tabs-list"] [data-slot="tooltip-trigger"] button::before,
+${AUX} div[data-slot="tabs-list"] [data-slot="tabs-trigger"] button::before {
   content: none !important;
 }
 
-/* 辅助对话（侧边面板，不在 main 内）的消息行：同款毛玻璃材质。
-   思考行不在此列 —— 折叠裸露/展开玻璃由上方统一规则覆盖两种作用域。 */
-div.border-l.border-border :where(
-  [class~="group/user-row"] > div:first-child,
-  [class~="group/user-row"] > div[class*="rounded-xl"],
-  [class~="group/assistant-row"] > [data-conversation-selectable]
-) {
-  border: 1px solid color-mix(in srgb, ${colors.accent} 30%, transparent) !important;
-  border-radius: 16px !important;
-  background: color-mix(in srgb, ${colors.surface} ${PNL}%, transparent) !important;
-  box-shadow: 0 12px 30px color-mix(in srgb, ${colors.surface} 30%, transparent), inset 0 1px color-mix(in srgb, white 12%, transparent) !important;
-  backdrop-filter: blur(14px) saturate(108%) !important;
-  color: ${colors.text} !important;
-  text-shadow: none !important;
-}
-div.border-l.border-border [class~="group/user-row"] > div:is(:first-child, [class*="rounded-xl"]) {
-  border-color: color-mix(in srgb, ${colors.accent} 44%, transparent) !important;
-  background: color-mix(in srgb, ${colors.surface} ${USR}%, transparent) !important;
-}
+/* 辅助对话/子代理面板（不在 main 内）的消息行不另设段落：上面的统一会话行规则
+   已把该面板收进作用域（:is(main, AUX)），玻璃配方、"无背景模糊"口径、用户气泡
+   的 USR 档与主对话完全一致。此处原有的重复段落（带 blur 的旧版）已删除 ——
+   它靠后覆盖统一规则，会让面板内的卡片重新长出模糊，与主对话不一致。 */
 
-/* 子代理输出（主对话与辅助对话面板中）同款毛玻璃材质。 */
-:is(main, div.border-l.border-border) :where(
+/* 子代理输出（主对话与辅助对话面板中）同款半透明卡；
+   不做背景模糊 —— 与其它会话卡片同一口径（surface 66%、无 blur）。 */
+:is(main, ${AUX}) :where(
   [class*="agent-row"] > [data-conversation-selectable],
   [class*="subagent"] > [data-conversation-selectable],
   [class*="subagent-row"] > div,
@@ -1740,14 +1810,13 @@ div.border-l.border-border [class~="group/user-row"] > div:is(:first-child, [cla
   border-radius: 16px !important;
   background: color-mix(in srgb, ${colors.surface} ${PNL}%, transparent) !important;
   box-shadow: 0 12px 30px color-mix(in srgb, ${colors.surface} 30%, transparent), inset 0 1px color-mix(in srgb, white 12%, transparent) !important;
-  backdrop-filter: blur(14px) saturate(108%) !important;
   color: ${colors.text} !important;
   text-shadow: none !important;
 }
 
 /* 已执行命令的输出卡片（工具/终端展开后的内容卡）同款半透明底；
    按用户点名不做背景模糊 —— 与会话卡片/输入框保持一致（surface 66%、无 blur）。 */
-:is(main, div.border-l.border-border) div[class*="bg-panel"][class*="rounded-xl"] {
+:is(main, ${AUX}) div[class*="bg-panel"][class*="rounded-xl"] {
   background: color-mix(in srgb, ${colors.surface} ${PNL}%, transparent) !important;
   border: 1px solid color-mix(in srgb, ${colors.accent} 30%, transparent) !important;
   color: ${colors.text} !important;
@@ -1954,12 +2023,12 @@ main [class*="max-w-4xl"]:has(h1) input::placeholder {
 /* 会话流内的文件更改汇总卡（bg-card）：原生 oklch 深底完全不透明，
    接入与设置页卡片同款毛玻璃材质；行底的 bg-background/50 深色叠底
    改为透明，避免在玻璃上再压一层暗色。 */
-:is(main, div.border-l.border-border) [class~="group/assistant-turn"] div[class~="bg-card"] {
+:is(main, ${AUX}) [class~="group/assistant-turn"] div[class~="bg-card"] {
   background: color-mix(in srgb, ${colors.surface} ${PNL}%, transparent) !important;
   border: 1px solid color-mix(in srgb, ${colors.accent} 30%, transparent) !important;
   color: ${colors.text} !important;
 }
-:is(main, div.border-l.border-border) [class~="group/assistant-turn"] div[class~="bg-card"] div[class~="bg-background/50"] {
+:is(main, ${AUX}) [class~="group/assistant-turn"] div[class~="bg-card"] div[class~="bg-background/50"] {
   background: transparent !important;
 }
 
@@ -1994,15 +2063,15 @@ div[data-slot="hover-card-content"]::after {
    24s 的 4 倍速）。颜色随主题 ----
    @property 注册角度变量使 conic-gradient 可动画；reduced-motion 时静止。 */
 @property --dream-flow { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
-:is(main) .chat-composer-region,
-:is(main, div.border-l.border-border) [class~="group/assistant-row"] > [data-conversation-selectable],
-:is(main, div.border-l.border-border) [class~="group/user-row"] > div[class*="rounded-xl"],
+:is(main, ${AUX}) .chat-composer-region,
+:is(main, ${AUX}) [class~="group/assistant-row"] > [data-conversation-selectable],
+:is(main, ${AUX}) [class~="group/user-row"] > div[class*="rounded-xl"],
 #sidebar li[class*="bg-selected"] {
   position: relative !important;
 }
-:is(main) .chat-composer-region::after,
-:is(main, div.border-l.border-border) [class~="group/assistant-row"] > [data-conversation-selectable]::after,
-:is(main, div.border-l.border-border) [class~="group/user-row"] > div[class*="rounded-xl"]::after,
+:is(main, ${AUX}) .chat-composer-region::after,
+:is(main, ${AUX}) [class~="group/assistant-row"] > [data-conversation-selectable]::after,
+:is(main, ${AUX}) [class~="group/user-row"] > div[class*="rounded-xl"]::after,
 #sidebar li[class*="bg-selected"]::after {
   content: "" !important;
   position: absolute !important;
@@ -2020,7 +2089,7 @@ div[data-slot="hover-card-content"]::after {
 /* 输入框区域（chat-composer-region，shrink-0 钉在外层容器底边）下缘被
    容器边界裁剪：外扩 2px 的环下缘整条不可见。底边改贴边内绘（同 Git
    面板 inset 0 方案），上/左/右仍外扩 2px。 */
-:is(main) .chat-composer-region::after {
+:is(main, ${AUX}) .chat-composer-region::after {
   inset: -2px -2px 0 -2px !important;
 }
 #sidebar li[class*="bg-selected"]::after {
@@ -2039,7 +2108,7 @@ div[data-slot="hover-card-content"]::after {
   width: 0 !important;
 }
 /* 用户气泡半径 rounded-xl（12px，右上 rounded-tr-xs 更小），外扩 2px 的环取 14px。 */
-:is(main, div.border-l.border-border) [class~="group/user-row"] > div[class*="rounded-xl"]::after {
+:is(main, ${AUX}) [class~="group/user-row"] > div[class*="rounded-xl"]::after {
   border-radius: 14px !important;
 }
 /* Git 工具状态面板流光：与会话盒同款多彩流光环（类签名 popover-border 全局唯一）。
@@ -2072,8 +2141,8 @@ aside[class*="popover-border"]::after {
    角标组呼吸式流光闪烁（静态 drop-shadow 光晕 + 透明度脉动）。
    ::before 定位绘制于底色之上、角落留白区，pointer-events 关闭不挡交互。
    用户气泡（group/user-row 下 rounded-xl 子盒）同款。 */
-:is(main, div.border-l.border-border) [class~="group/assistant-row"] > [data-conversation-selectable]::before,
-:is(main, div.border-l.border-border) [class~="group/user-row"] > div[class*="rounded-xl"]::before {
+:is(main, ${AUX}) [class~="group/assistant-row"] > [data-conversation-selectable]::before,
+:is(main, ${AUX}) [class~="group/user-row"] > div[class*="rounded-xl"]::before {
   content: "" !important;
   position: absolute !important;
   inset: -1px !important;
@@ -2085,10 +2154,10 @@ aside[class*="popover-border"]::after {
 @keyframes dream-corner-blink { 0%, 100% { opacity: 0.35; } 50% { opacity: 1; } }
 @keyframes dream-flow-orbit { to { --dream-flow: 360deg; } }
 @media (prefers-reduced-motion: reduce) {
-  :is(main) .chat-composer-region::after,
-  :is(main, div.border-l.border-border) [class~="group/assistant-row"] > [data-conversation-selectable]::after,
+  :is(main, ${AUX}) .chat-composer-region::after,
+  :is(main, ${AUX}) [class~="group/assistant-row"] > [data-conversation-selectable]::after,
   #sidebar li[class*="bg-selected"]::after,
-  :is(main, div.border-l.border-border) [class~="group/assistant-row"] > [data-conversation-selectable]::before,
+  :is(main, ${AUX}) [class~="group/assistant-row"] > [data-conversation-selectable]::before,
   aside[class*="popover-border"]::after,
   div[data-slot="hover-card-content"]::after { animation: none !important; }
 }`;
